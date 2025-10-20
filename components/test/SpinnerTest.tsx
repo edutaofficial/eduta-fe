@@ -1,4 +1,4 @@
-  import { Spinner } from "@/components/ui/spinner"
+  import { Spinner } from "@/components/ui/spinner";
   
   export function SpinnerDemo() {
     return (
@@ -6,6 +6,6 @@
             <Spinner />
             <span className="text-sm tabular-nums">$100.00</span>
       </div>
-    )
+    );
   }
   

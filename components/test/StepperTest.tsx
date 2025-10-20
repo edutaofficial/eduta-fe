@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useStepper } from '@/hooks/use-stepper';
+import React, { useState } from "react";
+import { useStepper } from "@/hooks/use-stepper";
 import {
   Stepper,
   StepperItems,
@@ -12,24 +12,24 @@ import {
   StepperPreviousButton,
   StepperNextButton,
   StepperCompleteButton,
-} from '@/components/ui/stepper';
+} from "@/components/ui/stepper";
 
 export default function StepperTest() {
   const [formData, setFormData] = useState({
     // Step 1: Personal Info
-    firstName: '',
-    lastName: '',
-    email: '',
-    
+    firstName: "",
+    lastName: "",
+    email: "",
+
     // Step 2: Address
-    street: '',
-    city: '',
-    country: '',
-    
+    street: "",
+    city: "",
+    country: "",
+
     // Step 3: Preferences
     notifications: false,
     newsletter: false,
-    
+
     // Step 4: Review (no fields)
   });
 
@@ -37,29 +37,29 @@ export default function StepperTest() {
     initialStep: 0,
     steps: [
       {
-        id: 'personal-info',
-        label: 'Personal Information',
-        description: 'Enter your basic details',
+        id: "personal-info",
+        label: "Personal Information",
+        description: "Enter your basic details",
       },
       {
-        id: 'address',
-        label: 'Address',
-        description: 'Where do you live?',
+        id: "address",
+        label: "Address",
+        description: "Where do you live?",
       },
       {
-        id: 'preferences',
-        label: 'Preferences',
-        description: 'Customize your experience',
+        id: "preferences",
+        label: "Preferences",
+        description: "Customize your experience",
         optional: true,
       },
       {
-        id: 'review',
-        label: 'Review & Submit',
-        description: 'Confirm your information',
+        id: "review",
+        label: "Review & Submit",
+        description: "Confirm your information",
       },
     ],
     onStepChange: (step) => {
-      console.log('Step changed to:', step);
+      console.log("Step changed to:", step);
     },
   });
 
@@ -68,8 +68,7 @@ export default function StepperTest() {
   };
 
   const handleComplete = () => {
-    console.log('Form completed with data:', formData);
-    alert('Form submitted successfully!');
+    console.log("Form completed with data:", formData);
   };
 
   return (
@@ -97,12 +96,14 @@ export default function StepperTest() {
           <StepperPanel index={0}>
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-semibold mb-4">Personal Information</h2>
+                <h2 className="text-xl font-semibold mb-4">
+                  Personal Information
+                </h2>
                 <p className="text-sm text-muted-foreground mb-6">
                   Please provide your basic information
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="firstName">
@@ -112,12 +113,14 @@ export default function StepperTest() {
                     id="firstName"
                     type="text"
                     value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("firstName", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                     placeholder="John"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="lastName">
                     Last Name
@@ -126,7 +129,9 @@ export default function StepperTest() {
                     id="lastName"
                     type="text"
                     value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("lastName", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                     placeholder="Doe"
                   />
@@ -141,7 +146,7 @@ export default function StepperTest() {
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
                   className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="john.doe@example.com"
                 />
@@ -153,7 +158,9 @@ export default function StepperTest() {
           <StepperPanel index={1}>
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-semibold mb-4">Address Information</h2>
+                <h2 className="text-xl font-semibold mb-4">
+                  Address Information
+                </h2>
                 <p className="text-sm text-muted-foreground mb-6">
                   Where should we reach you?
                 </p>
@@ -167,7 +174,7 @@ export default function StepperTest() {
                   id="street"
                   type="text"
                   value={formData.street}
-                  onChange={(e) => handleInputChange('street', e.target.value)}
+                  onChange={(e) => handleInputChange("street", e.target.value)}
                   className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="123 Main Street"
                 />
@@ -182,7 +189,7 @@ export default function StepperTest() {
                     id="city"
                     type="text"
                     value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    onChange={(e) => handleInputChange("city", e.target.value)}
                     className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                     placeholder="New York"
                   />
@@ -196,7 +203,9 @@ export default function StepperTest() {
                     id="country"
                     type="text"
                     value={formData.country}
-                    onChange={(e) => handleInputChange('country', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("country", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                     placeholder="United States"
                   />
@@ -221,7 +230,9 @@ export default function StepperTest() {
                     id="notifications"
                     type="checkbox"
                     checked={formData.notifications}
-                    onChange={(e) => handleInputChange('notifications', e.target.checked)}
+                    onChange={(e) =>
+                      handleInputChange("notifications", e.target.checked)
+                    }
                     className="w-4 h-4 rounded border-input text-primary focus:ring-2 focus:ring-ring"
                   />
                   <div className="flex-1">
@@ -242,7 +253,9 @@ export default function StepperTest() {
                     id="newsletter"
                     type="checkbox"
                     checked={formData.newsletter}
-                    onChange={(e) => handleInputChange('newsletter', e.target.checked)}
+                    onChange={(e) =>
+                      handleInputChange("newsletter", e.target.checked)
+                    }
                     className="w-4 h-4 rounded border-input text-primary focus:ring-2 focus:ring-ring"
                   />
                   <div className="flex-1">
@@ -265,7 +278,9 @@ export default function StepperTest() {
           <StepperPanel index={3}>
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-semibold mb-4">Review Your Information</h2>
+                <h2 className="text-xl font-semibold mb-4">
+                  Review Your Information
+                </h2>
                 <p className="text-sm text-muted-foreground mb-6">
                   Please review your information before submitting
                 </p>
@@ -273,11 +288,15 @@ export default function StepperTest() {
 
               <div className="space-y-4">
                 <div className="p-4 border border-border rounded-lg">
-                  <h3 className="font-semibold mb-3 text-sm">Personal Information</h3>
+                  <h3 className="font-semibold mb-3 text-sm">
+                    Personal Information
+                  </h3>
                   <dl className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <dt className="text-muted-foreground">Name:</dt>
-                      <dd className="font-medium">{formData.firstName} {formData.lastName}</dd>
+                      <dd className="font-medium">
+                        {formData.firstName} {formData.lastName}
+                      </dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-muted-foreground">Email:</dt>
@@ -309,11 +328,15 @@ export default function StepperTest() {
                   <dl className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <dt className="text-muted-foreground">Notifications:</dt>
-                      <dd className="font-medium">{formData.notifications ? 'Enabled' : 'Disabled'}</dd>
+                      <dd className="font-medium">
+                        {formData.notifications ? "Enabled" : "Disabled"}
+                      </dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-muted-foreground">Newsletter:</dt>
-                      <dd className="font-medium">{formData.newsletter ? 'Subscribed' : 'Not subscribed'}</dd>
+                      <dd className="font-medium">
+                        {formData.newsletter ? "Subscribed" : "Not subscribed"}
+                      </dd>
                     </div>
                   </dl>
                 </div>
@@ -336,4 +359,3 @@ export default function StepperTest() {
     </div>
   );
 }
-

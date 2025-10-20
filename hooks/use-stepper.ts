@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 
 export interface Step {
   id: string;
@@ -68,7 +68,7 @@ export function useStepper({
         onStepChange?.(step);
       }
     },
-    [steps.length, onStepChange]
+    [steps.length, onStepChange],
   );
 
   const reset = useCallback(() => {
@@ -80,14 +80,14 @@ export function useStepper({
     (stepIndex: number) => {
       return stepIndex < currentStep;
     },
-    [currentStep]
+    [currentStep],
   );
 
   const isStepActive = useCallback(
     (stepIndex: number) => {
       return stepIndex === currentStep;
     },
-    [currentStep]
+    [currentStep],
   );
 
   return {

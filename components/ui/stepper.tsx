@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { CheckIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { type UseStepperReturn } from '@/hooks/use-stepper';
+import * as React from "react";
+import { CheckIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { type UseStepperReturn } from "@/hooks/use-stepper";
 
 // Context for sharing stepper state across components
-interface StepperContextValue extends UseStepperReturn {}
+type StepperContextValue = UseStepperReturn;
 
 const StepperContext = React.createContext<StepperContextValue | null>(null);
 
 function useStepperContext() {
   const context = React.useContext(StepperContext);
   if (!context) {
-    throw new Error('Stepper components must be used within a Stepper');
+    throw new Error("Stepper components must be used within a Stepper");
   }
   return context;
 }
@@ -23,21 +23,21 @@ interface StepperProps {
   children: React.ReactNode;
   stepper: UseStepperReturn;
   className?: string;
-  orientation?: 'horizontal' | 'vertical';
+  orientation?: "horizontal" | "vertical";
 }
 
 export function Stepper({
   children,
   stepper,
   className,
-  orientation = 'horizontal',
+  orientation = "horizontal",
 }: StepperProps) {
   return (
     <StepperContext.Provider value={stepper}>
       <div
         className={cn(
-          'stepper',
-          orientation === 'horizontal' ? 'w-full' : 'flex flex-col',
+          "stepper",
+          orientation === "horizontal" ? "w-full" : "flex flex-col",
           className
         )}
       >
@@ -55,12 +55,7 @@ interface StepperItemsProps {
 
 export function StepperItems({ children, className }: StepperItemsProps) {
   return (
-    <ul
-      className={cn(
-        'relative flex flex-row gap-x-2',
-        className
-      )}
-    >
+    <ul className={cn("relative flex flex-row gap-x-2", className)}>
       {children}
     </ul>
   );
@@ -82,20 +77,25 @@ export function StepperItem({ index, className }: StepperItemProps) {
   if (!step) return null;
 
   return (
-    <li className={cn('shrink basis-0 flex-1 group', className)}>
+    <li className={cn("shrink basis-0 flex-1 group", className)}>
       <div className="min-w-7 min-h-7 w-full inline-flex items-center text-xs align-middle">
         <button
           type="button"
           onClick={() => goToStep(index)}
           className={cn(
-            'size-7 flex justify-center items-center shrink-0 font-medium rounded-full transition-all duration-200',
-            'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
-            isComplete && 'bg-primary text-primary-foreground hover:bg-primary/90',
-            isActive && !isComplete && 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2',
-            !isActive && !isComplete && 'bg-muted text-muted-foreground hover:bg-muted/80'
+            "size-7 flex justify-center items-center shrink-0 font-medium rounded-full transition-all duration-200",
+            "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary",
+            isComplete &&
+              "bg-primary text-primary-foreground hover:bg-primary/90",
+            isActive &&
+              !isComplete &&
+              "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2",
+            !isActive &&
+              !isComplete &&
+              "bg-muted text-muted-foreground hover:bg-muted/80"
           )}
           aria-label={`Go to ${step.label}`}
-          aria-current={isActive ? 'step' : undefined}
+          aria-current={isActive ? "step" : undefined}
         >
           {isComplete ? (
             <CheckIcon className="size-4" />
@@ -106,8 +106,8 @@ export function StepperItem({ index, className }: StepperItemProps) {
         {!isLast && (
           <div
             className={cn(
-              'ms-2 w-full h-px flex-1 transition-colors duration-200',
-              isComplete ? 'bg-primary' : 'bg-border'
+              "ms-2 w-full h-px flex-1 transition-colors duration-200",
+              isComplete ? "bg-primary" : "bg-border"
             )}
           />
         )}
@@ -115,9 +115,9 @@ export function StepperItem({ index, className }: StepperItemProps) {
       <div className="mt-3">
         <span
           className={cn(
-            'block text-sm font-medium transition-colors duration-200',
-            isActive && 'text-foreground',
-            !isActive && 'text-muted-foreground'
+            "block text-sm font-medium transition-colors duration-200",
+            isActive && "text-foreground",
+            !isActive && "text-muted-foreground"
           )}
         >
           {step.label}
@@ -144,11 +144,7 @@ interface StepperContentProps {
 }
 
 export function StepperContent({ children, className }: StepperContentProps) {
-  return (
-    <div className={cn('mt-8 mb-8', className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn("mt-8 mb-8", className)}>{children}</div>;
 }
 
 // StepperPanel - Individual step content panel
@@ -158,7 +154,11 @@ interface StepperPanelProps {
   className?: string;
 }
 
-export function StepperPanel({ index, children, className }: StepperPanelProps) {
+export function StepperPanel({
+  index,
+  children,
+  className,
+}: StepperPanelProps) {
   const { currentStep } = useStepperContext();
   const isActive = currentStep === index;
 
@@ -168,7 +168,7 @@ export function StepperPanel({ index, children, className }: StepperPanelProps) 
     <div
       role="tabpanel"
       aria-labelledby={`step-${index}`}
-      className={cn('animate-in fade-in-50 duration-200', className)}
+      className={cn("animate-in fade-in-50 duration-200", className)}
     >
       {children}
     </div>
@@ -183,7 +183,7 @@ interface StepperActionsProps {
 
 export function StepperActions({ children, className }: StepperActionsProps) {
   return (
-    <div className={cn('flex items-center justify-between gap-4', className)}>
+    <div className={cn("flex items-center justify-between gap-4", className)}>
       {children}
     </div>
   );
@@ -196,7 +196,7 @@ interface StepperPreviousButtonProps
 }
 
 export function StepperPreviousButton({
-  children = 'Previous',
+  children = "Previous",
   className,
   ...props
 }: StepperPreviousButtonProps) {
@@ -208,11 +208,11 @@ export function StepperPreviousButton({
       onClick={previousStep}
       disabled={!canGoPrevious}
       className={cn(
-        'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        'disabled:opacity-50 disabled:pointer-events-none',
-        'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
-        'h-10 px-4 py-2',
+        "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "disabled:opacity-50 disabled:pointer-events-none",
+        "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        "h-10 px-4 py-2",
         className
       )}
       {...props}
@@ -229,7 +229,7 @@ interface StepperNextButtonProps
 }
 
 export function StepperNextButton({
-  children = 'Next',
+  children = "Next",
   className,
   ...props
 }: StepperNextButtonProps) {
@@ -241,11 +241,11 @@ export function StepperNextButton({
       onClick={nextStep}
       disabled={!canGoNext}
       className={cn(
-        'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        'disabled:opacity-50 disabled:pointer-events-none',
-        'bg-primary text-primary-foreground hover:bg-primary/90',
-        'h-10 px-4 py-2',
+        "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "disabled:opacity-50 disabled:pointer-events-none",
+        "bg-primary text-primary-foreground hover:bg-primary/90",
+        "h-10 px-4 py-2",
         className
       )}
       {...props}
@@ -262,7 +262,7 @@ interface StepperCompleteButtonProps
 }
 
 export function StepperCompleteButton({
-  children = 'Complete',
+  children = "Complete",
   className,
   ...props
 }: StepperCompleteButtonProps) {
@@ -274,11 +274,11 @@ export function StepperCompleteButton({
     <button
       type="button"
       className={cn(
-        'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        'disabled:opacity-50 disabled:pointer-events-none',
-        'bg-primary text-primary-foreground hover:bg-primary/90',
-        'h-10 px-4 py-2',
+        "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "disabled:opacity-50 disabled:pointer-events-none",
+        "bg-primary text-primary-foreground hover:bg-primary/90",
+        "h-10 px-4 py-2",
         className
       )}
       {...props}
