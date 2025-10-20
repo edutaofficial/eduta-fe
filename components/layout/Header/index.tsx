@@ -156,7 +156,7 @@ export default function Header({ loggedIn }: { loggedIn: boolean }) {
                 </NavigationMenuTrigger>
                 <NavMenuContentModified triggerRef={categoriesTriggerRef}>
                   <ul className="grid w-[25rem] gap-2 p-4 md:w-[31.25rem] md:grid-cols-2 lg:w-[37.5rem]">
-                    {CONSTANTS.CATEGORIES.map((category) => (
+                    {CONSTANTS.CATEGORIES.slice(0, 6).map((category) => (
                       <li key={category.id}>
                         <NavigationMenuLink asChild>
                           <Link
