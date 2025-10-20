@@ -2,29 +2,60 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
-import pluginNext from "@next/eslint-plugin-next";
 import pluginJsxA11y from "eslint-plugin-jsx-a11y";
+import { FlatCompat } from "@eslint/eslintrc";
+import path from "path";
+import { fileURLToPath } from "url";
 
-export default [
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+const config = [
   // Global ignores - must be first
+  // Migrated from .eslintignore (no longer supported in flat config)
   {
     ignores: [
+      // Dependencies
       "**/node_modules/**",
       "**/.pnp/**",
       "**/.pnp.*",
       "**/.yarn/**",
+      "!**/.yarn/patches/**",
+      "!**/.yarn/plugins/**",
+      "!**/.yarn/releases/**",
+      "!**/.yarn/versions/**",
+      
+      // Testing
       "**/coverage/**",
+      
+      // Next.js
       "**/.next/**",
       "**/out/**",
+      
+      // Production
       "**/build/**",
+      
+      // Misc
       "**/.DS_Store",
       "**/*.pem",
+      
+      // Debug logs
       "**/npm-debug.log*",
       "**/yarn-debug.log*",
       "**/yarn-error.log*",
       "**/.pnpm-debug.log*",
+      
+      // Environment files
       "**/.env*",
+      
+      // Vercel
       "**/.vercel/**",
+      
+      // TypeScript
       "**/*.tsbuildinfo",
       "**/next-env.d.ts",
     ],
@@ -51,6 +82,9 @@ export default [
 
   // TypeScript configuration
   ...tseslint.configs.recommended,
+
+  // Next.js Core Web Vitals configuration
+  ...compat.extends("next/core-web-vitals"),
 
   // React configuration with strict rules
   {
@@ -119,31 +153,6 @@ export default [
       react: {
         version: "detect",
       },
-    },
-  },
-
-  // Next.js configuration with Core Web Vitals
-  {
-    files: ["**/*.{js,jsx,ts,tsx}"],
-    plugins: {
-      "@next/next": pluginNext,
-    },
-    rules: {
-      // Next.js specific rules
-      "@next/next/no-html-link-for-pages": "error",
-      "@next/next/no-img-element": "error",
-      "@next/next/no-page-custom-font": "off",
-      "@next/next/no-sync-scripts": "error",
-      "@next/next/no-title-in-document-head": "error",
-      "@next/next/no-unwanted-polyfillio": "error",
-      "@next/next/no-css-tags": "error",
-      "@next/next/no-head-element": "error",
-      "@next/next/no-head-import-in-document": "error",
-      "@next/next/no-script-component-in-head": "error",
-      "@next/next/no-styled-jsx-in-document": "error",
-      "@next/next/no-typos": "error",
-      "@next/next/no-document-import-in-page": "error",
-      "@next/next/no-duplicate-head": "error",
     },
   },
 
@@ -216,3 +225,5 @@ export default [
     },
   },
 ];
+
+export default config;

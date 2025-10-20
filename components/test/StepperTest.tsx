@@ -58,8 +58,8 @@ export default function StepperTest() {
         description: "Confirm your information",
       },
     ],
-    onStepChange: (step) => {
-      console.log("Step changed to:", step);
+    onStepChange: () => {
+      // Step change handler
     },
   });
 
@@ -68,7 +68,8 @@ export default function StepperTest() {
   };
 
   const handleComplete = () => {
-    console.log("Form completed with data:", formData);
+    // Form submission handler - would send data to backend
+    // formData contains all the user's information
   };
 
   return (
