@@ -28,7 +28,7 @@ export default function MobileSearchModal({
 
       {/* Search Content */}
       <div className="p-4">
-        <SearchComponent />
+        <SearchComponent alwaysShowResults={true} />
       </div>
     </div>
   );

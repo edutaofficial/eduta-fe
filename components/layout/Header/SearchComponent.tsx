@@ -13,9 +13,16 @@ import { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-export default function SearchComponent() {
+export default function SearchComponent({
+  alwaysShowResults = false,
+}: {
+  alwaysShowResults?: boolean;
+}) {
   const [search, setSearch] = useState("");
   const [showResults, setShowResults] = useState(false);
+
+  const shouldShowResults = alwaysShowResults || showResults;
+
   return (
     <Command className="relative group w-full md:w-[24.375rem] rounded-md overflow-visible">
       <CommandInput
@@ -29,7 +36,8 @@ export default function SearchComponent() {
       <CommandList
         className={cn(
           "max-h-[18.75rem] bg-white overflow-y-auto absolute top-10 left-0 w-full",
-          showResults ? "block" : "hidden"
+          shouldShowResults ? "block" : "hidden",
+          alwaysShowResults ? "max-h-[none] " : "max-h-[18.75rem]"
         )}
       >
         <CommandEmpty>No results found.</CommandEmpty>
