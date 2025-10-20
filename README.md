@@ -9,12 +9,14 @@
 **Eduta** is a modern e-learning platform designed to compete with industry leaders. The platform serves two primary user groups: students seeking quality educational content and instructors looking to share their expertise and generate income.
 
 ### 🎯 Business Goals
+
 - Create an intuitive and engaging learning experience
 - Enable instructors to easily create and monetize courses
 - Build a scalable platform for growth
 - Establish a competitive presence in the e-learning market
 
 ### 🔗 Project Management
+
 **Trello Board**: [View Project Board](https://trello.com/b/UwJIDskc/eduta-fe)
 
 ---
@@ -24,33 +26,33 @@
 ### Sprint 1 Overview
 
 ```
-Overall Completion: ▓░░░░░░░░░ 0% (0/48 tickets completed)
+Overall Completion: ▓▓░░░░░░░░ 15% (7/48 tickets completed)
 Estimated Timeline: 87 working days (~17-18 weeks)
-Start Date: 16 Oct 2025
+Start Date: 18 Oct 2025
 Target Completion: 12 Jan 2026
 ```
 
 ### Phase Status Tracker
 
-| Phase | Focus Area | Duration | Status | Progress |
-|-------|-----------|----------|--------|----------|
-| **Phase 1** | Foundation & Setup | 7 days | 🔴 Not Started | 0/3 tasks |
-| **Phase 2** | Public Website Pages | 20 days | 🔴 Not Started | 0/16 tasks |
-| **Phase 3** | User Registration & Login | 7 days | 🔴 Not Started | 0/4 tasks |
-| **Phase 4** | Student Features | 16 days | 🔴 Not Started | 0/9 tasks |
-| **Phase 5** | Instructor Features | 23 days | 🔴 Not Started | 0/10 tasks |
-| **Phase 6** | Blog & Content | 4 days | 🔴 Not Started | 0/2 tasks |
-| **Phase 7** | Quality Assurance | 9 days | 🔴 Not Started | 0/4 tasks |
+| Phase       | Focus Area                | Duration | Status         | Progress   |
+| ----------- | ------------------------- | -------- | -------------- | ---------- |
+| **Phase 1** | Foundation & Setup        | 7 days   | 🔴 Not Started | 0/3 tasks  |
+| **Phase 2** | Public Website Pages      | 20 days  | 🔴 Not Started | 0/16 tasks |
+| **Phase 3** | User Registration & Login | 7 days   | 🔴 Not Started | 0/4 tasks  |
+| **Phase 4** | Student Features          | 16 days  | 🔴 Not Started | 0/9 tasks  |
+| **Phase 5** | Instructor Features       | 23 days  | 🔴 Not Started | 0/10 tasks |
+| **Phase 6** | Blog & Content            | 4 days   | 🔴 Not Started | 0/2 tasks  |
+| **Phase 7** | Quality Assurance         | 9 days   | 🔴 Not Started | 0/4 tasks  |
 
 ### Key Metrics
 
-| Metric | Current Value | Target |
-|--------|---------------|--------|
-| **Completed Tasks** | 0 / 48 | 48 |
-| **Days Elapsed** | 0 days | 87 days |
-| **On Schedule** | ✅ Yes | - |
-| **Blockers** | 0 | 0 |
-| **Sprint Health** | 🟢 Healthy | - |
+| Metric              | Current Value | Target  |
+| ------------------- | ------------- | ------- |
+| **Completed Tasks** | 7 / 48        | 48      |
+| **Days Elapsed**    | 2 days        | 87 days |
+| **On Schedule**     | ✅ Yes        | -       |
+| **Blockers**        | 0             | 0       |
+| **Sprint Health**   | 🟢 Healthy    | -       |
 
 ---
 
@@ -59,6 +61,7 @@ Target Completion: 12 Jan 2026
 ### 🌐 Public Website Features
 
 **Home Page**
+
 - Attractive hero section to capture visitor attention
 - Browse courses by category
 - Showcase featured and popular courses
@@ -66,6 +69,7 @@ Target Completion: 12 Jan 2026
 - Frequently asked questions section
 
 **Course Catalog**
+
 - Search for courses by keyword
 - Filter courses by category, price, level, and ratings
 - Sort courses by popularity, rating, or date
@@ -73,6 +77,7 @@ Target Completion: 12 Jan 2026
 - Read reviews from other students
 
 **Blog Section**
+
 - Educational articles and resources
 - Industry insights and trends
 - Learning tips and success stories
@@ -82,23 +87,27 @@ Target Completion: 12 Jan 2026
 ### 👨‍🎓 Student Features
 
 **Learning Dashboard**
+
 - View all enrolled courses in one place
 - Track progress for each course
 - Resume learning from where you left off
 - Rate and review completed courses
 
 **Wishlist**
+
 - Save interesting courses for later
 - Quick access to saved courses
 - One-click enrollment
 
 **Certificates**
+
 - Access earned certificates
 - Download certificates in PDF format
 - Share verification links with employers
 - Track completion dates
 
 **Video Learning Experience**
+
 - High-quality video player
 - Adjustable playback speed
 - Automatic progress tracking
@@ -106,6 +115,7 @@ Target Completion: 12 Jan 2026
 - Access course resources and materials
 
 **Account Management**
+
 - Update personal information
 - Change password securely
 - Manage profile picture
@@ -116,6 +126,7 @@ Target Completion: 12 Jan 2026
 ### 👨‍🏫 Instructor Features
 
 **Course Management**
+
 - Create new courses with step-by-step guidance
 - Manage existing courses (edit, publish, unpublish)
 - Track draft courses awaiting completion
@@ -123,17 +134,20 @@ Target Completion: 12 Jan 2026
 - Organize content into sections and lectures
 
 **Course Creation Workflow**
+
 1. **Course Details**: Set title, description, category, and upload promotional materials
 2. **Build Curriculum**: Add sections, lectures, and resources
 3. **Set Pricing**: Choose pricing strategy for your course
 4. **Publish**: Review and launch your course
 
 **Student Communication**
+
 - Send announcements to enrolled students
 - Target specific courses or all students
 - Keep learners engaged and informed
 
 **Business Analytics**
+
 - Track course impressions and views
 - Monitor student enrollments
 - View average ratings
@@ -142,6 +156,7 @@ Target Completion: 12 Jan 2026
 - Compare performance across courses
 
 **Revenue Management**
+
 - View total earnings
 - Track pending payments
 - Understand payment release schedules
@@ -153,9 +168,11 @@ Target Completion: 12 Jan 2026
 ## 👥 User Types
 
 ### Students
+
 Students can discover courses, learn at their own pace, track progress, earn certificates, and build their skills across various subjects.
 
 ### Instructors
+
 Instructors can create comprehensive courses, manage their content, communicate with students, analyze performance, and generate revenue from their expertise.
 
 ---
@@ -163,9 +180,11 @@ Instructors can create comprehensive courses, manage their content, communicate 
 ## 📅 Development Roadmap
 
 ### Current Sprint (Sprint 1) - Frontend Development
+
 **Focus**: Building the complete user interface and user experience
 
 **Deliverables**:
+
 - Fully functional website pages
 - Student dashboard and learning interface
 - Instructor dashboard and course creation tools
@@ -175,9 +194,11 @@ Instructors can create comprehensive courses, manage their content, communicate 
 - Quality assurance and testing
 
 ### Next Sprint (Sprint 2) - Backend Integration
+
 **Focus**: Connecting frontend to backend services
 
 **Planned Items**:
+
 - User authentication and authorization
 - Course data management
 - Video streaming and file uploads
@@ -186,6 +207,7 @@ Instructors can create comprehensive courses, manage their content, communicate 
 - Email notifications
 
 ### Future Enhancements (Backlog)
+
 - Mobile applications (iOS & Android)
 - Live class functionality
 - Discussion forums
@@ -200,6 +222,7 @@ Instructors can create comprehensive courses, manage their content, communicate 
 ## 📊 Success Metrics
 
 ### Development KPIs
+
 - ✅ All planned features implemented
 - ✅ Zero critical bugs in production
 - ✅ Platform works on all major browsers
@@ -207,6 +230,7 @@ Instructors can create comprehensive courses, manage their content, communicate 
 - ✅ Fast page load times (under 3 seconds)
 
 ### Future Business KPIs (Post-Launch)
+
 - Number of registered students
 - Number of active instructors
 - Courses published
@@ -220,14 +244,21 @@ Instructors can create comprehensive courses, manage their content, communicate 
 ## 🚀 Current Status
 
 ### ✅ Completed
+
 - Design phase completed in Figma
 - Project planning and task breakdown
 - Development environment setup ready to begin
+- Explore Courses section implemented (categories, subcategories, slider, course cards)
+- Reusable Slider component with navigation/pagination
+- Reusable CourseCard component
+- Header categories now sourced from constants and sliced to top 6
 
 ### 🔄 In Progress
-- Awaiting development kickoff
+
+- Homepage integration and polishing (Hero + Explore Courses)
 
 ### ⏳ Upcoming
+
 - Foundation setup (design system, routing)
 - Public pages development
 - Authentication system
@@ -261,11 +292,12 @@ Instructors can create comprehensive courses, manage their content, communicate 
 
 ## 🔄 Document Updates
 
-| Date | Update | Updated By |
-|------|--------|------------|
-| [Current Date] | Initial document created | Development Team |
+| Date       | Update                                                                                                                                  | Updated By       |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| 2025-10-20 | Progress updated: 7 tickets completed; Explore Courses section added; days elapsed set to 2 (Started Sat 2025-10-18, Sun off, Mon work) | Development Team |
+| 2025-10-16 | Initial document created                                                                                                                | Development Team |
 
 ---
 
-**Last Updated**: [To be filled]  
-**Next Review Date**: [To be filled]
+**Last Updated**: 2025-10-20  
+**Next Review Date**: 2025-10-27

@@ -264,3 +264,17 @@ html {
   }
 }
 
+/* Hero Swiper Pagination Styles */
+.hero-pagination .swiper-pagination-bullet {
+  width: 12px;
+  height: 12px;
+  background: #d1d5db;
+  opacity: 1;
+  transition: all 0.3s ease;
+}
+
+.hero-pagination .swiper-pagination-bullet-active {
+  background: #2977A9;
+  width: 32px;
+  border-radius: 6px;
+}

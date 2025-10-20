@@ -1,4 +1,31 @@
 export const CONSTANTS = {
+  // HERO - slides data for homepage hero section
+  HERO_SLIDES: [
+    {
+      id: 1,
+      title: "Master Web Development Skills",
+      subtitle: "Learn from Industry Experts",
+      description: "Build real-world projects with modern technologies",
+      image: "https://placehold.co/650x650/2977A9/FFFFFF/png?text=Web+Development",
+      buttonText: "Start for free",
+    },
+    {
+      id: 2,
+      title: "Advance Your Career Today",
+      subtitle: "Transform Your Future",
+      description: "Join thousands of successful graduates worldwide",
+      image: "https://placehold.co/650x650/10B981/FFFFFF/png?text=Career+Growth",
+      buttonText: "Start for free",
+    },
+    {
+      id: 3,
+      title: "Learn at Your Own Pace",
+      subtitle: "Flexible Online Learning",
+      description: "Access courses anytime, anywhere on any device",
+      image: "https://placehold.co/650x650/F59E0B/FFFFFF/png?text=Online+Learning",
+      buttonText: "Start for free",
+    },
+  ],
   PLACEHOLDER_IMAGE: (width: number, height: number) =>
     `https://placehold.co/${width}x${height}.svg`,
 
@@ -72,6 +99,20 @@ export const CONSTANTS = {
         "Understand security fundamentals and protect applications from threats.",
       href: "/category/cybersecurity",
     },
+    {
+      id: "7",
+      name: "DevOps",
+      description:
+        "Automate, deploy, and monitor modern applications with CI/CD and tooling.",
+      href: "/category/devops",
+    },
+    {
+      id: "8",
+      name: "Product Management",
+      description:
+        "Learn discovery, roadmapping, prioritization, and shipping customer value.",
+      href: "/category/product-management",
+    },
   ],
 
   // TEMPORARY DATA - Replace with backend data in production
@@ -82,7 +123,154 @@ export const CONSTANTS = {
     fallback: "JD",
   },
 
- 
+  // Explore Courses - categories and demo courses
+  COURSE_CATEGORIES: [
+    {
+      id: "web-dev",
+      name: "Web Development",
+      subcategories: [
+        "JavaScript",
+        "React",
+        "Next.js",
+        "TypeScript",
+        "Node.js",
+        "CSS",
+        "Tailwind",
+      ],
+    },
+    {
+      id: "data",
+      name: "Data & Analytics",
+      subcategories: [
+        "Python",
+        "Pandas",
+        "SQL",
+        "Machine Learning",
+        "Deep Learning",
+        "Power BI",
+        "R",
+      ],
+    },
+    {
+      id: "design",
+      name: "Design",
+      subcategories: [
+        "UI/UX",
+        "Figma",
+        "Prototyping",
+        "Design Systems",
+        "Accessibility",
+        "Motion",
+      ],
+    },
+    {
+      id: "mobile",
+      name: "Mobile Development",
+      subcategories: [
+        "Flutter",
+        "React Native",
+        "Swift",
+        "Kotlin",
+        "Firebase",
+      ],
+    },
+    {
+      id: "cloud",
+      name: "Cloud & DevOps",
+      subcategories: [
+        "AWS",
+        "Azure",
+        "GCP",
+        "Docker",
+        "Kubernetes",
+        "CI/CD",
+      ],
+    },
+    {
+      id: "business",
+      name: "Business & PM",
+      subcategories: [
+        "Product Management",
+        "Agile",
+        "Scrum",
+        "Leadership",
+        "OKRs",
+      ],
+    },
+  ],
+
+  COURSES: [
+    {
+      id: "c1",
+      title: "Modern React & TypeScript",
+      company: "Eduta Originals",
+      image: "https://placehold.co/600x360/png?text=React+%2B+TS",
+      rating: 4.5,
+      ratingCount: 1233,
+      enrollments: 120,
+      impressions: 340,
+      featured: true,
+      categoryId: "web-dev",
+      subcategory: "React",
+      price: 0,
+    },
+    {
+      id: "c2",
+      title: "Next.js 15 App Router Mastery",
+      company: "Eduta",
+      image: "https://placehold.co/600x360/png?text=Next.js+15",
+      rating: 4.6,
+      ratingCount: 987,
+      enrollments: 220,
+      impressions: 680,
+      featured: true,
+      categoryId: "web-dev",
+      subcategory: "Next.js",
+      price: 0,
+    },
+    {
+      id: "c3",
+      title: "Python for Data Analysis",
+      company: "DataPro",
+      image: "https://placehold.co/600x360/png?text=Python+Data",
+      rating: 4.4,
+      ratingCount: 1500,
+      enrollments: 300,
+      impressions: 1050,
+      featured: false,
+      categoryId: "data",
+      subcategory: "Python",
+      price: 0,
+    },
+    {
+      id: "c4",
+      title: "Figma to Design Systems",
+      company: "DesignLab",
+      image: "https://placehold.co/600x360/png?text=Figma+Design+Systems",
+      rating: 4.7,
+      ratingCount: 640,
+      enrollments: 180,
+      impressions: 420,
+      featured: true,
+      categoryId: "design",
+      subcategory: "Design Systems",
+      price: 0,
+    },
+    {
+      id: "c5",
+      title: "Flutter from Zero to Hero",
+      company: "MobileWorks",
+      image: "https://placehold.co/600x360/png?text=Flutter",
+      rating: 4.5,
+      ratingCount: 1110,
+      enrollments: 260,
+      impressions: 770,
+      featured: false,
+      categoryId: "mobile",
+      subcategory: "Flutter",
+      price: 0,
+    },
+  ],
 
   // TEMPORARY DATA - Replace with backend data in production
   FOOTER_CATEGORIES: [
@@ -235,4 +423,9 @@ export const CONSTANTS = {
     linkedin: "https://linkedin.com/company/eduta",
     youtube: "https://youtube.com/@eduta",
   },
+ STUDENT_PROFILES: [
+    { id: 1, image: "https://i.pravatar.cc/150?img=1", name: "Student 1" },
+    { id: 2, image: "https://i.pravatar.cc/150?img=2", name: "Student 2" },
+    { id: 3, image: "https://i.pravatar.cc/150?img=3", name: "Student 3" },
+  ],
 };

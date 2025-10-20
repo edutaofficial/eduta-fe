@@ -1,5 +1,10 @@
-import { UnderDevelopment } from "@/components/Common";
+import { Categories, Hero } from "@/components/Home";
 
 export default function Page() {
-  return <UnderDevelopment />;
+  return (
+    <>
+      <Hero />
+      <Categories />
+    </>
+  );
 }
