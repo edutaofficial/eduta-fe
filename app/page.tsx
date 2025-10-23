@@ -1,4 +1,9 @@
-import { ExploreCourses, Hero, Categories } from "@/components/Home";
+import {
+  ExploreCourses,
+  Hero,
+  Categories,
+  FeaturedCourses,
+} from "@/components/Home";
 
 export default function Page() {
   return (
@@ -6,6 +11,7 @@ export default function Page() {
       <Hero />
       <Categories />
       <ExploreCourses />
+      <FeaturedCourses />
     </>
   );
 }

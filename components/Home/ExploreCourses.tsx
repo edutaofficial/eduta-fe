@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
@@ -16,13 +15,13 @@ import {
 import { CONSTANTS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { SearchIcon } from "lucide-react";
-
+import { useState } from "react";
 export default function ExploreCourses() {
-  const [activeCategory, setActiveCategory] = React.useState(
+  const [activeCategory, setActiveCategory] = useState(
     CONSTANTS.COURSE_CATEGORIES[0]?.id
   );
 
-  const [activeSubcategory, setActiveSubcategory] = React.useState<
+  const [activeSubcategory, setActiveSubcategory] = useState<
     string | null
   >(null);
 
