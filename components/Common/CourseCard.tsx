@@ -31,13 +31,17 @@ export function CourseCard({
 }: CourseCardProps) {
   return (
     <div
-      className={cn(
-        "rounded-xl border bg-white shadow-sm overflow-hidden",
-        className
-      )}
+      className={cn("rounded-md bg-white shadow-sm overflow-hidden", className)}
     >
       <div className="relative aspect-[3/2] w-full bg-default-100">
         <Image src={image} alt={title} fill className="object-cover" />
+        <div className="absolute top-4 right-4 bg-white rounded-md">
+          {featured ? (
+            <Badge variant="secondary">Featured</Badge>
+          ) : (
+            <Badge>Course</Badge>
+          )}
+        </div>
       </div>
       <div className="p-4 space-y-3">
         <div className="space-y-1">
@@ -69,7 +73,7 @@ export function CourseCard({
           </div>
           <div className="flex items-center gap-1 text-muted-foreground">
             <UsersIcon className="size-4" />
-            <span className="text-xs font-medium">{enrollments}+ enrolled</span>
+            <span className="text-xs font-medium">{enrollments}+</span>
           </div>
         </div>
 
@@ -83,19 +87,6 @@ export function CourseCard({
             <EyeIcon className="size-4" />
             <span className="text-xs font-medium">{impressions}+</span>
           </div>
-        </div>
-
-        <div className="pt-1">
-          {featured ? (
-            <Badge
-              variant="secondary"
-              className="border-primary-300 text-primary-700 bg-primary-50"
-            >
-              Featured
-            </Badge>
-          ) : (
-            <Badge variant="outline">Course</Badge>
-          )}
         </div>
       </div>
     </div>

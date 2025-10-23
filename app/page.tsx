@@ -1,10 +1,11 @@
-import { Categories, Hero } from "@/components/Home";
+import { ExploreCourses, Hero, Categories } from "@/components/Home";
 
 export default function Page() {
   return (
     <>
       <Hero />
       <Categories />
+      <ExploreCourses />
     </>
   );
 }
