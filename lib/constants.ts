@@ -423,9 +423,92 @@ export const CONSTANTS = {
     linkedin: "https://linkedin.com/company/eduta",
     youtube: "https://youtube.com/@eduta",
   },
- STUDENT_PROFILES: [
+  STUDENT_PROFILES: [
     { id: 1, image: "https://i.pravatar.cc/150?img=1", name: "Student 1" },
     { id: 2, image: "https://i.pravatar.cc/150?img=2", name: "Student 2" },
     { id: 3, image: "https://i.pravatar.cc/150?img=3", name: "Student 3" },
+  ],
+
+  // Testimonials data
+  TESTIMONIALS: [
+    {
+      id: 1,
+      reviewHeading: "Transformed My Career Completely",
+      reviewDescription: "The React course was absolutely amazing! I went from knowing nothing about web development to landing my dream job as a frontend developer. The instructors are world-class and the projects are real-world applicable.",
+      videoLink: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      thumbnailLink: "https://placehold.co/400x300/2977A9/FFFFFF/png?text=Video+Thumbnail+1",
+      userName: "Sarah Johnson",
+      ratingCount: 4.8,
+    },
+    {
+      id: 2,
+      reviewHeading: "Best Investment I Ever Made",
+      reviewDescription: "Eduta's data science program changed everything for me. The hands-on approach and practical projects helped me understand complex concepts easily. Now I'm working as a data scientist at a top tech company.",
+      videoLink: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      thumbnailLink: "https://placehold.co/400x300/10B981/FFFFFF/png?text=Video+Thumbnail+2",
+      userName: "Michael Chen",
+      ratingCount: 4.9,
+    },
+    {
+      id: 3,
+      reviewHeading: "Exceeded All My Expectations",
+      reviewDescription: "The mobile development course was incredible! I learned Flutter from scratch and built my first app within 3 months. The community support and instructor feedback were outstanding throughout the journey.",
+      videoLink: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      thumbnailLink: "https://placehold.co/400x300/F59E0B/FFFFFF/png?text=Video+Thumbnail+3",
+      userName: "Emily Rodriguez",
+      ratingCount: 4.7,
+    },
+    {
+      id: 4,
+      reviewHeading: "From Zero to Hero in 6 Months",
+      reviewDescription: "I had no programming background, but Eduta's structured learning path made everything click. The step-by-step approach and real-world projects gave me the confidence to start my own tech startup.",
+      videoLink: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      thumbnailLink: "https://placehold.co/400x300/EF4444/FFFFFF/png?text=Video+Thumbnail+4",
+      userName: "David Kim",
+      ratingCount: 4.6,
+    },
+    {
+      id: 5,
+      reviewHeading: "Life-Changing Learning Experience",
+      reviewDescription: "The design course opened up a whole new world for me. I learned not just the tools, but the thinking process behind great design. Now I'm a UX designer at a Fortune 500 company, all thanks to Eduta!",
+      videoLink: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      thumbnailLink: "https://placehold.co/400x300/8B5CF6/FFFFFF/png?text=Video+Thumbnail+5",
+      userName: "Lisa Thompson",
+      ratingCount: 4.9,
+    },
+  ],
+
+  // FAQ data
+  FAQS: [
+    {
+      id: 1,
+      question: "How do I get started with Eduta courses?",
+      answer: "Getting started is easy! Simply browse our course catalog, select a course that interests you, and click 'Start for free'. You'll have immediate access to all course materials and can learn at your own pace. No credit card required for free courses.",
+    },
+    {
+      id: 2,
+      question: "Are the courses really free?",
+      answer: "Yes! All our courses are completely free. We believe in making quality education accessible to everyone. You can access all course materials, videos, and resources without any cost or hidden fees.",
+    },
+    {
+      id: 3,
+      question: "Do I get a certificate after completing a course?",
+      answer: "Yes, upon successful completion of any course, you'll receive a digital certificate that you can share on LinkedIn and add to your resume. Our certificates are recognized by employers worldwide.",
+    },
+    {
+      id: 4,
+      question: "How long do I have access to the course materials?",
+      answer: "You have lifetime access to all course materials once you enroll. You can revisit the content anytime, anywhere, and continue learning at your own pace without any time restrictions.",
+    },
+    {
+      id: 5,
+      question: "What if I need help during the course?",
+      answer: "We provide multiple support channels including community forums, instructor Q&A sessions, and peer-to-peer learning groups. Our instructors and community are always ready to help you succeed.",
+    },
+    {
+      id: 6,
+      question: "Can I learn on mobile devices?",
+      answer: "Absolutely! Our platform is fully responsive and works seamlessly on desktop, tablet, and mobile devices. You can learn anywhere, anytime with our mobile-optimized interface.",
+    },
   ],
 };

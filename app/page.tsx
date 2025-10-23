@@ -3,6 +3,8 @@ import {
   Hero,
   Categories,
   FeaturedCourses,
+  Testimonials,
+  FAQ as FAQComponent,
 } from "@/components/Home";
 
 export default function Page() {
@@ -12,6 +14,8 @@ export default function Page() {
       <Categories />
       <ExploreCourses />
       <FeaturedCourses />
+      <Testimonials />
+      <FAQComponent />
     </>
   );
 }

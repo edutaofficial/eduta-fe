@@ -10,7 +10,7 @@ export default function FeaturedCourses() {
       {/* Top Badge + Headings */}
       <div className="space-y-4 text-center md:text-left max-w-container mx-auto md:px-6 px-4 ">
         <div className="flex flex-col items-center md:items-start gap-6">
-          <Badge variant="secondary">Student Favorite</Badge>
+          <Badge>Student Favorite</Badge>
           <h2 className="text-2xl md:text-4xl font-semibold text-default-900">
             Featured Courses
           </h2>
@@ -36,9 +36,7 @@ export default function FeaturedCourses() {
           }}
           slideClassName="pb-4"
           pagination={{
-            enabled: true,
-            clickable: true,
-            className: "hero-pagination",
+            enabled: false,
           }}
         >
           {CONSTANTS.COURSES.map((course) => (
