@@ -41,11 +41,13 @@ import { SwitchDemo } from "@/components/test/SwitchTest";
 import { TableDemo } from "@/components/test/TableTest";
 import StepperTest from "@/components/test/StepperTest";
 import Header from "@/components/layout/Header";
+import { ComboboxDemo } from "@/components/test/combo-box";
 export default function Home() {
   return (
     <div className="font-sans grid grid-rows-[1.25rem_1fr_1.25rem] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 bg-default-50">
-      <Header loggedIn={true} />
+      <Header />
       <main className="flex flex-col gap-[2rem] row-start-2 items-center sm:items-start">
+        <ComboboxDemo />
         <StepperTest />
         <TableDemo />
         <SwitchDemo />

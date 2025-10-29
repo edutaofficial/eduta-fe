@@ -21,9 +21,23 @@ import {
   LogOutIcon,
 } from "lucide-react";
 import { CONSTANTS } from "@/lib/constants";
+import type { User } from "@/lib/context/AuthContext";
 
-export default function MobileUserDrawer() {
+interface MobileUserDrawerProps {
+  user: User | null;
+  onLogout: () => void;
+}
+
+export default function MobileUserDrawer({
+  user,
+  onLogout,
+}: MobileUserDrawerProps) {
   const [open, setOpen] = React.useState(false);
+
+  const handleLogout = () => {
+    setOpen(false);
+    onLogout();
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -44,14 +58,16 @@ export default function MobileUserDrawer() {
         <div className="flex items-center gap-3 p-4">
           <Avatar className="size-14">
             <AvatarImage src={CONSTANTS.USER_DATA.avatar} />
-            <AvatarFallback>{CONSTANTS.USER_DATA.fallback}</AvatarFallback>
+            <AvatarFallback>
+              {user?.name?.charAt(0).toUpperCase() || "U"}
+            </AvatarFallback>
           </Avatar>
           <div className="flex flex-col gap-1">
             <p className="text-sm font-semibold line-clamp-1">
-              {CONSTANTS.USER_DATA.name}
+              {user?.name || CONSTANTS.USER_DATA.name}
             </p>
             <p className="text-xs text-muted-foreground line-clamp-1">
-              {CONSTANTS.USER_DATA.email}
+              {user?.email || CONSTANTS.USER_DATA.email}
             </p>
           </div>
         </div>
@@ -126,14 +142,13 @@ export default function MobileUserDrawer() {
 
         {/* Logout Section */}
         <div className="p-4 pb-8">
-          <Link
-            href="#"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors text-destructive"
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors text-destructive w-full text-left"
           >
             <LogOutIcon className="size-5" />
             <span className="text-sm">Log Out</span>
-          </Link>
+          </button>
         </div>
       </SheetContent>
     </Sheet>

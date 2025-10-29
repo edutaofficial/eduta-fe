@@ -1,5 +1,5 @@
 import { UnderDevelopment } from "@/components/Common";
 
-export default function LoginPage() {
+export default function BlogPage() {
   return <UnderDevelopment />;
 }

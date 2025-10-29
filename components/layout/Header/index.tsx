@@ -22,6 +22,7 @@ import MobileUserDrawer from "./MobileUserDrawer";
 import MobileSearchModal, { MobileSearchTrigger } from "./MobileSearchModal";
 import { CONSTANTS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/context/AuthContext";
 import {
   BellIcon,
   HeartIcon,
@@ -36,7 +37,9 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-export default function Header({ loggedIn }: { loggedIn: boolean }) {
+export default function Header() {
+  const { user, logout } = useAuth();
+  const loggedIn = Boolean(user);
   const blogTriggerRef = React.useRef<HTMLButtonElement>(null);
   const categoriesTriggerRef = React.useRef<HTMLButtonElement>(null);
   const avatarTriggerRef = React.useRef<HTMLButtonElement>(null);
@@ -66,10 +69,12 @@ export default function Header({ loggedIn }: { loggedIn: boolean }) {
             <div className="flex items-center gap-2">
               <MobileSearchTrigger onClick={() => setShowSearch(true)} />
               {loggedIn ? (
-                <MobileUserDrawer />
+                <MobileUserDrawer user={user} onLogout={logout} />
               ) : (
-                <Button size="icon" variant="ghost">
-                  <LogInIcon className="size-5" />
+                <Button size="icon" variant="ghost" asChild>
+                  <Link href="/login">
+                    <LogInIcon className="size-5" />
+                  </Link>
                 </Button>
               )}
             </div>
@@ -106,7 +111,7 @@ export default function Header({ loggedIn }: { loggedIn: boolean }) {
                   asChild
                   className={navigationMenuTriggerStyle()}
                 >
-                  <Link href="#">About</Link>
+                  <Link href="/courses">Courses</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
@@ -192,7 +197,7 @@ export default function Header({ loggedIn }: { loggedIn: boolean }) {
                       <Avatar className="size-10">
                         <AvatarImage src={CONSTANTS.USER_DATA.avatar} />
                         <AvatarFallback>
-                          {CONSTANTS.USER_DATA.fallback}
+                          {user?.name?.charAt(0).toUpperCase() || "U"}
                         </AvatarFallback>
                       </Avatar>
                     </NavigationMenuTrigger>
@@ -203,15 +208,15 @@ export default function Header({ loggedIn }: { loggedIn: boolean }) {
                           <Avatar className="size-14">
                             <AvatarImage src={CONSTANTS.USER_DATA.avatar} />
                             <AvatarFallback>
-                              {CONSTANTS.USER_DATA.fallback}
+                              {user?.name?.charAt(0).toUpperCase() || "U"}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col gap-1">
                             <p className="text-sm font-semibold line-clamp-1">
-                              {CONSTANTS.USER_DATA.name}
+                              {user?.name || CONSTANTS.USER_DATA.name}
                             </p>
                             <p className="text-xs text-muted-foreground line-clamp-1">
-                              {CONSTANTS.USER_DATA.email}
+                              {user?.email || CONSTANTS.USER_DATA.email}
                             </p>
                           </div>
                         </div>
@@ -221,14 +226,14 @@ export default function Header({ loggedIn }: { loggedIn: boolean }) {
                         {/* Learning Section */}
 
                         <Link
-                          href="#"
+                          href="/student/courses"
                           className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
                         >
                           <GraduationCapIcon className="size-5" />
                           <span className="text-sm">My Learning</span>
                         </Link>
                         <Link
-                          href="#"
+                          href="/student/certificates"
                           className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
                         >
                           <AwardIcon className="size-5" />
@@ -240,18 +245,18 @@ export default function Header({ loggedIn }: { loggedIn: boolean }) {
                         {/* Orders Section */}
 
                         <Link
-                          href="#"
+                          href="/student/wishlist"
                           className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
                         >
                           <ShoppingCartIcon className="size-5" />
-                          <span className="text-sm">My Orders</span>
+                          <span className="text-sm">My Wishlist</span>
                         </Link>
                         <Link
-                          href="#"
+                          href="/student/certificates"
                           className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
                         >
                           <CreditCardIcon className="size-5" />
-                          <span className="text-sm">Purchase History</span>
+                          <span className="text-sm">Certificates</span>
                         </Link>
 
                         <Separator className="my-4" />
@@ -259,14 +264,14 @@ export default function Header({ loggedIn }: { loggedIn: boolean }) {
                         {/* Settings Section */}
 
                         <Link
-                          href="#"
+                          href="/blog"
                           className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
                         >
                           <MessageSquareIcon className="size-5" />
-                          <span className="text-sm">Messages</span>
+                          <span className="text-sm">Blog</span>
                         </Link>
                         <Link
-                          href="#"
+                          href="/student/settings"
                           className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
                         >
                           <SettingsIcon className="size-5" />
@@ -279,20 +284,24 @@ export default function Header({ loggedIn }: { loggedIn: boolean }) {
 
                         {/* Logout Section */}
 
-                        <Link
-                          href="#"
-                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors text-destructive"
+                        <button
+                          onClick={logout}
+                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors text-destructive w-full text-left"
                         >
                           <LogOutIcon className="size-5" />
                           <span className="text-sm">Log Out</span>
-                        </Link>
+                        </button>
                       </div>
                     </NavMenuContentModified>
                   </div>
                 ) : (
                   <div className="flex gap-4">
-                    <Button>Login</Button>
-                    <Button variant="outline">Sign up</Button>
+                    <Button asChild>
+                      <Link href="/login">Login</Link>
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <Link href="/signup">Sign up</Link>
+                    </Button>
                   </div>
                 )}
               </NavigationMenuItem>

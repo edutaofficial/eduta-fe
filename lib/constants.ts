@@ -429,6 +429,197 @@ export const CONSTANTS = {
     { id: 3, image: "https://i.pravatar.cc/150?img=3", name: "Student 3" },
   ],
 
+  // Instructor data
+  INSTRUCTOR: {
+    name: "Dr. Sarah Johnson",
+    email: "sarah.johnson@eduta.org",
+    avatar: "https://i.pravatar.cc/150?img=11",
+  },
+
+  // Instructor dashboard data
+  INSTRUCTOR_DRAFT_COURSES: [
+    {
+      id: "d1",
+      title: "Advanced React Patterns",
+      subtitle: "Master complex React patterns and architecture",
+      progress: 65,
+      status: "draft",
+    },
+    {
+      id: "d2",
+      title: "Modern JavaScript Essentials",
+      subtitle: "Learn ES6+ features and modern JS practices",
+      progress: 30,
+      status: "draft",
+    },
+    {
+      id: "d3",
+      title: "Full-Stack Development with Next.js",
+      subtitle: "Build complete web applications",
+      progress: 80,
+      status: "draft",
+    },
+  ],
+
+  INSTRUCTOR_PUBLISHED_COURSES: [
+    {
+      id: "p1",
+      title: "Complete Python Bootcamp",
+      subtitle: "From Zero to Hero in Python",
+      image: "https://placehold.co/600x360/png?text=Python+Course",
+      rating: 4.8,
+      ratingCount: 1250,
+      enrollments: 850,
+      impressions: 2100,
+      featured: true,
+      status: "published",
+      price: 0,
+    },
+    {
+      id: "p2",
+      title: "JavaScript Fundamentals",
+      subtitle: "Learn JavaScript from scratch",
+      image: "https://placehold.co/600x360/png?text=JavaScript+Course",
+      rating: 4.6,
+      ratingCount: 980,
+      enrollments: 650,
+      impressions: 1800,
+      featured: false,
+      status: "published",
+      price: 0,
+    },
+    {
+      id: "p3",
+      title: "UI/UX Design Masterclass",
+      subtitle: "Design beautiful user interfaces",
+      image: "https://placehold.co/600x360/png?text=Design+Course",
+      rating: 4.9,
+      ratingCount: 540,
+      enrollments: 420,
+      impressions: 1200,
+      featured: true,
+      status: "published",
+      price: 0,
+    },
+    {
+      id: "p4",
+      title: "Data Science with Python",
+      subtitle: "Analyze data like a professional",
+      image: "https://placehold.co/600x360/png?text=Data+Science+Course",
+      rating: 4.7,
+      ratingCount: 780,
+      enrollments: 580,
+      impressions: 1500,
+      featured: false,
+      status: "completed",
+      price: 0,
+    },
+  ],
+
+  // Announcements data
+  ANNOUNCEMENTS: [
+    {
+      id: "a1",
+      courseId: "p1",
+      courseTitle: "Complete Python Bootcamp",
+      heading: "New Lecture Added",
+      description: "We've added a new lecture on Advanced Data Structures. Please complete it by the end of the week.",
+      date: "2024-01-15",
+    },
+    {
+      id: "a2",
+      courseId: "p2",
+      courseTitle: "JavaScript Fundamentals",
+      heading: "Assignment Deadline Extended",
+      description: "The deadline for Assignment 3 has been extended by 3 days to give everyone more time.",
+      date: "2024-01-14",
+    },
+    {
+      id: "a3",
+      courseId: "p3",
+      courseTitle: "UI/UX Design Masterclass",
+      heading: "Guest Speaker Session",
+      description: "Join us this Friday for a special session with Senior Designer Jane Doe.",
+      date: "2024-01-13",
+    },
+  ],
+
+  // Analytics data
+  ANALYTICS_DATA: {
+    impressions: [
+      { month: "Jan", value: 1200 },
+      { month: "Feb", value: 1500 },
+      { month: "Mar", value: 1800 },
+      { month: "Apr", value: 2100 },
+      { month: "May", value: 1900 },
+      { month: "Jun", value: 2400 },
+    ],
+    enrollments: [
+      { month: "Jan", value: 85 },
+      { month: "Feb", value: 120 },
+      { month: "Mar", value: 150 },
+      { month: "Apr", value: 180 },
+      { month: "May", value: 210 },
+      { month: "Jun", value: 250 },
+    ],
+    ratings: [
+      { month: "Jan", value: 4.2 },
+      { month: "Feb", value: 4.5 },
+      { month: "Mar", value: 4.6 },
+      { month: "Apr", value: 4.7 },
+      { month: "May", value: 4.8 },
+      { month: "Jun", value: 4.9 },
+    ],
+  },
+
+  // Payment data
+  PAYMENTS: [
+    {
+      id: "pay1",
+      courseId: "p1",
+      courseTitle: "Complete Python Bootcamp",
+      earnings: 1250.00,
+      status: "release-ready",
+      releaseDate: "2024-01-20",
+      students: 85,
+    },
+    {
+      id: "pay2",
+      courseId: "p2",
+      courseTitle: "JavaScript Fundamentals",
+      earnings: 890.50,
+      status: "pending",
+      releaseDate: "2024-01-28",
+      students: 65,
+    },
+    {
+      id: "pay3",
+      courseId: "p3",
+      courseTitle: "UI/UX Design Masterclass",
+      earnings: 420.00,
+      status: "released",
+      releaseDate: "2024-01-10",
+      students: 42,
+    },
+    {
+      id: "pay4",
+      courseId: "p4",
+      courseTitle: "Data Science with Python",
+      earnings: 580.00,
+      status: "withdrawn",
+      releaseDate: "2024-01-05",
+      students: 58,
+    },
+  ],
+  PAYMENT_REVENUE: [
+    { month: "Jan", revenue: 2800 },
+    { month: "Feb", revenue: 3200 },
+    { month: "Mar", revenue: 3800 },
+    { month: "Apr", revenue: 4200 },
+    { month: "May", revenue: 4500 },
+    { month: "Jun", revenue: 5200 },
+  ],
+
   // Testimonials data
   TESTIMONIALS: [
     {
