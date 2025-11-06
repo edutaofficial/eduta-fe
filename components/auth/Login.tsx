@@ -63,7 +63,7 @@ export default function Login() {
       try {
         // Call backend first to get a precise error message
         const resp = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/login`,
+          `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/login`,
           {
             method: "POST",
             headers: {
