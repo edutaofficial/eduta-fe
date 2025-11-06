@@ -43,6 +43,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+        console.log("API_BASE_URL in auth: ->", API_BASE_URL);
         const response = await fetch(`${API_BASE_URL}/api/v1/user/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
