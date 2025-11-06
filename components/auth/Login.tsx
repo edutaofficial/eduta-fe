@@ -40,6 +40,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [debugURL, setdebugURL] = useState("");
   useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -62,8 +63,10 @@ export default function Login() {
     mutationFn: async (values: LoginFormValues) => {
       try {
         // Call backend first to get a precise error message
+        const baseURL = `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/login`
+        setdebugURL(baseURL);
         const resp = await fetch(
-          `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/login`,
+          baseURL,
           {
             method: "POST",
             headers: {
@@ -163,6 +166,8 @@ export default function Login() {
             </CardTitle>
             <CardDescription className="text-default-600">
               Sign in to your Eduta account
+              <br />
+              {debugURL}
             </CardDescription>
           </CardHeader>
 
