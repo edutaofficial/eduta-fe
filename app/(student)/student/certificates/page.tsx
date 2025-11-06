@@ -1,5 +1,5 @@
-import { UnderDevelopment } from "@/components/Common";
+import { CertificatesTab } from "@/components/Student";
 
 export default function StudentCertificatesPage() {
-  return <UnderDevelopment />;
+  return <CertificatesTab />;
 }

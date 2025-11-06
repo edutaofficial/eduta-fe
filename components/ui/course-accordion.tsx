@@ -151,48 +151,61 @@ const CourseAccordionTrigger = React.forwardRef<
   };
 
   return (
-    <button
-      ref={ref}
-      type="button"
-      onClick={toggle}
-      className={cn(
-        "flex w-full items-center justify-between gap-2 px-4 py-3 text-left transition-all",
-        variant === "section"
-          ? "bg-primary-50 hover:bg-primary-100"
-          : "bg-primary-100 hover:bg-primary-200",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <div className="flex items-center gap-2">
-        {onClose && (
-          <>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              className="p-1 hover:text-destructive transition-colors outline-none"
-              aria-label="Remove item"
-            >
-              <XIcon className="size-4" />
-            </button>
-            <Separator
-              orientation="vertical"
-              className="h-6 w-[0.0625rem] bg-muted-foreground/20"
-            />
-          </>
+    <div className="relative flex w-full">
+      <button
+        ref={ref}
+        type="button"
+        onClick={toggle}
+        className={cn(
+          "flex w-full items-center justify-between gap-2 px-4 py-3 text-left transition-all",
+          variant === "section"
+            ? "bg-primary-50 hover:bg-primary-100"
+            : "bg-primary-100 hover:bg-primary-200",
+          className
         )}
-        <ChevronDownIcon
-          className={cn(
-            "size-4 shrink-0 transition-transform duration-200",
-            isOpen && "rotate-180"
+        {...props}
+      >
+        {children}
+        <div className="flex items-center gap-2">
+          {onClose && (
+            <>
+              <div className="w-4" />
+              <Separator
+                orientation="vertical"
+                className="h-6 w-[0.0625rem] bg-muted-foreground/20"
+              />
+            </>
           )}
-        />
-      </div>
-    </button>
+          <ChevronDownIcon
+            className={cn(
+              "size-4 shrink-0 transition-transform duration-200",
+              isOpen && "rotate-180"
+            )}
+          />
+        </div>
+      </button>
+      {onClose && (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }
+          }}
+          className="absolute right-12 top-1/2 -translate-y-1/2 p-1 hover:text-destructive transition-colors outline-none cursor-pointer"
+          aria-label="Remove item"
+        >
+          <XIcon className="size-4" />
+        </div>
+      )}
+    </div>
   );
 });
 

@@ -1,8 +1,32 @@
+"use client";
 import * as React from "react";
 import Image from "next/image";
-import { StarIcon, UsersIcon, EyeIcon } from "lucide-react";
+import { StarIcon, UsersIcon, EyeIcon, BookOpenIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+
+// Generate a consistent placeholder color based on course title
+function getPlaceholderColor(title?: string): string {
+  const colors = [
+    "bg-gradient-to-br from-blue-400 to-blue-600",
+    "bg-gradient-to-br from-purple-400 to-purple-600",
+    "bg-gradient-to-br from-pink-400 to-pink-600",
+    "bg-gradient-to-br from-green-400 to-green-600",
+    "bg-gradient-to-br from-yellow-400 to-yellow-600",
+    "bg-gradient-to-br from-red-400 to-red-600",
+    "bg-gradient-to-br from-indigo-400 to-indigo-600",
+    "bg-gradient-to-br from-teal-400 to-teal-600",
+  ];
+
+  if (!title) {
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  const hash = title
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[hash % colors.length];
+}
 
 export interface CourseCardProps {
   image: string;
@@ -29,12 +53,36 @@ export function CourseCard({
   price = 0,
   className,
 }: CourseCardProps) {
+  const hasImage =
+    image && image.trim() !== "" && image !== "undefined" && image !== "null";
+  const [imageError, setImageError] = React.useState(false);
+
   return (
     <div
       className={cn("rounded-md bg-white shadow-sm overflow-hidden", className)}
     >
       <div className="relative aspect-[3/2] w-full bg-default-100">
-        <Image src={image} alt={title} fill className="object-cover" />
+        {hasImage && !imageError ? (
+          <Image
+            src={image}
+            alt={title}
+            fill
+            className="object-cover"
+            onError={() => setImageError(true)}
+            unoptimized={
+              image.includes("placehold.co") || image.includes("pravatar")
+            }
+          />
+        ) : (
+          <div
+            className={cn(
+              "w-full h-full flex items-center justify-center",
+              getPlaceholderColor(title)
+            )}
+          >
+            <BookOpenIcon className="size-16 text-white opacity-40" />
+          </div>
+        )}
         <div className="absolute top-4 right-4 bg-white rounded-md">
           {featured ? (
             <Badge variant="secondary">Featured</Badge>

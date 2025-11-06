@@ -1,5 +1,5 @@
-import { UnderDevelopment } from "@/components/Common";
+import { WishlistTab } from "@/components/Student";
 
 export default function StudentWishlistPage() {
-  return <UnderDevelopment />;
+  return <WishlistTab />;
 }

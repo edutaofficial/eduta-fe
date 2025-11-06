@@ -1,8 +1,12 @@
 // lib/contexts/AuthContext.tsx
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { createContext, useContext, useState } from "react";
+import {
+  useSession,
+  signIn as nextAuthSignIn,
+  signOut as nextAuthSignOut,
+} from "next-auth/react";
 
 export type UserRole = "student" | "instructor" | "admin";
 
@@ -12,7 +16,11 @@ export interface User {
   name: string;
   id?: string;
   token?: string;
+  instructorId?: number;
+  learnerId?: number;
 }
+
+// JWT payload typing not required with next-auth session callbacks
 
 interface AuthContextType {
   user: User | null;
@@ -24,7 +32,8 @@ interface AuthContextType {
     email: string,
     password: string,
     role: UserRole,
-    name: string
+    name: string,
+    options?: { professionalTitle?: string; bio?: string }
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isLoading: boolean;
@@ -32,133 +41,78 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user database (for development only)
-// Password requirements: at least 12 characters, uppercase, lowercase, numbers
-const MOCK_USERS = [
-  {
-    email: "student@eduta.org",
-    password: "StudentPassword123",
-    role: "student" as UserRole,
-    name: "Student User",
-  },
-  {
-    email: "instructor@eduta.org",
-    password: "InstructorPass123",
-    role: "instructor" as UserRole,
-    name: "Instructor User",
-  },
-  {
-    email: "admin@eduta.org",
-    password: "AdminPassword123",
-    role: "admin" as UserRole,
-    name: "Admin User",
-  },
-];
+// Base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-const AUTH_STORAGE_KEY = "eduta_auth_user";
-const AUTH_TOKEN_KEY = "eduta_auth_token";
+// Decode JWT to extract instructor_id and learner_id
+function decodeJwt(token: string): {
+  instructor_id?: number;
+  learner_id?: number;
+} | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1]));
+    return payload;
+  } catch {
+    return null;
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Use lazy initialization to load user from localStorage
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof window === "undefined") return null;
-    const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
-    const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
-
-    if (storedUser && storedToken) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        return { ...parsedUser, token: storedToken };
-      } catch {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-      }
-    }
-    return null;
-  });
+  const { data: session } = useSession();
   const [isLoading] = useState(false);
-  const router = useRouter();
 
-  // Set cookie for middleware after mount if user exists
-  useEffect(() => {
-    if (user) {
-      const userString = JSON.stringify({
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        name: user.name,
-      });
-      document.cookie = `eduta_auth_user=${encodeURIComponent(userString)}; path=/; max-age=86400`; // 24 hours
+  // Extract user data from session
+  const user: User | null = session?.user
+    ? (() => {
+        const token = (session as unknown as { accessToken?: string })
+          .accessToken;
+        const decoded = token ? decodeJwt(token) : null;
+
+        return {
+          id: (session.user as unknown as { id?: string })?.id,
+          email: session.user.email || "",
+          name: session.user.name || "User",
+          role: ((session as unknown as { role?: UserRole }).role ||
+            "student") as UserRole,
+          token,
+          instructorId: decoded?.instructor_id,
+          learnerId: decoded?.learner_id,
+        };
+      })()
+    : null;
+
+  // (jwt decode not needed; next-auth provides data via session callbacks)
+
+  type ApiJson = { [key: string]: unknown };
+  async function parseResponseSafe(response: Response): Promise<ApiJson> {
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return response.json();
     }
-  }, [user]);
+    const text = await response.text();
+    try {
+      return JSON.parse(text) as ApiJson;
+    } catch {
+      return { message: text } as ApiJson;
+    }
+  }
 
   /**
-   * LOGIN FUNCTION
-   *
-   * 🔴 REPLACE THIS WITH REAL API CALL
-   *
-   * API Endpoint: POST /api/auth/login
-   * Request Body: { email: string, password: string }
-   * Expected Response: {
-   *   success: boolean,
-   *   user: { id, email, name, role },
-   *   token: string,
-   *   error?: string
-   * }
-   *
-   * Example implementation:
-   *
-   * const response = await fetch('/api/auth/login', {
-   *   method: 'POST',
-   *   headers: { 'Content-Type': 'application/json' },
-   *   body: JSON.stringify({ email, password }),
-   * });
-   * const data = await response.json();
+   * LOGIN FUNCTION - Real API integration
    */
   const login = async (
     email: string,
     password: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      // 🔴 MOCK IMPLEMENTATION - REPLACE WITH REAL API CALL
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
-
-      const foundUser = MOCK_USERS.find(
-        (u) => u.email === email && u.password === password
-      );
-
-      if (!foundUser) {
-        return { success: false, error: "Invalid email or password" };
-      }
-
-      // Simulate token generation (in real app, this comes from backend)
-      const mockToken = `mock_token_${Date.now()}`;
-
-      const userData: User = {
-        id: `user_${Date.now()}`, // In real app, this comes from backend
-        email: foundUser.email,
-        role: foundUser.role,
-        name: foundUser.name,
-        token: mockToken,
-      };
-
-      // Store user data
-      setUser(userData);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
-      localStorage.setItem(AUTH_TOKEN_KEY, mockToken);
-
-      // Set cookie for middleware
-      document.cookie = `eduta_auth_user=${encodeURIComponent(JSON.stringify(userData))}; path=/; max-age=86400`;
-
-      // Route based on role
-      const roleRoutes: Record<UserRole, string> = {
-        student: "/student/dashboard",
-        instructor: "/instructor/dashboard",
-        admin: "/admin",
-      };
-
-      router.push(roleRoutes[foundUser.role]);
-
+      const res = await nextAuthSignIn("credentials", {
+        redirect: false,
+        email,
+        password,
+      });
+      if (res?.error) return { success: false, error: res.error };
       return { success: true };
 
       /* 🟢 REAL API IMPLEMENTATION EXAMPLE:
@@ -205,70 +159,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Login error:", error);
-      return { success: false, error: "An error occurred during login" };
+      return {
+        success: false,
+        error: "Something went wrong. Please try again.",
+      };
     }
   };
 
-  /**
-   * SIGNUP FUNCTION
-   *
-   * 🔴 REPLACE THIS WITH REAL API CALL
-   *
-   * API Endpoint: POST /api/auth/signup
-   * Request Body: { email: string, password: string, role: UserRole, name: string }
-   * Expected Response: {
-   *   success: boolean,
-   *   user: { id, email, name, role },
-   *   token: string,
-   *   error?: string
-   * }
-   */
   const signup = async (
     email: string,
     password: string,
     role: UserRole,
-    name: string
+    name: string,
+    options?: { professionalTitle?: string; bio?: string }
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      // 🔴 MOCK IMPLEMENTATION - REPLACE WITH REAL API CALL
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
+      const [firstName, ...rest] = name.trim().split(" ");
+      const lastName = rest.join(" ");
+      const user_type = role === "instructor" ? "instructor" : "learner";
 
-      // Check if user already exists
-      const existingUser = MOCK_USERS.find((u) => u.email === email);
-      if (existingUser) {
-        return { success: false, error: "User already exists" };
+      const response = await fetch(`${API_BASE_URL}/api/v1/user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          first_name: firstName || name,
+          last_name: lastName || "",
+          email,
+          password,
+          confirm_password: password,
+          user_type,
+          professional_title:
+            role === "instructor" ? options?.professionalTitle || "" : "",
+          bio: role === "instructor" ? options?.bio || "" : "",
+        }),
+      });
+
+      const data = (await parseResponseSafe(response)) as {
+        status?: string;
+        message?: string;
+        error_code?: string;
+      };
+
+      if (!response.ok || data?.status !== "success") {
+        const message =
+          data?.message ||
+          (data?.error_code === "USER__DUPLICATE_EMAIL_OR_NICKNAME"
+            ? "duplicate email or nickname"
+            : "Signup failed");
+        return { success: false, error: String(message) };
       }
 
-      // Simulate token generation
-      const mockToken = `mock_token_${Date.now()}`;
-
-      const newUser: User = {
-        id: `user_${Date.now()}`,
-        email,
-        role,
-        name,
-        token: mockToken,
-      };
-
-      // Add to mock database (won't persist on refresh in this demo)
-      MOCK_USERS.push({ email, password, role, name });
-
-      setUser(newUser);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
-      localStorage.setItem(AUTH_TOKEN_KEY, mockToken);
-
-      // Set cookie for middleware
-      document.cookie = `eduta_auth_user=${encodeURIComponent(JSON.stringify(newUser))}; path=/; max-age=86400`;
-
-      // Route based on role
-      const roleRoutes: Record<UserRole, string> = {
-        student: "/student/dashboard",
-        instructor: "/instructor/dashboard",
-        admin: "/admin",
-      };
-
-      router.push(roleRoutes[role]);
-
+      // After signup, sign in using NextAuth credentials
+      await nextAuthSignIn("credentials", { redirect: false, email, password });
       return { success: true };
 
       /* 🟢 REAL API IMPLEMENTATION EXAMPLE:
@@ -327,22 +272,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Request Headers: { Authorization: `Bearer ${token}` }
    */
   const logout = () => {
-    // 🟢 OPTIONAL: Call logout API to invalidate token on server
-    // await fetch('/api/auth/logout', {
-    //   method: 'POST',
-    //   headers: { Authorization: `Bearer ${user?.token}` },
-    //   credentials: 'include',
-    // });
-
-    setUser(null);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-
-    // Clear cookie
-    document.cookie =
-      "eduta_auth_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-
-    router.push("/login");
+    nextAuthSignOut({ redirect: true, callbackUrl: "/login" });
   };
 
   return (

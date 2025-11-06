@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormik } from "formik";
 import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
 import {
   Card,
   CardHeader,
@@ -71,6 +72,7 @@ export default function ForgotPassword() {
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [success, setSuccess] = useState("");
@@ -80,6 +82,107 @@ export default function ForgotPassword() {
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  interface ApiResponse {
+    status?: string;
+    message?: string;
+    data?: {
+      verified?: boolean;
+      reset?: boolean;
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  }
+
+  async function parseResponseSafe(response: Response): Promise<ApiResponse> {
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return response.json();
+    }
+    const text = await response.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { message: text };
+    }
+  }
+
+  const sendOtpMutation = useMutation({
+    mutationFn: async (emailToSend: string) => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/forgot-password`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ email: emailToSend }),
+        }
+      );
+      const data = await parseResponseSafe(response);
+      if (!response.ok || data?.status !== "success") {
+        throw new Error(
+          data?.message || "Failed to send OTP. Please try again."
+        );
+      }
+      return data;
+    },
+  });
+
+  const verifyOtpMutation = useMutation({
+    mutationFn: async (vals: { email: string; otp: string }) => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/verify-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ email: vals.email, otp_code: vals.otp }),
+        }
+      );
+      const data = await parseResponseSafe(response);
+      if (!response.ok || data?.status !== "success" || !data?.data?.verified) {
+        throw new Error(data?.message || "Invalid OTP. Please try again.");
+      }
+      return data;
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (vals: {
+      email: string;
+      otp: string;
+      newPassword: string;
+      confirmPassword: string;
+    }) => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/reset-password`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            email: vals.email,
+            otp_code: vals.otp,
+            new_password: vals.newPassword,
+            confirm_password: vals.confirmPassword,
+          }),
+        }
+      );
+      const data = await parseResponseSafe(response);
+      if (!response.ok || data?.status !== "success" || !data?.data?.reset) {
+        throw new Error(
+          data?.message || "Failed to reset password. Please try again."
+        );
+      }
+      return data;
+    },
+  });
 
   // Timer for resend OTP
   useEffect(() => {
@@ -111,20 +214,18 @@ export default function ForgotPassword() {
     onSubmit: async (values) => {
       setIsLoading(true);
       setSuccess("");
-
       try {
-        // 🔴 REPLACE WITH REAL API CALL
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
+        const data = await sendOtpMutation.mutateAsync(values.email);
         setEmail(values.email);
-        setSuccess("OTP sent to your email address");
+        setSuccess(data?.message || "OTP sent to your email address");
         setStep("otp");
         setResendTimer(60);
-      } catch {
-        emailFormik.setFieldError(
-          "email",
-          "Failed to send OTP. Please try again."
-        );
+      } catch (e: unknown) {
+        const errorMessage =
+          e instanceof Error
+            ? e.message
+            : "Failed to send OTP. Please try again.";
+        emailFormik.setFieldError("email", errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -151,23 +252,20 @@ export default function ForgotPassword() {
     onSubmit: async (values) => {
       setIsLoading(true);
       setSuccess("");
-
       try {
-        // 🔴 REPLACE WITH REAL API CALL
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // Simulate OTP verification
-        if (values.otp === "123456") {
-          setStep("password");
-          setSuccess("OTP verified successfully");
-        } else {
-          otpFormik.setFieldError("otp", "Invalid OTP. Please try again.");
-        }
-      } catch {
-        otpFormik.setFieldError(
-          "otp",
-          "Failed to verify OTP. Please try again."
-        );
+        const data = await verifyOtpMutation.mutateAsync({
+          email,
+          otp: values.otp,
+        });
+        setOtpCode(values.otp);
+        setStep("password");
+        setSuccess(data?.message || "OTP verified successfully");
+      } catch (e: unknown) {
+        const errorMessage =
+          e instanceof Error
+            ? e.message
+            : "Failed to verify OTP. Please try again.";
+        otpFormik.setFieldError("otp", errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -195,21 +293,26 @@ export default function ForgotPassword() {
     onSubmit: async () => {
       setIsLoading(true);
       setSuccess("");
-
       try {
-        // 🔴 REPLACE WITH REAL API CALL
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        setSuccess("Password reset successfully! Redirecting to login...");
-
+        const data = await resetPasswordMutation.mutateAsync({
+          email,
+          otp: otpCode,
+          newPassword: passwordFormik.values.newPassword,
+          confirmPassword: passwordFormik.values.confirmPassword,
+        });
+        setSuccess(
+          data?.message ||
+            "Password reset successfully! Redirecting to login..."
+        );
         setTimeout(() => {
           router.push("/login");
         }, 2000);
-      } catch {
-        passwordFormik.setFieldError(
-          "newPassword",
-          "Failed to reset password. Please try again."
-        );
+      } catch (e: unknown) {
+        const errorMessage =
+          e instanceof Error
+            ? e.message
+            : "Failed to reset password. Please try again.";
+        passwordFormik.setFieldError("newPassword", errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -223,11 +326,15 @@ export default function ForgotPassword() {
     setSuccess("");
 
     try {
-      // 🔴 REPLACE WITH REAL API CALL
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setSuccess("OTP resent to your email address");
-      setResendTimer(60);
+      try {
+        const data = await sendOtpMutation.mutateAsync(email);
+        if (data?.status === "success") {
+          setSuccess(data?.message || "OTP resent to your email address");
+          setResendTimer(60);
+        }
+      } catch {
+        // silent
+      }
     } catch {
       // Error handled silently
     } finally {

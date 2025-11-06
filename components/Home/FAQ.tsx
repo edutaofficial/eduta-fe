@@ -7,7 +7,7 @@ import {
 } from "../ui/accordion";
 import { CONSTANTS } from "@/lib/constants";
 
-function FAQ() {
+function FAQComponent() {
   return (
     <section className="w-full mx-auto py-16 space-y-14">
       {/* Top Badge + Headings */}
@@ -37,4 +37,4 @@ function FAQ() {
   );
 }
 
-export default FAQ;
+export default FAQComponent;

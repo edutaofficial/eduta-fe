@@ -1,5 +1,6 @@
 // middleware.ts (place in root directory, same level as app folder)
 import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 /**
  * Authentication & Authorization Middleware
@@ -21,26 +22,19 @@ interface User {
   token?: string;
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  // Get the auth cookie
-  const authCookie = request.cookies.get("eduta_auth_user");
-  
-  // Parse user from cookie
-  let user: User | null = null;
-  if (authCookie) {
-    try {
-      user = JSON.parse(decodeURIComponent(authCookie.value));
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to parse auth cookie:", error);
-      // Clear invalid cookie
-      const response = NextResponse.next();
-      response.cookies.delete("eduta_auth_user");
-      return response;
-    }
-  }
+
+  // Read NextAuth JWT (App Router)
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  const user: User | null = token
+    ? {
+        email: (token as unknown as { email?: string }).email || "",
+        role: (token as unknown as { role?: User["role"] }).role || "student",
+        name: (token as unknown as { name?: string }).name || "User",
+        id: (token as unknown as { sub?: string }).sub,
+      }
+    : null;
 
   /**
    * 🔴 FOR PRODUCTION: Verify JWT token here
@@ -72,7 +66,6 @@ export function middleware(request: NextRequest) {
   const protectedRoutes: Record<string, ("student" | "instructor" | "admin")[]> = {
     "/student": ["student"],
     "/instructor": ["instructor"],
-    "/admin": ["admin"],
   };
 
   // Public routes that should redirect to dashboard if already logged in
@@ -115,6 +108,21 @@ export function middleware(request: NextRequest) {
       };
       
       const dashboardUrl = new URL(roleRoutes[user.role] || "/login", request.url);
+      return NextResponse.redirect(dashboardUrl);
+    }
+  }
+
+  // --- SCENARIO 2b: Additional RBAC enforcement beyond protected prefixes ---
+  if (user) {
+    // Instructor cannot access any route other than those starting with /instructor
+    if (user.role === "instructor" && !pathname.startsWith("/instructor")) {
+      const dashboardUrl = new URL("/instructor/dashboard", request.url);
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    // Student can access all except routes starting with /instructor
+    if (user.role === "student" && pathname.startsWith("/instructor")) {
+      const dashboardUrl = new URL("/student/dashboard", request.url);
       return NextResponse.redirect(dashboardUrl);
     }
   }

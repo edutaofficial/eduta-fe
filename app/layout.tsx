@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "@/components/layout/ClientLayout";
 import { AuthProvider } from "@/lib/context/AuthContext";
+import QueryProvider from "@/components/providers/QueryProvider";
+import NextAuthSessionProvider from "@/components/providers/SessionProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -94,9 +96,15 @@ export default function RootLayout({
         <meta name="theme-color" content="#ffffff" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <AuthProvider>
-          <ClientLayout>{children}</ClientLayout>
-        </AuthProvider>
+        <QueryProvider>
+          <NextAuthSessionProvider>
+            <main>
+              <AuthProvider>
+                <ClientLayout>{children}</ClientLayout>
+              </AuthProvider>
+            </main>
+          </NextAuthSessionProvider>
+        </QueryProvider>
       </body>
     </html>
   );

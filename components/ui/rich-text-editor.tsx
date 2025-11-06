@@ -24,6 +24,7 @@ interface RichTextEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  maxLength?: number; // Maximum character count (plain text)
 }
 
 export function RichTextEditor({
@@ -31,8 +32,10 @@ export function RichTextEditor({
   onChange,
   placeholder,
   className,
+  maxLength,
 }: RichTextEditorProps) {
   const [isMounted, setIsMounted] = React.useState(false);
+  const [charCount, setCharCount] = React.useState(0);
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -55,6 +58,17 @@ export function RichTextEditor({
     },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
+      const text = editor.getText();
+      const currentLength = text.length;
+      
+      setCharCount(currentLength);
+      
+      // Prevent exceeding max length
+      if (maxLength && currentLength > maxLength) {
+        // Don't allow the change
+        return false;
+      }
+      
       onChange(html);
     },
   });
@@ -62,6 +76,9 @@ export function RichTextEditor({
   React.useEffect(() => {
     if (editor && value !== editor.getHTML()) {
       editor.commands.setContent(value);
+      // Update character count
+      const text = editor.getText();
+      setCharCount(text.length);
     }
   }, [value, editor]);
 
@@ -240,6 +257,24 @@ export function RichTextEditor({
         placeholder={placeholder}
         className="min-h-[200px] max-h-[400px] overflow-y-auto"
       />
+      
+      {/* Character Counter */}
+      {maxLength && (
+        <div className="border-t bg-muted/30 px-4 py-2 flex justify-end">
+          <span
+            className={cn(
+              "text-xs font-medium",
+              charCount > maxLength
+                ? "text-destructive"
+                : charCount > maxLength * 0.9
+                  ? "text-warning-600"
+                  : "text-muted-foreground"
+            )}
+          >
+            {charCount}/{maxLength}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

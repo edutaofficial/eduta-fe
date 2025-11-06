@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { InstructorSidebar } from "./InstructorSidebar";
-import InstructorHeader from "./InstructorHeader";
+import { InstructorHeader } from "./InstructorHeader";
 import { useAuth } from "@/lib/context/AuthContext";
 interface InstructorLayoutProps {
   children: React.ReactNode;

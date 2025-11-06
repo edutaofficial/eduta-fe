@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useFormik } from "formik";
 import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { signIn, getSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
   CardHeader,
@@ -88,8 +91,67 @@ export default function Signup() {
   const [activeTab, setActiveTab] = useState<TabType>("student");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const { signup } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const signupStudentMutation = useMutation({
+    mutationFn: async (values: StudentSignupFormValues) => {
+      const result = await signup(
+        values.email,
+        values.password,
+        "student",
+        values.name
+      );
+      if (!result.success) return result;
+      await signIn("credentials", {
+        redirect: false,
+        email: values.email,
+        password: values.password,
+      });
+      const redirect = searchParams.get("redirect");
+      const session = await getSession();
+      const role = (session as unknown as { role?: string })?.role;
+      const dest =
+        redirect ||
+        (role === "instructor"
+          ? "/instructor/dashboard"
+          : "/student/dashboard");
+      router.replace(dest);
+      return result;
+    },
+  });
+
+  const signupInstructorMutation = useMutation({
+    mutationFn: async (values: InstructorSignupFormValues) => {
+      const result = await signup(
+        values.email,
+        values.password,
+        "instructor",
+        values.name,
+        {
+          professionalTitle: values.professionalTitle,
+          bio: values.bio,
+        }
+      );
+      if (!result.success) return result;
+      await signIn("credentials", {
+        redirect: false,
+        email: values.email,
+        password: values.password,
+      });
+      const redirect = searchParams.get("redirect");
+      const session = await getSession();
+      const role = (session as unknown as { role?: string })?.role;
+      const dest =
+        redirect ||
+        (role === "instructor"
+          ? "/instructor/dashboard"
+          : "/student/dashboard");
+      router.replace(dest);
+      return result;
+    },
+  });
 
   const studentFormik = useFormik<StudentSignupFormValues>({
     initialValues: {
@@ -113,17 +175,13 @@ export default function Signup() {
     },
     enableReinitialize: true,
     onSubmit: async (values) => {
-      setIsLoading(true);
-      const result = await signup(
-        values.email,
-        values.password,
-        "student",
-        values.name
-      );
+      const result = await signupStudentMutation.mutateAsync(values);
       if (!result.success) {
-        studentFormik.setFieldError("email", result.error || "Signup failed");
+        studentFormik.setFieldError(
+          "email",
+          result.error || "Something went wrong. Please try again."
+        );
       }
-      setIsLoading(false);
     },
   });
 
@@ -151,20 +209,13 @@ export default function Signup() {
     },
     enableReinitialize: true,
     onSubmit: async (values) => {
-      setIsLoading(true);
-      const result = await signup(
-        values.email,
-        values.password,
-        "instructor",
-        values.name
-      );
+      const result = await signupInstructorMutation.mutateAsync(values);
       if (!result.success) {
         instructorFormik.setFieldError(
           "email",
-          result.error || "Signup failed"
+          result.error || "Something went wrong. Please try again."
         );
       }
-      setIsLoading(false);
     },
   });
 
@@ -296,7 +347,11 @@ export default function Signup() {
                         : ""
                     }`}
                     placeholder="John Doe"
-                    disabled={isLoading}
+                    disabled={
+                      activeTab === "student"
+                        ? signupStudentMutation.isPending
+                        : signupInstructorMutation.isPending
+                    }
                   />
                 </div>
                 {formik.touched.name && formik.errors.name && (
@@ -326,7 +381,11 @@ export default function Signup() {
                         : ""
                     }`}
                     placeholder="you@example.com"
-                    disabled={isLoading}
+                    disabled={
+                      activeTab === "student"
+                        ? signupStudentMutation.isPending
+                        : signupInstructorMutation.isPending
+                    }
                   />
                 </div>
                 {formik.touched.email && formik.errors.email && (
@@ -370,7 +429,7 @@ export default function Signup() {
                             : ""
                         }`}
                         placeholder="Senior Developer"
-                        disabled={isLoading}
+                        disabled={signupInstructorMutation.isPending}
                       />
                     </div>
                     {(
@@ -416,7 +475,7 @@ export default function Signup() {
                             : ""
                         }`}
                         placeholder="Tell us about your experience and expertise..."
-                        disabled={isLoading}
+                        disabled={signupInstructorMutation.isPending}
                       />
                     </div>
                     {(
@@ -457,7 +516,11 @@ export default function Signup() {
                         : ""
                     }`}
                     placeholder="At least 12 characters with uppercase, lowercase, and numbers"
-                    disabled={isLoading}
+                    disabled={
+                      activeTab === "student"
+                        ? signupStudentMutation.isPending
+                        : signupInstructorMutation.isPending
+                    }
                   />
                   <button
                     type="button"
@@ -500,7 +563,11 @@ export default function Signup() {
                         : ""
                     }`}
                     placeholder="Confirm your password"
-                    disabled={isLoading}
+                    disabled={
+                      activeTab === "student"
+                        ? signupStudentMutation.isPending
+                        : signupInstructorMutation.isPending
+                    }
                   />
                   <button
                     type="button"
@@ -526,14 +593,36 @@ export default function Signup() {
 
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={
+                  activeTab === "student"
+                    ? signupStudentMutation.isPending
+                    : signupInstructorMutation.isPending
+                }
                 className="w-full bg-primary-600 hover:bg-primary-700 text-white shadow-md hover:shadow-lg transition-all"
                 size="lg"
               >
                 <UserPlusIcon className="size-4 mr-2" />
-                {isLoading
+                {(
+                  activeTab === "student"
+                    ? signupStudentMutation.isPending
+                    : signupInstructorMutation.isPending
+                )
                   ? "Creating account..."
                   : `Sign up as ${activeTab === "student" ? "Student" : "Instructor"}`}
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => signIn("google")}
+                disabled={
+                  activeTab === "student"
+                    ? signupStudentMutation.isPending
+                    : signupInstructorMutation.isPending
+                }
+                className="w-full mt-2 bg-white text-default-900 border border-primary-200 hover:bg-primary-50"
+                size="lg"
+              >
+                Continue with Google
               </Button>
             </form>
           </CardContent>

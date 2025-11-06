@@ -16,9 +16,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { UploadIcon, PlusIcon, XIcon } from "lucide-react";
-import { CONSTANTS } from "@/lib/constants";
+import { PlusIcon, XIcon, EyeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCourseStore } from "@/store/useCourseStore";
+import { useQuery } from "@tanstack/react-query";
+import type { Category } from "@/types/course";
+import { UploadFile } from "@/components/Common";
 
 // Zod schema for validation
 const courseDetailsSchema = z.object({
@@ -46,152 +49,77 @@ const courseDetailsSchema = z.object({
 
 type CourseDetailsFormValues = z.infer<typeof courseDetailsSchema>;
 
-interface FileUploadProps {
-  label: string;
-  accept: string;
-  file: File | null;
-  onFileChange: (file: File | null) => void;
-  error?: string;
+export type CourseDetailsHandle = {
+  validateAndFocus: () => Promise<boolean>;
+};
+
+interface CourseDetailsProps {
+  onPreview?: () => void;
 }
 
-function FileUpload({
-  label,
-  accept,
-  file,
-  onFileChange,
-  error,
-}: FileUploadProps) {
-  const [isDragging, setIsDragging] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+const CourseDetailsInner = (
+  { onPreview }: CourseDetailsProps,
+  ref: React.Ref<CourseDetailsHandle>
+) => {
+  const {
+    basicInfo,
+    setBasicInfo,
+    fetchCategories,
+    setUploading,
+    validationErrors,
+    clearValidationErrors,
+  } = useCourseStore();
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const { files } = e.dataTransfer;
-    if (files && files[0]) {
-      onFileChange(files[0]);
+  // Clear server validation errors when user starts typing
+  React.useEffect(() => {
+    if (validationErrors) {
+      return () => clearValidationErrors();
     }
-  };
+  }, [validationErrors, clearValidationErrors]);
 
-  const handleClick = () => {
-    fileInputRef.current?.click();
-  };
+  // Fetch categories
+  const { data: categories = { data: [] } } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
+    enabled: true,
+  });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { files } = e.target;
-    if (files && files[0]) {
-      onFileChange(files[0]);
-    }
-  };
-
-  const handleRemove = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onFileChange(null);
-  };
-
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={accept}
-        onChange={handleFileChange}
-        className="hidden"
-      />
-      <div
-        onClick={handleClick}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleClick();
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-          isDragging
-            ? "border-primary-600 bg-primary-50"
-            : "hover:border-primary-400"
-        } ${error ? "border-destructive" : ""}`}
-      >
-        {file ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <UploadIcon className="size-5 text-muted-foreground" />
-              <div className="text-left">
-                <p className="text-sm font-medium">{file.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleRemove}
-              className="text-destructive hover:text-destructive/80"
-            >
-              <XIcon className="size-4" />
-            </button>
-          </div>
-        ) : (
-          <>
-            <UploadIcon className="size-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm font-medium mb-1">
-              Drag and drop file or click to upload
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {accept === "video/*"
-                ? "Supports MP4, MOV, AVI"
-                : "Supports PNG, JPG, WEBP"}
-            </p>
-          </>
-        )}
-      </div>
-      {error && <p className="text-sm text-destructive">{error}</p>}
-    </div>
+  const categoryOptions = (categories as { data: Category[] })?.data?.map(
+    (cat) => ({
+      value: cat.categoryId,
+      label: cat.name,
+    })
   );
-}
 
-export type CourseDetailsHandle = { validateAndFocus: () => Promise<boolean> };
+  // Normalize learning level to capitalized format
+  const normalizeLearningLevel = (level: string): string => {
+    if (!level) return "";
+    const lower = level.toLowerCase();
+    if (lower === "beginner") return "Beginner";
+    if (lower === "intermediate") return "Intermediate";
+    if (lower === "advanced") return "Advanced";
+    if (lower === "expert") return "Expert";
+    return level; // Return as-is if already capitalized or unknown
+  };
 
-const CourseDetailsInner = (_: object, ref: React.Ref<CourseDetailsHandle>) => {
+  // Initialize formik with store values
   const formik = useFormik<CourseDetailsFormValues>({
     initialValues: {
-      courseTitle: "",
-      selectedCategories: [],
-      learningLevel: "",
-      description: "",
-      learningPoints: [
-        { id: 1, text: "" },
-        { id: 2, text: "" },
-        { id: 3, text: "" },
-      ],
-      promoVideo: null,
-      coverBanner: null,
+      courseTitle: basicInfo.title || "",
+      selectedCategories: basicInfo.categoryId ? [basicInfo.categoryId] : [],
+      learningLevel: normalizeLearningLevel(basicInfo.learningLevel || ""),
+      description: basicInfo.description || "",
+      learningPoints:
+        basicInfo.learningPoints.length > 0
+          ? basicInfo.learningPoints.map((lp, idx) => ({
+              id: idx + 1,
+              text: lp.description,
+            }))
+          : [
+              { id: 1, text: "" },
+              { id: 2, text: "" },
+              { id: 3, text: "" },
+            ],
     },
     validate: (values) => {
       const result = courseDetailsSchema.safeParse(values);
@@ -215,17 +143,99 @@ const CourseDetailsInner = (_: object, ref: React.Ref<CourseDetailsHandle>) => {
       return errors as Record<string, unknown>;
     },
     onSubmit: (vals) => {
-      // eslint-disable-next-line no-console
-      console.log("Form Data:", vals);
+      // Sync to store (this will be called when moving to next step)
+      const learningPoints = vals.learningPoints.map((lp) => ({
+        description: lp.text,
+      }));
+
+      setBasicInfo({
+        title: vals.courseTitle,
+        categoryId: vals.selectedCategories[0] || "",
+        learningLevel: vals.learningLevel,
+        description: vals.description,
+        fullDescription: vals.description,
+        language: "English",
+        learningPoints,
+        requirements: [],
+        targetAudience: [],
+        tags: [],
+      });
     },
     validateOnBlur: true,
-    validateOnChange: true,
+    validateOnChange: false,
   });
 
-  const categoryOptions = CONSTANTS.CATEGORIES.slice(0, 6).map((cat) => ({
-    value: cat.id,
-    label: cat.name,
-  }));
+  // Sync formik values to store on change (with proper dependency tracking)
+  const prevValuesRef = React.useRef(formik.values);
+  React.useEffect(() => {
+    // Only update if values actually changed
+    const hasChanged =
+      prevValuesRef.current.courseTitle !== formik.values.courseTitle ||
+      JSON.stringify(prevValuesRef.current.selectedCategories) !==
+        JSON.stringify(formik.values.selectedCategories) ||
+      prevValuesRef.current.learningLevel !== formik.values.learningLevel ||
+      prevValuesRef.current.description !== formik.values.description ||
+      JSON.stringify(prevValuesRef.current.learningPoints) !==
+        JSON.stringify(formik.values.learningPoints);
+
+    if (hasChanged) {
+      prevValuesRef.current = formik.values;
+
+      const learningPoints = formik.values.learningPoints.map((lp) => ({
+        description: lp.text,
+      }));
+
+      setBasicInfo({
+        title: formik.values.courseTitle,
+        categoryId: formik.values.selectedCategories[0] || "",
+        learningLevel: formik.values.learningLevel,
+        description: formik.values.description,
+        fullDescription: formik.values.description,
+        language: "English",
+        learningPoints,
+        requirements: [],
+        targetAudience: [],
+        tags: [],
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    formik.values.courseTitle,
+    formik.values.selectedCategories,
+    formik.values.learningLevel,
+    formik.values.description,
+    formik.values.learningPoints,
+    setBasicInfo,
+  ]);
+
+  // Memoize upload callbacks to prevent infinite loops
+  const handlePromoVideoChange = React.useCallback(
+    (assetId: number | null) => {
+      setBasicInfo({ promoVideoId: assetId });
+    },
+    [setBasicInfo]
+  );
+
+  const handlePromoVideoUploadState = React.useCallback(
+    (isUploading: boolean) => {
+      setUploading({ promoVideo: isUploading });
+    },
+    [setUploading]
+  );
+
+  const handleCoverBannerChange = React.useCallback(
+    (assetId: number | null) => {
+      setBasicInfo({ courseBannerId: assetId });
+    },
+    [setBasicInfo]
+  );
+
+  const handleCoverBannerUploadState = React.useCallback(
+    (isUploading: boolean) => {
+      setUploading({ coverBanner: isUploading });
+    },
+    [setUploading]
+  );
 
   const addLearningPoint = () => {
     const currentPoints = formik.values.learningPoints;
@@ -289,14 +299,23 @@ const CourseDetailsInner = (_: object, ref: React.Ref<CourseDetailsHandle>) => {
             name="courseTitle"
             placeholder="Enter course title"
             value={formik.values.courseTitle}
-            onChange={formik.handleChange}
+            onChange={(e) => {
+              formik.handleChange(e);
+              if (validationErrors?.title) clearValidationErrors();
+            }}
             aria-invalid={
-              !!(formik.touched.courseTitle && formik.errors.courseTitle)
+              !!(formik.touched.courseTitle && formik.errors.courseTitle) ||
+              !!validationErrors?.title
             }
           />
           {formik.touched.courseTitle && formik.errors.courseTitle && (
             <p className="text-sm text-destructive mt-1">
               {formik.errors.courseTitle}
+            </p>
+          )}
+          {validationErrors?.title && (
+            <p className="text-sm text-destructive mt-1">
+              {validationErrors.title}
             </p>
           )}
         </div>
@@ -318,10 +337,10 @@ const CourseDetailsInner = (_: object, ref: React.Ref<CourseDetailsHandle>) => {
               <SelectValue placeholder="Select level" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="beginner">Beginner</SelectItem>
-              <SelectItem value="intermediate">Intermediate</SelectItem>
-              <SelectItem value="advanced">Advanced</SelectItem>
-              <SelectItem value="expert">Expert</SelectItem>
+              <SelectItem value="Beginner">Beginner</SelectItem>
+              <SelectItem value="Intermediate">Intermediate</SelectItem>
+              <SelectItem value="Advanced">Advanced</SelectItem>
+              <SelectItem value="Expert">Expert</SelectItem>
             </SelectContent>
           </Select>
           {formik.touched.learningLevel && formik.errors.learningLevel && (
@@ -367,17 +386,23 @@ const CourseDetailsInner = (_: object, ref: React.Ref<CourseDetailsHandle>) => {
         </Label>
         <div
           aria-invalid={
-            !!(formik.touched.description && formik.errors.description)
+            !!(formik.touched.description && formik.errors.description) ||
+            !!validationErrors?.description
           }
         >
           <RichTextEditor
             value={formik.values.description}
-            onChange={(v) => formik.setFieldValue("description", v)}
+            onChange={(v) => {
+              formik.setFieldValue("description", v);
+              if (validationErrors?.description) clearValidationErrors();
+            }}
             placeholder="Describe what students will learn in this course..."
+            maxLength={2500}
             className={cn(
-              formik.touched.description &&
-                formik.errors.description &&
-                "border-destructive"
+              (formik.touched.description && formik.errors.description) ||
+                validationErrors?.description
+                ? "border-destructive"
+                : ""
             )}
           />
         </div>
@@ -386,34 +411,31 @@ const CourseDetailsInner = (_: object, ref: React.Ref<CourseDetailsHandle>) => {
             {formik.errors.description}
           </p>
         )}
+        {validationErrors?.description && (
+          <p className="text-sm text-destructive mt-1">
+            {validationErrors.description}
+          </p>
+        )}
       </div>
 
       {/* File Uploads */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Promo Video Upload */}
-        <FileUpload
+        <UploadFile
           label="Promo Video"
           accept="video/*"
-          file={formik.values.promoVideo || null}
-          onFileChange={(file) => formik.setFieldValue("promoVideo", file)}
-          error={
-            formik.touched.promoVideo
-              ? (formik.errors.promoVideo as unknown as string | undefined)
-              : undefined
-          }
+          value={basicInfo.promoVideoId}
+          onChange={handlePromoVideoChange}
+          onUploadStateChange={handlePromoVideoUploadState}
         />
 
         {/* Cover Banner Upload */}
-        <FileUpload
+        <UploadFile
           label="Cover Banner"
           accept="image/*"
-          file={formik.values.coverBanner || null}
-          onFileChange={(file) => formik.setFieldValue("coverBanner", file)}
-          error={
-            formik.touched.coverBanner
-              ? (formik.errors.coverBanner as unknown as string | undefined)
-              : undefined
-          }
+          value={basicInfo.courseBannerId}
+          onChange={handleCoverBannerChange}
+          onUploadStateChange={handleCoverBannerUploadState}
         />
       </div>
 
@@ -442,6 +464,7 @@ const CourseDetailsInner = (_: object, ref: React.Ref<CourseDetailsHandle>) => {
                     aria-invalid={
                       !!(
                         formik.touched.learningPoints?.[index]?.text &&
+                        Array.isArray(formik.errors.learningPoints) &&
                         (
                           formik.errors.learningPoints as unknown as Array<{
                             text?: string;
@@ -451,6 +474,7 @@ const CourseDetailsInner = (_: object, ref: React.Ref<CourseDetailsHandle>) => {
                     }
                   />
                   {formik.touched.learningPoints?.[index]?.text &&
+                    Array.isArray(formik.errors.learningPoints) &&
                     (
                       formik.errors.learningPoints as unknown as Array<{
                         text?: string;
@@ -498,10 +522,26 @@ const CourseDetailsInner = (_: object, ref: React.Ref<CourseDetailsHandle>) => {
           Add Learning Point
         </Button>
       </div>
+
+      {/* Preview Button */}
+      {onPreview && (
+        <div className="pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onPreview}
+            className="w-full gap-2"
+          >
+            <EyeIcon className="size-4" />
+            Preview Course
+          </Button>
+        </div>
+      )}
     </form>
   );
 };
 
-export const CourseDetails = React.forwardRef<CourseDetailsHandle, object>(
-  CourseDetailsInner
-);
+export const CourseDetails = React.forwardRef<
+  CourseDetailsHandle,
+  CourseDetailsProps
+>(CourseDetailsInner);

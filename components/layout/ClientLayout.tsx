@@ -11,9 +11,15 @@ export default function ClientLayout({
 }) {
   const pathname = usePathname();
   const isInstructorRoute = pathname?.startsWith("/instructor");
+  const isCertificateVerifyRoute = pathname?.startsWith("/certificate/verify");
 
-  if (isInstructorRoute) {
-    return <>{children}</>;
+  // Routes without header/footer
+  if (isInstructorRoute || isCertificateVerifyRoute) {
+    return (
+      <div className="min-h-screen min-w-screen h-full w-full bg-[url('/certificate-verification.webp')] bg-cover bg-center">
+        {children}
+      </div>
+    );
   }
 
   return (

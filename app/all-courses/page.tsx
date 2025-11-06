@@ -1,5 +1,5 @@
-import { UnderDevelopment } from "@/components/Common";
+import { AllCoursesPage } from "@/components/Courses";
 
-export default function AllCoursesPage() {
-  return <UnderDevelopment />;
+export default function AllCoursesPageRoute() {
+  return <AllCoursesPage />;
 }

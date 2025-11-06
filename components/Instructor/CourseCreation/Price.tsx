@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -10,14 +11,94 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCourseStore } from "@/store/useCourseStore";
+import { EyeIcon } from "lucide-react";
 
 export type PriceHandle = { validateAndFocus: () => Promise<boolean> };
 
-const PriceInner = (_: object, ref: React.Ref<PriceHandle>) => {
-  const [currency, setCurrency] = React.useState("USD");
-  const [priceTier, setPriceTier] = React.useState("free");
-  const [customPrice, setCustomPrice] = React.useState("");
+interface PriceProps {
+  onPreview?: () => void;
+}
+
+const PriceInner = ({ onPreview }: PriceProps, ref: React.Ref<PriceHandle>) => {
+  const { pricing, setPricing } = useCourseStore();
+
+  // Initialize from store or defaults
+  const [currency, setCurrency] = React.useState(pricing.currency || "USD");
+  const [priceTier, setPriceTier] = React.useState(
+    pricing.isFree
+      ? "free"
+      : pricing.price === 0
+        ? "free"
+        : pricing.price === 9.99
+          ? "basic"
+          : pricing.price === 19.99
+            ? "standard"
+            : pricing.price === 39.99
+              ? "premium"
+              : "custom"
+  );
+  const [customPrice, setCustomPrice] = React.useState(
+    priceTier === "custom" ? String(pricing.price) : ""
+  );
   const [showErrors, setShowErrors] = React.useState(false);
+
+  // Sync from store when pricing changes (e.g., when navigating back)
+  // Only sync if component just mounted or store values changed externally
+  const isInitialMount = React.useRef(true);
+  React.useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return; // Skip on initial mount since useState already initialized from store
+    }
+
+    // Only update if store values are different from current local state
+    if (pricing.currency && pricing.currency !== currency) {
+      setCurrency(pricing.currency);
+    }
+    const newPriceTier = pricing.isFree
+      ? "free"
+      : Math.abs(pricing.price - 0) < 0.01
+        ? "free"
+        : Math.abs(pricing.price - 9.99) < 0.01
+          ? "basic"
+          : Math.abs(pricing.price - 19.99) < 0.01
+            ? "standard"
+            : Math.abs(pricing.price - 39.99) < 0.01
+              ? "premium"
+              : "custom";
+    if (newPriceTier !== priceTier) {
+      setPriceTier(newPriceTier);
+      if (newPriceTier === "custom") {
+        setCustomPrice(String(pricing.price));
+      } else {
+        setCustomPrice("");
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pricing.currency, pricing.price, pricing.isFree]); // Only re-sync when store values change, not on every render
+
+  // Sync to store
+  React.useEffect(() => {
+    const price =
+      priceTier === "free"
+        ? 0
+        : priceTier === "basic"
+          ? 9.99
+          : priceTier === "standard"
+            ? 19.99
+            : priceTier === "premium"
+              ? 39.99
+              : parseFloat(customPrice) || 0;
+
+    setPricing({
+      currency,
+      price,
+      isFree: priceTier === "free",
+      discountPercent: null,
+      priceTier,
+    });
+  }, [currency, priceTier, customPrice, setPricing]);
 
   React.useImperativeHandle(ref, () => ({
     validateAndFocus: async () => {
@@ -125,8 +206,23 @@ const PriceInner = (_: object, ref: React.Ref<PriceHandle>) => {
           </div>
         </div>
       </div>
+
+      {/* Preview Button */}
+      {onPreview && (
+        <div className="pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onPreview}
+            className="w-full gap-2"
+          >
+            <EyeIcon className="size-4" />
+            Preview Course
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
 
-export const Price = React.forwardRef<PriceHandle, object>(PriceInner);
+export const Price = React.forwardRef<PriceHandle, PriceProps>(PriceInner);

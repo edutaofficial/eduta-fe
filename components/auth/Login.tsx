@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useFormik } from "formik";
 import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { signIn, getSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
   CardHeader,
@@ -37,8 +40,69 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  type ApiJson = { [key: string]: unknown };
+  async function parseResponseSafe(response: Response): Promise<ApiJson> {
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return response.json();
+    }
+    const text = await response.text();
+    try {
+      return JSON.parse(text) as ApiJson;
+    } catch {
+      return { message: text } as ApiJson;
+    }
+  }
+
+  const loginMutation = useMutation({
+    mutationFn: async (values: LoginFormValues) => {
+      try {
+        // Call backend first to get a precise error message
+        const resp = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/login`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              email: values.email,
+              password: values.password,
+            }),
+          }
+        );
+        const data = await parseResponseSafe(resp);
+        if (!resp.ok || data?.status !== "success") {
+          const message = data?.message || "Login failed";
+          return { success: false, error: String(message) };
+        }
+
+        // If backend ok, create NextAuth session
+        const res = await signIn("credentials", {
+          redirect: false,
+          email: values.email,
+          password: values.password,
+        });
+        if (!res || res.error) {
+          return {
+            success: false,
+            error: "Something went wrong. Please try again.",
+          };
+        }
+        return { success: true };
+      } catch {
+        return {
+          success: false,
+          error: "Something went wrong. Please try again.",
+        };
+      }
+    },
+  });
 
   const formik = useFormik<LoginFormValues>({
     initialValues: {
@@ -59,12 +123,24 @@ export default function Login() {
       return {};
     },
     onSubmit: async (values) => {
-      setIsLoading(true);
-      const result = await login(values.email, values.password);
+      const result = await loginMutation.mutateAsync(values);
       if (!result.success) {
-        formik.setFieldError("password", result.error || "Login failed");
+        formik.setFieldError(
+          "password",
+          result.error || "Something went wrong. Please try again."
+        );
       }
-      setIsLoading(false);
+      if (result.success) {
+        const redirect = searchParams.get("redirect");
+        const session = await getSession();
+        const role = (session as unknown as { role?: string })?.role;
+        const dest =
+          redirect ||
+          (role === "instructor"
+            ? "/instructor/dashboard"
+            : "/student/dashboard");
+        router.replace(dest);
+      }
     },
   });
 
@@ -111,7 +187,7 @@ export default function Login() {
                         : ""
                     }`}
                     placeholder="Enter your email"
-                    disabled={isLoading}
+                    disabled={loginMutation.isPending}
                   />
                 </div>
                 {formik.touched.email && formik.errors.email && (
@@ -149,7 +225,7 @@ export default function Login() {
                         : ""
                     }`}
                     placeholder="Enter your password"
-                    disabled={isLoading}
+                    disabled={loginMutation.isPending}
                   />
                   <button
                     type="button"
@@ -174,12 +250,22 @@ export default function Login() {
 
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={loginMutation.isPending}
                 className="w-full bg-primary-600 hover:bg-primary-700 text-white shadow-md hover:shadow-lg transition-all"
                 size="lg"
               >
                 <LogInIcon className="size-4 mr-2" />
-                {isLoading ? "Signing in..." : "Sign In"}
+                {loginMutation.isPending ? "Signing in..." : "Sign In"}
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => signIn("google")}
+                disabled={loginMutation.isPending}
+                className="w-full mt-2 bg-white text-default-900 border border-primary-200 hover:bg-primary-50"
+                size="lg"
+              >
+                Continue with Google
               </Button>
             </form>
           </CardContent>

@@ -1,0 +1,190 @@
+import { ChevronDownIcon, StarIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { CONSTANTS } from "@/lib/constants";
+
+export type SkillLevel = "beginner" | "intermediate" | "advanced";
+
+export interface CoursesFiltersProps {
+  selectedLevels: SkillLevel[];
+  selectedDomains: string[];
+  selectedDurations: string[];
+  minRating: number;
+  onLevelToggle: (level: SkillLevel) => void;
+  onDomainToggle: (domainId: string) => void;
+  onDurationToggle: (duration: string) => void;
+  onRatingChange: (rating: number) => void;
+  onClearAll: () => void;
+}
+
+export function CoursesFilters({
+  selectedLevels,
+  selectedDomains,
+  selectedDurations,
+  minRating,
+  onLevelToggle,
+  onDomainToggle,
+  onDurationToggle,
+  onRatingChange,
+  onClearAll,
+}: CoursesFiltersProps) {
+  const hasActiveFilters =
+    selectedLevels.length > 0 ||
+    selectedDomains.length > 0 ||
+    selectedDurations.length > 0 ||
+    minRating > 0;
+
+  return (
+    <aside className="w-full lg:w-64 flex-shrink-0">
+      <div className="bg-white rounded-xl border border-default-200 p-4 space-y-1 sticky top-28">
+        <h2 className="font-semibold text-lg mb-4 text-default-900">Filters</h2>
+
+        <div className="space-y-1">
+          {/* Skill Level Filter */}
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-3 hover:text-primary-600 transition-colors">
+              <span className="font-medium text-default-900">Skill Level</span>
+              <ChevronDownIcon className="size-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pb-4 pt-2 space-y-3">
+              {(["beginner", "intermediate", "advanced"] as SkillLevel[]).map(
+                (level) => (
+                  <div key={level} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`level-${level}`}
+                      checked={selectedLevels.includes(level)}
+                      onCheckedChange={() => onLevelToggle(level)}
+                    />
+                    <Label
+                      htmlFor={`level-${level}`}
+                      className="text-sm font-normal cursor-pointer capitalize"
+                    >
+                      {level}
+                    </Label>
+                  </div>
+                )
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Domains Filter */}
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-3 hover:text-primary-600 transition-colors">
+              <span className="font-medium text-default-900">Domains</span>
+              <ChevronDownIcon className="size-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pb-4 pt-2 space-y-3">
+              {CONSTANTS.COURSE_CATEGORIES.map((category) => (
+                <div
+                  key={category.id}
+                  className="flex items-center space-x-2"
+                >
+                  <Checkbox
+                    id={`domain-${category.id}`}
+                    checked={selectedDomains.includes(category.id)}
+                    onCheckedChange={() => onDomainToggle(category.id)}
+                  />
+                  <Label
+                    htmlFor={`domain-${category.id}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {category.name}
+                  </Label>
+                </div>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Duration Filter */}
+          <Collapsible>
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-3 hover:text-primary-600 transition-colors">
+              <span className="font-medium text-default-900">Duration</span>
+              <ChevronDownIcon className="size-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pb-4 pt-2 space-y-3">
+              {[
+                { value: "0-5", label: "0-5 hours" },
+                { value: "6-10", label: "6-10 hours" },
+                { value: "11-15", label: "11-15 hours" },
+                { value: "16+", label: "16+ hours" },
+              ].map((duration) => (
+                <div
+                  key={duration.value}
+                  className="flex items-center space-x-2"
+                >
+                  <Checkbox
+                    id={`duration-${duration.value}`}
+                    checked={selectedDurations.includes(duration.value)}
+                    onCheckedChange={() => onDurationToggle(duration.value)}
+                  />
+                  <Label
+                    htmlFor={`duration-${duration.value}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {duration.label}
+                  </Label>
+                </div>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Rating Filter */}
+          <Collapsible>
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-3 hover:text-primary-600 transition-colors">
+              <span className="font-medium text-default-900">Rating</span>
+              <ChevronDownIcon className="size-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pb-4 pt-2 space-y-3">
+              {[4.5, 4.0, 3.5, 3.0].map((rating) => (
+                <div
+                  key={rating}
+                  role="button"
+                  tabIndex={0}
+                  className="flex items-center space-x-2 cursor-pointer"
+                  onClick={() => onRatingChange(rating === minRating ? 0 : rating)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onRatingChange(rating === minRating ? 0 : rating);
+                    }
+                  }}
+                >
+                  <Checkbox
+                    id={`rating-${rating}`}
+                    checked={minRating === rating}
+                  />
+                  <Label
+                    htmlFor={`rating-${rating}`}
+                    className="text-sm font-normal cursor-pointer flex items-center gap-1"
+                  >
+                    <StarIcon className="size-4 fill-warning-300 text-warning-300" />
+                    {rating}+ and above
+                  </Label>
+                </div>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+
+        {/* Clear Filters */}
+        {hasActiveFilters && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClearAll}
+            className="w-full mt-4"
+          >
+            Clear All Filters
+          </Button>
+        )}
+      </div>
+    </aside>
+  );
+}
+

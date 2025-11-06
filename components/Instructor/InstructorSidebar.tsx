@@ -9,10 +9,8 @@ import {
   MegaphoneIcon,
   ChartBarIcon,
   CreditCardIcon,
-  LogOutIcon,
   SettingsIcon,
 } from "lucide-react";
-import { CONSTANTS } from "@/lib/constants";
 
 interface InstructorSidebarProps {
   isHovered: boolean;
@@ -21,7 +19,6 @@ interface InstructorSidebarProps {
 
 export function InstructorSidebar({
   isHovered,
-  onLogout,
 }: InstructorSidebarProps) {
   const pathname = usePathname();
   const sidebarWidth = isHovered ? "16rem" : "5rem";
@@ -113,39 +110,8 @@ export function InstructorSidebar({
           })}
         </nav>
 
-        {/* User Info at Bottom */}
-        <div className="mt-auto space-y-2">
-          <div
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-opacity duration-300 ${
-              isHovered ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <div className="size-10 rounded-full bg-default-100 flex items-center justify-center shrink-0">
-              <span className="text-sm font-semibold text-primary-900">
-                {CONSTANTS.INSTRUCTOR?.name?.charAt(0) || "I"}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-default-50 truncate">
-                {CONSTANTS.INSTRUCTOR?.name || "Instructor"}
-              </p>
-              <p className="text-xs text-default-200 truncate">
-                {CONSTANTS.INSTRUCTOR?.email || "instructor@eduta.org"}
-              </p>
-            </div>
-          </div>
-
-          {/* Logout Button */}
-          <button
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-default-50 hover:bg-primary-800 transition-all ${
-              isHovered ? "opacity-100" : "opacity-0"
-            }`}
-            onClick={onLogout}
-          >
-            <LogOutIcon className="size-5 shrink-0" />
-            <span className="text-sm font-medium">Logout</span>
-          </button>
-        </div>
+        {/* Bottom spacing - removed user info and logout (now in header) */}
+        <div className="mt-auto" />
       </div>
     </aside>
   );

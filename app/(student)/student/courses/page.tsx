@@ -1,5 +1,5 @@
-import { UnderDevelopment } from "@/components/Common";
+import { CoursesTab } from "@/components/Student";
 
 export default function StudentCoursesPage() {
-  return <UnderDevelopment />;
+  return <CoursesTab />;
 }

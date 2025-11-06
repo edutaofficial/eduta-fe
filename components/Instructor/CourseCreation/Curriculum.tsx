@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useFormik } from "formik";
 import * as z from "zod";
+import type { UICurriculum } from "@/types/course";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,24 +14,32 @@ import {
   CourseAccordionItem,
   CourseAccordionTrigger,
 } from "@/components/ui/course-accordion";
-import { UploadIcon, PlusIcon } from "lucide-react";
+import { PlusIcon, UploadIcon, EyeIcon } from "lucide-react";
+import { useCourseStore } from "@/store/useCourseStore";
+import { UploadFile } from "@/components/Common";
 
 export type CurriculumHandle = { validateAndFocus: () => Promise<boolean> };
+
+interface CurriculumProps {
+  onPreview?: () => void;
+}
 
 const curriculumSchema = z.object({
   sections: z
     .array(
       z.object({
-        id: z.number(),
+        id: z.union([z.number(), z.string()]),
         name: z.string().min(1, "Section name is required"),
         description: z.string().min(1, "Section description is required"),
         lectures: z.array(
           z.object({
-            id: z.number(),
+            id: z.union([z.number(), z.string()]),
             name: z.string().min(1, "Lecture name is required"),
             description: z.string().min(1, "Lecture description is required"),
             video: z.string().min(1, "Lecture video is required"),
             resources: z.string().optional().nullable(),
+            duration: z.number().optional(),
+            isPreview: z.boolean().optional(),
           })
         ),
       })
@@ -38,7 +47,30 @@ const curriculumSchema = z.object({
     .min(1),
 });
 
-const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
+const CurriculumInner = (
+  { onPreview }: CurriculumProps,
+  ref: React.Ref<CurriculumHandle>
+) => {
+  const { curriculum, setCurriculum, setUploading } = useCourseStore();
+  const [uploadingLectures, setUploadingLectures] = React.useState<
+    Record<string, boolean>
+  >({});
+
+  // Track if any lecture is uploading and update store (prevent infinite loops)
+  const prevUploadingRef = React.useRef<Record<string, boolean>>({});
+  React.useEffect(() => {
+    const isAnyUploading = Object.values(uploadingLectures).some(Boolean);
+    const prevIsAnyUploading = Object.values(prevUploadingRef.current).some(
+      Boolean
+    );
+
+    // Only update if state actually changed
+    if (isAnyUploading !== prevIsAnyUploading) {
+      prevUploadingRef.current = uploadingLectures;
+      setUploading({ curriculum: isAnyUploading });
+    }
+  }, [uploadingLectures, setUploading]);
+
   // Stable incremental id (no randomness during render)
   const nextIdRef = React.useRef(2);
   const getNextId = () => {
@@ -46,24 +78,62 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
     return nextIdRef.current;
   };
 
+  // Initialize with store data or default
+  // Transform store format to form format
+  const initialSections =
+    curriculum.sections.length > 0
+      ? curriculum.sections.map((section) => ({
+          id: section.id,
+          name:
+            "title" in section
+              ? section.title
+              : (section as { name: string }).name,
+          description: section.description,
+          lectures: section.lectures.map((lecture) => ({
+            id: lecture.id,
+            name:
+              "title" in lecture
+                ? lecture.title
+                : (lecture as { name: string }).name,
+            description: lecture.description,
+            video:
+              "videoId" in lecture
+                ? String(lecture.videoId || "")
+                : (lecture as { video: string }).video,
+            resources:
+              "resources" in lecture && Array.isArray(lecture.resources)
+                ? lecture.resources.map((r) => r.fileId).join(",")
+                : (lecture as unknown as { resources?: string | null })
+                    .resources || "",
+            duration: lecture.duration || 15,
+            isPreview:
+              "isFree" in lecture
+                ? lecture.isFree
+                : (lecture as { isPreview?: boolean }).isPreview || false,
+          })),
+        }))
+      : [
+          {
+            id: 1,
+            name: "Untitled",
+            description: "",
+            lectures: [
+              {
+                id: 1,
+                name: "Untitled",
+                description: "",
+                video: "",
+                resources: "",
+                duration: 15,
+                isPreview: false,
+              },
+            ],
+          },
+        ];
+
   const formik = useFormik<z.infer<typeof curriculumSchema>>({
     initialValues: {
-      sections: [
-        {
-          id: 1,
-          name: "Untitled",
-          description: "",
-          lectures: [
-            {
-              id: 1,
-              name: "Untitled",
-              description: "",
-              video: "",
-              resources: "",
-            },
-          ],
-        },
-      ],
+      sections: initialSections,
     },
     validate: (values) => {
       const result = curriculumSchema.safeParse(values);
@@ -88,6 +158,30 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
     onSubmit: () => {},
   });
 
+  // Sync formik values to store (UI format)
+  React.useEffect(() => {
+    setCurriculum({
+      sections: formik.values.sections as unknown as UICurriculum["sections"],
+    });
+  }, [formik.values.sections, setCurriculum]);
+
+  // Handle lecture video upload state change - memoized to prevent infinite loops
+  const handleLectureUploadStateChange = React.useCallback(
+    (
+      sectionId: number | string,
+      lectureId: number | string,
+      isUploading: boolean
+    ) => {
+      const key = `${sectionId}-${lectureId}`;
+      setUploadingLectures((prev) => {
+        // Only update if value actually changed
+        if (prev[key] === isUploading) return prev;
+        return { ...prev, [key]: isUploading };
+      });
+    },
+    []
+  );
+
   const addSection = () => {
     const next = [
       ...formik.values.sections,
@@ -109,14 +203,18 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
     formik.setFieldValue("sections", next);
   };
 
-  const updateSection = (sectionId: number, field: string, value: string) => {
+  const updateSection = (
+    sectionId: number | string,
+    field: string,
+    value: string
+  ) => {
     const next = formik.values.sections.map((s) =>
       s.id === sectionId ? { ...s, [field]: value } : s
     );
     formik.setFieldValue("sections", next);
   };
 
-  const addLecture = (sectionId: number) => {
+  const addLecture = (sectionId: number | string) => {
     const next = formik.values.sections.map((s) =>
       s.id === sectionId
         ? {
@@ -129,6 +227,8 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
                 description: "",
                 video: "",
                 resources: "",
+                duration: 15,
+                isPreview: false,
               },
             ],
           }
@@ -138,17 +238,33 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
   };
 
   const updateLecture = (
-    sectionId: number,
-    lectureId: number,
+    sectionId: number | string,
+    lectureId: number | string,
     field: string,
-    value: string
+    value: string | number | boolean
   ) => {
     const next = formik.values.sections.map((s) =>
       s.id === sectionId
         ? {
             ...s,
             lectures: s.lectures.map((lec) =>
-              lec.id === lectureId ? { ...lec, [field]: value } : lec
+              lec.id === lectureId
+                ? {
+                    ...lec,
+                    [field]:
+                      field === "duration"
+                        ? typeof value === "number"
+                          ? value
+                          : value
+                            ? parseInt(String(value), 10)
+                            : undefined
+                        : field === "isPreview"
+                          ? typeof value === "boolean"
+                            ? value
+                            : value === "true"
+                          : value,
+                  }
+                : lec
             ),
           }
         : s
@@ -160,14 +276,20 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
   const isSectionValid = (section: {
     name: string;
     description: string;
-    lectures: { name: string; description: string; video: string }[];
+    lectures: {
+      name: string;
+      description: string;
+      video: string;
+      duration?: number;
+    }[];
   }) => {
     if (!section.name.trim()) return false;
     if (!section.description.trim()) return false;
     for (const lec of section.lectures) {
       if (!lec.name.trim()) return false;
       if (!lec.description.trim()) return false;
-      if (!lec.video.trim()) return false; // resources optional
+      if (!lec.video.trim()) return false;
+      if (!lec.duration || lec.duration <= 0) return false; // duration required
     }
     return true;
   };
@@ -207,18 +329,28 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
             el?.scrollIntoView({ behavior: "smooth", block: "center" });
             return false;
           }
+          if (!lecture.duration || lecture.duration <= 0) {
+            const el = document.getElementById(
+              `lecture-duration-${lecture.id}`
+            );
+            el?.scrollIntoView({ behavior: "smooth", block: "center" });
+            return false;
+          }
         }
       }
       return false;
     },
   }));
 
-  const removeSection = (sectionId: number) => {
+  const removeSection = (sectionId: number | string) => {
     const next = formik.values.sections.filter((s) => s.id !== sectionId);
     formik.setFieldValue("sections", next);
   };
 
-  const removeLecture = (sectionId: number, lectureId: number) => {
+  const removeLecture = (
+    sectionId: number | string,
+    lectureId: number | string
+  ) => {
     const next = formik.values.sections.map((s) =>
       s.id === sectionId
         ? { ...s, lectures: s.lectures.filter((lec) => lec.id !== lectureId) }
@@ -301,6 +433,7 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
                           updateSection(section.id, "description", value)
                         }
                         placeholder="Describe what students will learn in this section..."
+                        maxLength={2500}
                       />
                     </div>
                     {showErrors && !section.description.trim() && (
@@ -395,6 +528,7 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
                                     )
                                   }
                                   placeholder="Describe this lecture..."
+                                  maxLength={2500}
                                 />
                               </div>
                               {showErrors && !lecture.description.trim() && (
@@ -405,28 +539,74 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <Label>
-                                  Lecture Video{" "}
-                                  <span className="text-destructive">*</span>
-                                </Label>
-                                <div
-                                  id={`lecture-video-${lecture.id}`}
-                                  className="border-2 border-dashed bg-white rounded-lg p-6 text-center hover:border-primary-400 transition-colors cursor-pointer"
-                                >
-                                  <UploadIcon className="size-6 mx-auto mb-2 text-muted-foreground" />
-                                  <p className="text-xs text-muted-foreground">
-                                    Upload video
-                                  </p>
-                                </div>
-                                {showErrors && !lecture.video.trim() && (
-                                  <p className="text-sm text-destructive mt-1">
-                                    Lecture video is required
-                                  </p>
-                                )}
+                                <UploadFile
+                                  label="Lecture Video"
+                                  accept="video/*"
+                                  value={
+                                    lecture.video
+                                      ? parseInt(lecture.video, 10)
+                                      : null
+                                  }
+                                  onChange={(assetId) => {
+                                    updateLecture(
+                                      section.id,
+                                      lecture.id,
+                                      "video",
+                                      assetId ? String(assetId) : ""
+                                    );
+                                  }}
+                                  onUploadStateChange={(isUploading) => {
+                                    handleLectureUploadStateChange(
+                                      section.id,
+                                      lecture.id,
+                                      isUploading
+                                    );
+                                  }}
+                                  error={
+                                    showErrors && !lecture.video.trim()
+                                      ? "Lecture video is required"
+                                      : undefined
+                                  }
+                                />
                               </div>
                               <div className="space-y-2">
-                                <Label>Resources</Label>
-                                <div className="border-2 border-dashed bg-white rounded-lg p-6 text-center hover:border-primary-400 transition-colors cursor-pointer">
+                                <Label>Resources (Optional)</Label>
+                                <input
+                                  type="file"
+                                  accept=".pdf,.doc,.docx,.zip"
+                                  id={`lecture-resources-input-${lecture.id}`}
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      // Handle resource upload - store as asset ID for now
+                                      // TODO: Implement resource upload similar to video upload
+                                      // Resource upload not yet implemented
+                                    }
+                                  }}
+                                />
+                                <div
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => {
+                                    document
+                                      .getElementById(
+                                        `lecture-resources-input-${lecture.id}`
+                                      )
+                                      ?.click();
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      document
+                                        .getElementById(
+                                          `lecture-resources-input-${lecture.id}`
+                                        )
+                                        ?.click();
+                                    }
+                                  }}
+                                  className="border-2 border-dashed bg-white rounded-lg p-6 text-center hover:border-primary-400 transition-colors cursor-pointer"
+                                >
                                   <UploadIcon className="size-6 mx-auto mb-2 text-muted-foreground" />
                                   <p className="text-xs text-muted-foreground">
                                     Upload resources
@@ -434,13 +614,69 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center justify-end">
-                              <Button
-                                variant="default"
-                                disabled={!isSectionValid(section)}
-                              >
-                                Save
-                              </Button>
+
+                            {/* Lecture Duration and Preview Options */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>
+                                  Duration (minutes){" "}
+                                  <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                  id={`lecture-duration-${lecture.id}`}
+                                  type="number"
+                                  min="1"
+                                  placeholder="15"
+                                  value={lecture.duration || ""}
+                                  onChange={(e) => {
+                                    const duration =
+                                      parseInt(e.target.value, 10) || undefined;
+                                    updateLecture(
+                                      section.id,
+                                      lecture.id,
+                                      "duration",
+                                      duration ? String(duration) : ""
+                                    );
+                                  }}
+                                  className="bg-white"
+                                  aria-invalid={
+                                    showErrors &&
+                                    (!lecture.duration || lecture.duration <= 0)
+                                  }
+                                />
+                                {showErrors &&
+                                  (!lecture.duration ||
+                                    lecture.duration <= 0) && (
+                                    <p className="text-sm text-destructive mt-1">
+                                      Duration is required and must be greater
+                                      than 0
+                                    </p>
+                                  )}
+                              </div>
+                              <div className="space-y-2 flex items-end">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`lecture-preview-${lecture.id}`}
+                                    checked={lecture.isPreview ?? false}
+                                    onChange={(e) => {
+                                      updateLecture(
+                                        section.id,
+                                        lecture.id,
+                                        "isPreview",
+                                        e.target.checked ? "true" : "false"
+                                      );
+                                    }}
+                                    className="h-4 w-4 rounded border-gray-300"
+                                  />
+                                  <Label
+                                    htmlFor={`lecture-preview-${lecture.id}`}
+                                    className="cursor-pointer"
+                                  >
+                                    Allow preview (free)
+                                  </Label>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </CourseAccordionContent>
@@ -448,21 +684,30 @@ const CurriculumInner = (_: object, ref: React.Ref<CurriculumHandle>) => {
                     ))}
                   </CourseAccordion>
                 </div>
-
-                <div className="flex items-center justify-end mt-6">
-                  <Button disabled={showErrors && !isSectionValid(section)}>
-                    Save Section
-                  </Button>
-                </div>
               </div>
             </CourseAccordionContent>
           </CourseAccordionItem>
         ))}
       </CourseAccordion>
+
+      {/* Preview Button */}
+      {onPreview && (
+        <div className="pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onPreview}
+            className="w-full gap-2"
+          >
+            <EyeIcon className="size-4" />
+            Preview Course
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
 
-export const Curriculum = React.forwardRef<CurriculumHandle, object>(
+export const Curriculum = React.forwardRef<CurriculumHandle, CurriculumProps>(
   CurriculumInner
 );

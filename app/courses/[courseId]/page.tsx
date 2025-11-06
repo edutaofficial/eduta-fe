@@ -1,5 +1,13 @@
-import { UnderDevelopment } from "@/components/Common";
+"use client";
 
-export default function CourseDetailPage() {
-  return <UnderDevelopment />;
+import * as React from "react";
+import { CourseDetail } from "@/components/Common";
+
+export default function CourseDetailPage({
+  params,
+}: {
+  params: Promise<{ courseId: string }>;
+}) {
+  const { courseId } = React.use(params);
+  return <CourseDetail courseId={courseId} />;
 }

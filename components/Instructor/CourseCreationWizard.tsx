@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { Curriculum } from "./CourseCreation/Curriculum";
 import { Price } from "./CourseCreation/Price";
 import { Finalize } from "./CourseCreation/Finalize";
 import { Separator } from "@radix-ui/react-separator";
+import { useCourseStore } from "@/store/useCourseStore";
+import { CourseDetail } from "@/components/Common";
 
 const STEPS = [
   { id: 1, name: "Course Details", component: CourseDetails },
@@ -19,8 +21,23 @@ const STEPS = [
 ] as const;
 
 export function CourseCreationWizard() {
-  const [currentStep, setCurrentStep] = React.useState(1);
-  type Validatable = { validateAndFocus: () => Promise<boolean> };
+  const {
+    step: currentStep,
+    setStep,
+    createCourse,
+    updateCurriculum,
+    updatePricing,
+    saveDraft,
+    publishCourse,
+    loading,
+    error,
+    courseId,
+    uploading,
+  } = useCourseStore();
+
+  type Validatable = {
+    validateAndFocus: () => Promise<boolean>;
+  };
   const detailsRef = React.useRef<Validatable>(null as unknown as Validatable);
   const curriculumRef = React.useRef<Validatable>(
     null as unknown as Validatable
@@ -28,29 +45,134 @@ export function CourseCreationWizard() {
   const priceRef = React.useRef<Validatable>(null as unknown as Validatable);
   const finalizeRef = React.useRef<Validatable>(null as unknown as Validatable);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const showPreview = searchParams.get("preview") === "true";
+
+  // Check if assets are uploading (reactive from store)
+  const isUploadingAssets =
+    (currentStep === 1 && (uploading.promoVideo || uploading.coverBanner)) ||
+    (currentStep === 2 && uploading.curriculum);
+
+  // Restore courseId from localStorage on mount
+  React.useEffect(() => {
+    if (!courseId && typeof window !== "undefined") {
+      const savedCourseId = localStorage.getItem("course_creation_courseId");
+      if (savedCourseId) {
+        useCourseStore.setState({ courseId: savedCourseId });
+      }
+    }
+  }, [courseId]);
+
+  // Scroll to top when step changes
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentStep]);
 
   const goToNext = async () => {
     if (currentStep >= STEPS.length) return;
+
+    // Validate current step
     let ok = true;
     if (currentStep === 1)
-      ok = (await detailsRef.current?.validateAndFocus()) ?? true;
+      ok = (await detailsRef.current?.validateAndFocus()) ?? false;
     if (currentStep === 2)
-      ok = (await curriculumRef.current?.validateAndFocus()) ?? true;
+      ok = (await curriculumRef.current?.validateAndFocus()) ?? false;
     if (currentStep === 3)
-      ok = (await priceRef.current?.validateAndFocus()) ?? true;
+      ok = (await priceRef.current?.validateAndFocus()) ?? false;
     if (currentStep === 4)
-      ok = (await finalizeRef.current?.validateAndFocus()) ?? true;
+      ok = (await finalizeRef.current?.validateAndFocus()) ?? false;
     if (!ok) return;
-    setCurrentStep(currentStep + 1);
+
+    try {
+      // Call API based on current step - store automatically advances step on success
+      if (currentStep === 1) {
+        await createCourse();
+        // Step is advanced in store after successful createCourse
+      } else if (currentStep === 2) {
+        await updateCurriculum();
+        // Step is advanced in store after successful updateCurriculum
+      } else if (currentStep === 3) {
+        await updatePricing();
+        // Step is advanced in store after successful updatePricing
+      }
+    } catch (err: unknown) {
+      // eslint-disable-next-line no-console
+      console.error("Step transition error:", err);
+      // Error is already set in store and will be displayed in UI
+      // Don't break the UI flow - let user see the error and retry
+    }
   };
 
   const goToPrevious = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      // Clear any errors when navigating back
+      useCourseStore.setState({ error: null, validationErrors: null });
+      setStep((currentStep - 1) as 1 | 2 | 3 | 4);
+      // Scroll to top will be handled by useEffect
     }
   };
 
-  // no-op
+  const handleSaveDraft = async () => {
+    try {
+      await saveDraft();
+      // eslint-disable-next-line no-console
+      console.log("Course saved as draft!");
+      // Reset store to clear all state for next course creation
+      useCourseStore.getState().resetStore();
+      router.push("/instructor/courses");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to save draft.";
+      // eslint-disable-next-line no-console
+      console.error(errorMessage);
+      // eslint-disable-next-line no-alert
+      alert(errorMessage);
+    }
+  };
+
+  const handlePublish = async () => {
+    const ok = await finalizeRef.current?.validateAndFocus();
+    if (!ok) return;
+
+    try {
+      await publishCourse();
+      // eslint-disable-next-line no-console
+      console.log("Course published successfully!");
+      // Reset store to clear all state for next course creation
+      useCourseStore.getState().resetStore();
+      router.push("/instructor/courses");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to publish course.";
+      // eslint-disable-next-line no-console
+      console.error(errorMessage);
+      // eslint-disable-next-line no-alert
+      alert(errorMessage);
+    }
+  };
+
+  const handlePreview = () => {
+    // Add preview=true to URL
+    const url = new URL(window.location.href);
+    url.searchParams.set("preview", "true");
+    router.push(url.pathname + url.search);
+  };
+
+  const handleClosePreview = () => {
+    // Remove preview from URL (browser back will work naturally)
+    router.back();
+  };
+
+  // Show preview if enabled
+  if (showPreview) {
+    return (
+      <CourseDetail
+        courseId={courseId}
+        isPreview={true}
+        onBack={handleClosePreview}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen w-full">
@@ -59,14 +181,23 @@ export function CourseCreationWizard() {
         <h1 className="text-4xl font-semibold text-default-900 mb-6">
           Create a Course
         </h1>
-        <Separator className="h-[1px] w-full bg-default-400 mb-10" />
+        <Separator className="h-px w-full bg-default-400 mb-10" />
 
         {/* Steps Indicator */}
         <div className="flex items-center justify-between">
           {STEPS.map((step, index) => (
             <React.Fragment key={step.id}>
               <button
-                onClick={() => setCurrentStep(step.id)}
+                onClick={() => {
+                  // Don't allow navigation in preview mode
+                  if (showPreview) return;
+                  // Clear errors when navigating to a different step
+                  useCourseStore.setState({
+                    error: null,
+                    validationErrors: null,
+                  });
+                  setStep(step.id as 1 | 2 | 3 | 4);
+                }}
                 className={`flex flex-col items-center gap-2 ${
                   currentStep >= step.id
                     ? "text-primary-600"
@@ -98,15 +229,34 @@ export function CourseCreationWizard() {
         </div>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="mb-4 p-4 bg-destructive/10 border border-destructive rounded-lg">
+          <div className="flex items-start gap-2">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-destructive mb-1">Error</p>
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+            <button
+              onClick={() => useCourseStore.setState({ error: null })}
+              className="text-destructive hover:text-destructive/80 text-sm font-medium"
+              aria-label="Dismiss error"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Step Content */}
       <Card>
         <CardContent className="p-8">
           {currentStep === 1 ? (
-            <CourseDetails ref={detailsRef} />
+            <CourseDetails ref={detailsRef} onPreview={handlePreview} />
           ) : currentStep === 2 ? (
-            <Curriculum ref={curriculumRef} />
+            <Curriculum ref={curriculumRef} onPreview={handlePreview} />
           ) : currentStep === 3 ? (
-            <Price ref={priceRef} />
+            <Price ref={priceRef} onPreview={handlePreview} />
           ) : (
             <Finalize ref={finalizeRef} />
           )}
@@ -128,29 +278,52 @@ export function CourseCreationWizard() {
                 <>
                   <Button
                     variant="outline"
-                    onClick={() => router.push("/instructor/courses")}
+                    onClick={handleSaveDraft}
+                    disabled={loading.saveDraft}
                   >
-                    Save as Draft
+                    {loading.saveDraft ? "Saving..." : "Save as Draft"}
                   </Button>
                   <Button
                     className="gap-2"
-                    onClick={async () => {
-                      const ok = await finalizeRef.current?.validateAndFocus();
-                      if (ok) {
-                        // Handle successful save
-                        // eslint-disable-next-line no-console
-                        console.log("Ready to publish!");
-                      }
-                    }}
+                    onClick={handlePublish}
+                    disabled={loading.publishCourse}
                   >
-                    Save & Publish
+                    {loading.publishCourse ? "Publishing..." : "Save & Publish"}
                   </Button>
                 </>
               ) : (
-                <Button onClick={goToNext} className="gap-2">
-                  Next
-                  <ChevronRightIcon className="size-4" />
-                </Button>
+                <div className="relative">
+                  <Button
+                    onClick={goToNext}
+                    className="gap-2"
+                    disabled={
+                      loading.createCourse ||
+                      loading.updateCurriculum ||
+                      loading.updatePricing ||
+                      isUploadingAssets
+                    }
+                    title={
+                      isUploadingAssets
+                        ? "Please wait for assets to finish uploading"
+                        : undefined
+                    }
+                  >
+                    {loading.createCourse ||
+                    loading.updateCurriculum ||
+                    loading.updatePricing
+                      ? "Saving..."
+                      : isUploadingAssets
+                        ? "Uploading assets..."
+                        : "Next"}
+                    <ChevronRightIcon className="size-4" />
+                  </Button>
+                  {isUploadingAssets && (
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-2 bg-gray-900 text-white text-xs rounded shadow-lg z-50 pointer-events-none">
+                      Assets are uploading. Please wait...
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full border-4 border-transparent border-t-gray-900" />
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

@@ -382,7 +382,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
       (
         opts: MultiSelectOption[] | MultiSelectGroup[]
       ): opts is MultiSelectGroup[] => {
-        return opts.length > 0 && "heading" in opts[0];
+        return opts?.length > 0 && "heading" in opts[0];
       },
       []
     );
@@ -539,7 +539,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
     };
 
     const getAllOptions = React.useCallback((): MultiSelectOption[] => {
-      if (options.length === 0) return [];
+      if (options?.length === 0) return [];
       let allOptions: MultiSelectOption[];
       if (isGroupedOptions(options)) {
         allOptions = options.flatMap((group) => group.options);
@@ -549,7 +549,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
       const valueSet = new Set<string>();
       const duplicates: string[] = [];
       const uniqueOptions: MultiSelectOption[] = [];
-      allOptions.forEach((option) => {
+      allOptions?.forEach((option) => {
         if (valueSet.has(option.value)) {
           duplicates.push(option.value);
           if (!deduplicateOptions) {
@@ -815,7 +815,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
               aria-controls={isPopoverOpen ? listboxId : undefined}
               aria-describedby={`${triggerDescriptionId} ${selectedCountId}`}
               aria-label={`Multi-select: ${selectedValues.length} of ${
-                getAllOptions().length
+                getAllOptions()?.length
               } options selected. ${placeholder}`}
               className={cn(
                 "flex p-1 rounded-md border border-input h-12 items-center justify-between bg-transparent hover:bg-inherit [&_svg]:pointer-events-auto focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[.1875rem] outline-none",

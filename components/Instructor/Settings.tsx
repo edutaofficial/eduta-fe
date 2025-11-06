@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import * as React from "react";
+import { useState, useEffect } from "react";
 import { useFormik } from "formik";
 import { z } from "zod";
 import { useAuth } from "@/lib/context/AuthContext";
+import { useInstructorStore } from "@/store/useInstructorStore";
+import { useUpload } from "@/hooks/useUpload";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Card,
@@ -18,113 +21,151 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { UploadFile } from "@/components/Common";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import {
   UserIcon,
   MailIcon,
   BriefcaseIcon,
   FileTextIcon,
-  LinkedinIcon,
-  InstagramIcon,
-  YoutubeIcon,
+  AlertCircleIcon,
+  CheckCircleIcon,
+  PhoneIcon,
+  ClockIcon,
+  InfoIcon,
   LockIcon,
   EyeIcon,
   EyeOffIcon,
-  AlertCircleIcon,
-  CheckCircleIcon,
-  UploadIcon,
 } from "lucide-react";
-
-// Password validation: at least 12 characters, uppercase, lowercase, numbers
-const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,}$/;
 
 // Name validation: only letters and spaces
 const nameRegex = /^[a-zA-Z\s]+$/;
 
-// URL validation (optional)
-const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
-
 const accountSettingsSchema = z.object({
-  name: z
+  firstName: z
     .string()
-    .min(1, "Full name is required")
+    .min(1, "First name is required")
     .regex(nameRegex, "Name must contain only letters and spaces"),
-  email: z
+  lastName: z
     .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
-  professionalTitle: z
-    .string()
-    .min(1, "Professional title is required")
-    .min(3, "Professional title must be at least 3 characters"),
-  bio: z
-    .string()
-    .min(1, "Bio is required")
-    .min(20, "Bio must be at least 20 characters"),
-  linkedin: z
+    .min(1, "Last name is required")
+    .regex(nameRegex, "Name must contain only letters and spaces"),
+  phoneNumber: z
     .string()
     .optional()
     .refine(
-      (val) => !val || urlRegex.test(val),
-      "Please enter a valid LinkedIn URL"
+      (val) => !val || /^\+?[1-9]\d{1,14}$/.test(val),
+      "Please enter a valid phone number"
     ),
-  instagram: z
-    .string()
-    .optional()
-    .refine(
-      (val) => !val || urlRegex.test(val),
-      "Please enter a valid Instagram URL"
-    ),
-  youtube: z
-    .string()
-    .optional()
-    .refine(
-      (val) => !val || urlRegex.test(val),
-      "Please enter a valid YouTube URL"
-    ),
+  specialization: z.string().optional(),
+  bio: z.string().optional(),
 });
 
-const accountSecuritySchema = z
-  .object({
-    oldPassword: z.string().min(1, "Current password is required"),
-    newPassword: z
-      .string()
-      .min(12, "Password must be at least 12 characters")
-      .regex(
-        passwordRegex,
-        "Password must contain uppercase, lowercase, and numbers"
-      ),
-    confirmPassword: z.string().min(1, "Please confirm your password"),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
-
 type AccountSettingsFormValues = z.infer<typeof accountSettingsSchema>;
-type AccountSecurityFormValues = z.infer<typeof accountSecuritySchema>;
 
 export function InstructorSettings() {
   const { user } = useAuth();
+  const {
+    profile,
+    loading,
+    error: storeError,
+    fetchProfile,
+    updateProfile,
+    clearError,
+  } = useInstructorStore();
+
+  const { useGetAssetById } = useUpload();
+
   const [activeTab, setActiveTab] = useState("account");
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [showOldPassword, setShowOldPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [profilePictureId, setProfilePictureId] = useState<number | null>(null);
+
+  // Fetch profile picture asset only when we have a valid ID
+  // This hook will automatically refetch when profilePictureId changes
+  const { data: profilePictureAsset, isLoading: isLoadingAsset } =
+    useGetAssetById(profilePictureId || 0);
+
+  // Debug logging
+  React.useEffect(() => {
+    if (profilePictureId) {
+      // eslint-disable-next-line no-console
+      console.log("Profile Picture ID changed to:", profilePictureId);
+      // eslint-disable-next-line no-console
+      console.log("Asset data:", profilePictureAsset);
+      // eslint-disable-next-line no-console
+      console.log("Is loading asset:", isLoadingAsset);
+    }
+  }, [profilePictureId, profilePictureAsset, isLoadingAsset]);
   const [accountSuccess, setAccountSuccess] = useState("");
   const [accountError, setAccountError] = useState("");
-  const [securitySuccess, setSecuritySuccess] = useState("");
-  const [securityError, setSecurityError] = useState("");
-  const [isAccountLoading, setIsAccountLoading] = useState(false);
-  const [isSecurityLoading, setIsSecurityLoading] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [passwordResetStep, setPasswordResetStep] = useState<
+    "email" | "otp" | "password"
+  >("email");
+  const [passwordResetEmail, setPasswordResetEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordResetSuccessMessage, setPasswordResetSuccessMessage] =
+    useState("");
+  const [isPasswordResetLoading, setIsPasswordResetLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  // Fetch profile on mount
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  // Update form when profile is loaded
+  useEffect(() => {
+    if (profile) {
+      // eslint-disable-next-line no-console
+      console.log("Profile loaded in Settings:", profile);
+      // eslint-disable-next-line no-console
+      console.log("Setting profilePictureId to:", profile.profile_picture_id);
+
+      accountFormik.setValues({
+        firstName: profile.first_name || "",
+        lastName: profile.last_name || "",
+        phoneNumber: profile.phone_number || "",
+        specialization: profile.specialization || "",
+        bio: profile.bio || "",
+      });
+      setProfilePictureId(profile.profile_picture_id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
+
+  // Timer for resend OTP
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => {
+        setResendTimer(resendTimer - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimer]);
 
   const accountFormik = useFormik<AccountSettingsFormValues>({
     initialValues: {
-      name: user?.name || "",
-      email: user?.email || "",
-      professionalTitle: "",
-      bio: "",
-      linkedin: "",
-      instagram: "",
-      youtube: "",
+      firstName: profile?.first_name || "",
+      lastName: profile?.last_name || "",
+      phoneNumber: profile?.phone_number || "",
+      specialization: profile?.specialization || "",
+      bio: profile?.bio || "",
     },
     validate: (values) => {
       const result = accountSettingsSchema.safeParse(values);
@@ -139,103 +180,242 @@ export function InstructorSettings() {
       }
       return {};
     },
-    onSubmit: async (_values) => {
-      setIsAccountLoading(true);
+    onSubmit: async (values) => {
       setAccountError("");
       setAccountSuccess("");
+      clearError();
 
       try {
-        // 🔴 REPLACE WITH REAL API CALL
-        // API Endpoint: PUT /api/instructor/settings/account
-        // Request Body: { name, email, professionalTitle, bio, profileImage, linkedin, instagram, youtube }
-        // Expected Response: { success: boolean, message?: string, error?: string }
-        // const response = await fetch("/api/instructor/settings/account", {
-        //   method: "PUT",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({
-        //     name: _values.name,
-        //     email: _values.email,
-        //     professionalTitle: _values.professionalTitle,
-        //     bio: _values.bio,
-        //     profileImage,
-        //     linkedin: _values.linkedin,
-        //     instagram: _values.instagram,
-        //     youtube: _values.youtube,
-        //   }),
-        // });
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        setAccountSuccess("Account settings updated successfully!");
-      } catch {
-        setAccountError("Failed to update account settings. Please try again.");
-      } finally {
-        setIsAccountLoading(false);
-      }
-    },
-  });
-
-  const securityFormik = useFormik<AccountSecurityFormValues>({
-    initialValues: {
-      oldPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    },
-    validate: (values) => {
-      const result = accountSecuritySchema.safeParse(values);
-      if (!result.success) {
-        const errors: Record<string, string> = {};
-        result.error.issues.forEach((issue) => {
-          if (issue.path[0]) {
-            errors[issue.path[0].toString()] = issue.message;
-          }
+        await updateProfile({
+          first_name: values.firstName,
+          last_name: values.lastName,
+          phone_number: values.phoneNumber || null,
+          specialization: values.specialization || "",
+          bio: values.bio || "",
+          profile_picture_id: profilePictureId,
         });
-        return errors;
-      }
-      return {};
-    },
-    onSubmit: async (_values) => {
-      setIsSecurityLoading(true);
-      setSecurityError("");
-      setSecuritySuccess("");
 
-      try {
-        // 🔴 REPLACE WITH REAL API CALL
-        // API Endpoint: PUT /api/instructor/settings/security
-        // Request Body: { oldPassword, newPassword }
-        // Expected Response: { success: boolean, message?: string, error?: string }
-        // const response = await fetch("/api/instructor/settings/security", {
-        //   method: "PUT",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({
-        //     oldPassword: _values.oldPassword,
-        //     newPassword: _values.newPassword,
-        //   }),
-        // });
+        setAccountSuccess("Profile updated successfully!");
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        setSecuritySuccess("Password changed successfully!");
-        securityFormik.resetForm();
-      } catch {
-        setSecurityError("Failed to change password. Please try again.");
-      } finally {
-        setIsSecurityLoading(false);
+        // Clear success message after 5 seconds
+        setTimeout(() => setAccountSuccess(""), 5000);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to update profile. Please try again.";
+        setAccountError(errorMessage);
       }
     },
   });
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // 🔴 In production, upload to backend and get URL
-      // For now, create a local preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const handlePasswordReset = async () => {
+    if (!user?.email) {
+      setAccountError("No email found. Please log in again.");
+      return;
     }
+
+    setIsPasswordResetLoading(true);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/forgot-password`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ email: user.email }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data?.status !== "success") {
+        throw new Error(
+          data?.message || "Failed to send OTP. Please try again."
+        );
+      }
+
+      setPasswordResetEmail(user.email);
+      setPasswordResetStep("otp");
+      setResendTimer(60);
+      setShowPasswordDialog(true);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to send password reset email. Please try again.";
+      setAccountError(errorMessage);
+    } finally {
+      setIsPasswordResetLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0 || !passwordResetEmail) return;
+
+    setIsPasswordResetLoading(true);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/forgot-password`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ email: passwordResetEmail }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data?.status === "success") {
+        setResendTimer(60);
+      }
+    } catch {
+      // Silent fail for resend
+    } finally {
+      setIsPasswordResetLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otpCode.length !== 6) {
+      setOtpError("OTP must be 6 digits");
+      return;
+    }
+
+    setIsPasswordResetLoading(true);
+    setOtpError("");
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/verify-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            email: passwordResetEmail,
+            otp_code: otpCode,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data?.status !== "success" || !data?.data?.verified) {
+        throw new Error(data?.message || "Invalid OTP. Please try again.");
+      }
+
+      setPasswordResetStep("password");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to verify OTP. Please try again.";
+      setOtpError(errorMessage);
+    } finally {
+      setIsPasswordResetLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    // Validate passwords
+    if (!newPassword || newPassword.length < 12) {
+      setPasswordError("Password must be at least 12 characters");
+      return;
+    }
+
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,}$/.test(newPassword)) {
+      setPasswordError(
+        "Password must contain uppercase, lowercase, and numbers"
+      );
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError("Passwords do not match");
+      return;
+    }
+
+    setIsPasswordResetLoading(true);
+    setPasswordError("");
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/reset-password`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            email: passwordResetEmail,
+            otp_code: otpCode,
+            new_password: newPassword,
+            confirm_password: confirmNewPassword,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data?.status !== "success" || !data?.data?.reset) {
+        throw new Error(
+          data?.message || "Failed to reset password. Please try again."
+        );
+      }
+
+      setPasswordResetSuccessMessage("Password reset successfully!");
+
+      // Close dialog after 2 seconds
+      setTimeout(() => {
+        handleClosePasswordDialog();
+      }, 2000);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to reset password. Please try again.";
+      setPasswordError(errorMessage);
+    } finally {
+      setIsPasswordResetLoading(false);
+    }
+  };
+
+  const handleClosePasswordDialog = () => {
+    setShowPasswordDialog(false);
+    setPasswordResetStep("email");
+    setPasswordResetEmail("");
+    setOtpCode("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setShowNewPassword(false);
+    setShowConfirmNewPassword(false);
+    setOtpError("");
+    setPasswordError("");
+    setPasswordResetSuccessMessage("");
+    setResendTimer(0);
+  };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const getInitials = () => {
+    const firstName = accountFormik.values.firstName || user?.name || "I";
+    const lastName = accountFormik.values.lastName || "";
+    return `${firstName.charAt(0)}${lastName.charAt(0) || ""}`.toUpperCase();
   };
 
   return (
@@ -243,96 +423,138 @@ export function InstructorSettings() {
       <div>
         <h1 className="text-3xl font-bold text-default-900">Settings</h1>
         <p className="text-default-600 mt-2">
-          Manage your account settings and security preferences
+          Manage your profile and account preferences
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="account">Account Settings</TabsTrigger>
-          <TabsTrigger value="security">Account Security</TabsTrigger>
+          <TabsTrigger value="account">Profile Settings</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
 
         <TabsContent value="account" className="mt-6">
           <Card>
-            <CardHeader className="hidden">
-              <CardTitle>Account Settings</CardTitle>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
               <CardDescription>
-                Update your profile information and social links
+                Update your personal information and professional details
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={accountFormik.handleSubmit} className="space-y-6">
                 {/* Profile Picture */}
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <Label className="text-default-700">Profile Picture</Label>
-                  <div className="flex items-center gap-6">
-                    <Avatar className="size-20">
-                      {profileImage ? (
-                        <AvatarImage src={profileImage} alt="Profile" />
-                      ) : null}
-                      <AvatarFallback className="bg-primary-100 text-primary-700 text-xl">
-                        {accountFormik.values.name?.charAt(0)?.toUpperCase() ||
-                          "I"}
-                      </AvatarFallback>
-                    </Avatar>
+                  <div className="flex items-start gap-6">
+                    <div className="relative">
+                      <Avatar className="size-24 border-2 border-primary-200">
+                        {profilePictureId && profilePictureAsset?.file_url ? (
+                          <AvatarImage
+                            src={profilePictureAsset.file_url}
+                            alt="Profile"
+                          />
+                        ) : 
+                        <AvatarFallback className="bg-primary-100 text-primary-700 text-2xl font-semibold">
+                          {getInitials()}
+                        </AvatarFallback>}
+                      </Avatar>
+                      {isLoadingAsset && profilePictureId && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full">
+                          <div className="size-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex-1">
-                      <Label
-                        htmlFor="profile-upload"
-                        className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                      >
-                        <UploadIcon className="size-4" />
-                        Upload Photo
-                      </Label>
-                      <input
-                        id="profile-upload"
-                        type="file"
+                      <UploadFile
+                        label=""
                         accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
+                        value={profilePictureId}
+                        onChange={(assetId) => {
+                          // eslint-disable-next-line no-console
+                          console.log("Upload changed, new asset ID:", assetId);
+                          setProfilePictureId(assetId);
+                        }}
+                        hint="JPG, PNG or WEBP. Max size 2MB"
                       />
-                      <p className="text-xs text-default-500 mt-2">
-                        JPG, PNG or GIF. Max size 2MB
-                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-default-700">
-                    Full Name <span className="text-error-600">*</span>
-                  </Label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
-                    <Input
-                      id="name"
-                      name="name"
-                      type="text"
-                      value={accountFormik.values.name}
-                      onChange={accountFormik.handleChange}
-                      onBlur={accountFormik.handleBlur}
-                      className={`pl-10 ${
-                        accountFormik.touched.name && accountFormik.errors.name
-                          ? "border-error-500"
-                          : ""
-                      }`}
-                      placeholder="John Doe"
-                      disabled={isAccountLoading}
-                    />
+                {/* Name Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* First Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName" className="text-default-700">
+                      First Name <span className="text-error-600">*</span>
+                    </Label>
+                    <div className="relative">
+                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        type="text"
+                        value={accountFormik.values.firstName}
+                        onChange={accountFormik.handleChange}
+                        onBlur={accountFormik.handleBlur}
+                        className={`pl-10 ${
+                          accountFormik.touched.firstName &&
+                          accountFormik.errors.firstName
+                            ? "border-error-500"
+                            : ""
+                        }`}
+                        placeholder="John"
+                        disabled={loading.updateProfile}
+                      />
+                    </div>
+                    {accountFormik.touched.firstName &&
+                      accountFormik.errors.firstName && (
+                        <p className="text-sm text-error-600 flex items-center gap-1">
+                          <AlertCircleIcon className="size-3" />
+                          {accountFormik.errors.firstName}
+                        </p>
+                      )}
                   </div>
-                  {accountFormik.touched.name && accountFormik.errors.name && (
-                    <p className="text-sm text-error-600 flex items-center gap-1">
-                      <AlertCircleIcon className="size-3" />
-                      {accountFormik.errors.name}
-                    </p>
-                  )}
+
+                  {/* Last Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName" className="text-default-700">
+                      Last Name <span className="text-error-600">*</span>
+                    </Label>
+                    <div className="relative">
+                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        type="text"
+                        value={accountFormik.values.lastName}
+                        onChange={accountFormik.handleChange}
+                        onBlur={accountFormik.handleBlur}
+                        className={`pl-10 ${
+                          accountFormik.touched.lastName &&
+                          accountFormik.errors.lastName
+                            ? "border-error-500"
+                            : ""
+                        }`}
+                        placeholder="Doe"
+                        disabled={loading.updateProfile}
+                      />
+                    </div>
+                    {accountFormik.touched.lastName &&
+                      accountFormik.errors.lastName && (
+                        <p className="text-sm text-error-600 flex items-center gap-1">
+                          <AlertCircleIcon className="size-3" />
+                          {accountFormik.errors.lastName}
+                        </p>
+                      )}
+                  </div>
                 </div>
 
-                {/* Email */}
+                {/* Email (Read-only) */}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-default-700">
-                    Email Address <span className="text-error-600">*</span>
+                    Email Address
                   </Label>
                   <div className="relative">
                     <MailIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
@@ -340,68 +562,75 @@ export function InstructorSettings() {
                       id="email"
                       name="email"
                       type="email"
-                      value={accountFormik.values.email}
+                      value={user?.email || ""}
+                      className="pl-10 bg-muted cursor-not-allowed"
+                      disabled
+                      readOnly
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Email cannot be changed
+                  </p>
+                </div>
+
+                {/* Phone Number */}
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber" className="text-default-700">
+                    Phone Number (Optional)
+                  </Label>
+                  <div className="relative">
+                    <PhoneIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
+                    <Input
+                      id="phoneNumber"
+                      name="phoneNumber"
+                      type="tel"
+                      value={accountFormik.values.phoneNumber}
                       onChange={accountFormik.handleChange}
                       onBlur={accountFormik.handleBlur}
                       className={`pl-10 ${
-                        accountFormik.touched.email &&
-                        accountFormik.errors.email
+                        accountFormik.touched.phoneNumber &&
+                        accountFormik.errors.phoneNumber
                           ? "border-error-500"
                           : ""
                       }`}
-                      placeholder="you@example.com"
-                      disabled={isAccountLoading}
+                      placeholder="+1234567890"
+                      disabled={loading.updateProfile}
                     />
                   </div>
-                  {accountFormik.touched.email &&
-                    accountFormik.errors.email && (
+                  {accountFormik.touched.phoneNumber &&
+                    accountFormik.errors.phoneNumber && (
                       <p className="text-sm text-error-600 flex items-center gap-1">
                         <AlertCircleIcon className="size-3" />
-                        {accountFormik.errors.email}
+                        {accountFormik.errors.phoneNumber}
                       </p>
                     )}
                 </div>
 
-                {/* Professional Title */}
+                {/* Specialization */}
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="professionalTitle"
-                    className="text-default-700"
-                  >
-                    Professional Title <span className="text-error-600">*</span>
+                  <Label htmlFor="specialization" className="text-default-700">
+                    Specialization (Optional)
                   </Label>
                   <div className="relative">
                     <BriefcaseIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
                     <Input
-                      id="professionalTitle"
-                      name="professionalTitle"
+                      id="specialization"
+                      name="specialization"
                       type="text"
-                      value={accountFormik.values.professionalTitle}
+                      value={accountFormik.values.specialization}
                       onChange={accountFormik.handleChange}
                       onBlur={accountFormik.handleBlur}
-                      className={`pl-10 ${
-                        accountFormik.touched.professionalTitle &&
-                        accountFormik.errors.professionalTitle
-                          ? "border-error-500"
-                          : ""
-                      }`}
-                      placeholder="Senior Developer"
-                      disabled={isAccountLoading}
+                      className="pl-10"
+                      placeholder="Web Development, Data Science, etc."
+                      disabled={loading.updateProfile}
                     />
                   </div>
-                  {accountFormik.touched.professionalTitle &&
-                    accountFormik.errors.professionalTitle && (
-                      <p className="text-sm text-error-600 flex items-center gap-1">
-                        <AlertCircleIcon className="size-3" />
-                        {accountFormik.errors.professionalTitle}
-                      </p>
-                    )}
                 </div>
 
                 {/* Bio */}
                 <div className="space-y-2">
                   <Label htmlFor="bio" className="text-default-700">
-                    Bio <span className="text-error-600">*</span>
+                    Bio (Optional)
                   </Label>
                   <div className="relative">
                     <FileTextIcon className="absolute left-3 top-3 size-5 text-default-400" />
@@ -411,136 +640,40 @@ export function InstructorSettings() {
                       value={accountFormik.values.bio}
                       onChange={accountFormik.handleChange}
                       onBlur={accountFormik.handleBlur}
-                      className={`pl-10 min-h-[120px] ${
-                        accountFormik.touched.bio && accountFormik.errors.bio
-                          ? "border-error-500"
-                          : ""
-                      }`}
+                      className="pl-10 min-h-[120px]"
                       placeholder="Tell us about your experience and expertise..."
-                      disabled={isAccountLoading}
+                      disabled={loading.updateProfile}
                     />
                   </div>
-                  {accountFormik.touched.bio && accountFormik.errors.bio && (
-                    <p className="text-sm text-error-600 flex items-center gap-1">
-                      <AlertCircleIcon className="size-3" />
-                      {accountFormik.errors.bio}
-                    </p>
-                  )}
                 </div>
 
-                {/* Social Links */}
+                {/* Social Links - Disabled with Notice */}
                 <div className="space-y-4">
-                  <Label className="text-default-700">Social Links</Label>
-
-                  {/* LinkedIn */}
-                  <div className="space-y-2">
-                    <Label htmlFor="linkedin" className="text-default-600">
-                      LinkedIn (Optional)
-                    </Label>
-                    <div className="relative">
-                      <LinkedinIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
-                      <Input
-                        id="linkedin"
-                        name="linkedin"
-                        type="url"
-                        value={accountFormik.values.linkedin || ""}
-                        onChange={accountFormik.handleChange}
-                        onBlur={accountFormik.handleBlur}
-                        className={`pl-10 ${
-                          accountFormik.touched.linkedin &&
-                          accountFormik.errors.linkedin
-                            ? "border-error-500"
-                            : ""
-                        }`}
-                        placeholder="https://linkedin.com/in/yourprofile"
-                        disabled={isAccountLoading}
-                      />
+                  <div className="flex items-center gap-2">
+                    <Label className="text-default-700">Social Links</Label>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary-50 border border-primary-200 rounded-md">
+                      <InfoIcon className="size-3.5 text-primary-600" />
+                      <span className="text-xs text-primary-700 font-medium">
+                        Coming in next version
+                      </span>
                     </div>
-                    {accountFormik.touched.linkedin &&
-                      accountFormik.errors.linkedin && (
-                        <p className="text-sm text-error-600 flex items-center gap-1">
-                          <AlertCircleIcon className="size-3" />
-                          {accountFormik.errors.linkedin}
-                        </p>
-                      )}
                   </div>
-
-                  {/* Instagram */}
-                  <div className="space-y-2">
-                    <Label htmlFor="instagram" className="text-default-600">
-                      Instagram (Optional)
-                    </Label>
-                    <div className="relative">
-                      <InstagramIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
-                      <Input
-                        id="instagram"
-                        name="instagram"
-                        type="url"
-                        value={accountFormik.values.instagram || ""}
-                        onChange={accountFormik.handleChange}
-                        onBlur={accountFormik.handleBlur}
-                        className={`pl-10 ${
-                          accountFormik.touched.instagram &&
-                          accountFormik.errors.instagram
-                            ? "border-error-500"
-                            : ""
-                        }`}
-                        placeholder="https://instagram.com/yourprofile"
-                        disabled={isAccountLoading}
-                      />
-                    </div>
-                    {accountFormik.touched.instagram &&
-                      accountFormik.errors.instagram && (
-                        <p className="text-sm text-error-600 flex items-center gap-1">
-                          <AlertCircleIcon className="size-3" />
-                          {accountFormik.errors.instagram}
-                        </p>
-                      )}
-                  </div>
-
-                  {/* YouTube */}
-                  <div className="space-y-2">
-                    <Label htmlFor="youtube" className="text-default-600">
-                      YouTube (Optional)
-                    </Label>
-                    <div className="relative">
-                      <YoutubeIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
-                      <Input
-                        id="youtube"
-                        name="youtube"
-                        type="url"
-                        value={accountFormik.values.youtube || ""}
-                        onChange={accountFormik.handleChange}
-                        onBlur={accountFormik.handleBlur}
-                        className={`pl-10 ${
-                          accountFormik.touched.youtube &&
-                          accountFormik.errors.youtube
-                            ? "border-error-500"
-                            : ""
-                        }`}
-                        placeholder="https://youtube.com/@yourchannel"
-                        disabled={isAccountLoading}
-                      />
-                    </div>
-                    {accountFormik.touched.youtube &&
-                      accountFormik.errors.youtube && (
-                        <p className="text-sm text-error-600 flex items-center gap-1">
-                          <AlertCircleIcon className="size-3" />
-                          {accountFormik.errors.youtube}
-                        </p>
-                      )}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 opacity-50 pointer-events-none">
+                    <Input placeholder="LinkedIn URL" disabled />
+                    <Input placeholder="Instagram URL" disabled />
+                    <Input placeholder="YouTube URL" disabled />
                   </div>
                 </div>
 
-                {accountError && (
+                {(accountError || storeError) && (
                   <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
                     <AlertCircleIcon className="size-4 shrink-0" />
-                    <span>{accountError}</span>
+                    <span>{accountError || storeError}</span>
                   </div>
                 )}
 
                 {accountSuccess && (
-                  <div className="bg-primary-50 border border-primary-200 text-primary-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+                  <div className="bg-success-50 border border-success-200 text-success-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
                     <CheckCircleIcon className="size-4 shrink-0" />
                     <span>{accountSuccess}</span>
                   </div>
@@ -548,10 +681,10 @@ export function InstructorSettings() {
 
                 <Button
                   type="submit"
-                  disabled={isAccountLoading}
+                  disabled={loading.updateProfile}
                   className="bg-primary-600 hover:bg-primary-700 text-white"
                 >
-                  {isAccountLoading ? "Saving..." : "Save Changes"}
+                  {loading.updateProfile ? "Saving..." : "Save Changes"}
                 </Button>
               </form>
             </CardContent>
@@ -561,180 +694,283 @@ export function InstructorSettings() {
         <TabsContent value="security" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Account Security</CardTitle>
+              <CardTitle>Password & Security</CardTitle>
               <CardDescription>
-                Change your password to keep your account secure
+                Manage your password and account security settings
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form
-                onSubmit={securityFormik.handleSubmit}
-                className="space-y-5"
-              >
-                {/* Old Password */}
-                <div className="space-y-2">
-                  <Label htmlFor="oldPassword" className="text-default-700">
-                    Current Password <span className="text-error-600">*</span>
-                  </Label>
-                  <div className="relative">
-                    <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400 z-10" />
-                    <Input
-                      id="oldPassword"
-                      name="oldPassword"
-                      type={showOldPassword ? "text" : "password"}
-                      value={securityFormik.values.oldPassword}
-                      onChange={securityFormik.handleChange}
-                      onBlur={securityFormik.handleBlur}
-                      className={`pl-10 pr-10 ${
-                        securityFormik.touched.oldPassword &&
-                        securityFormik.errors.oldPassword
-                          ? "border-error-500"
-                          : ""
-                      }`}
-                      placeholder="Enter your current password"
-                      disabled={isSecurityLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowOldPassword(!showOldPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-default-400 hover:text-default-600 transition-colors"
-                      tabIndex={-1}
-                    >
-                      {showOldPassword ? (
-                        <EyeOffIcon className="size-5" />
-                      ) : (
-                        <EyeIcon className="size-5" />
-                      )}
-                    </button>
-                  </div>
-                  {securityFormik.touched.oldPassword &&
-                    securityFormik.errors.oldPassword && (
-                      <p className="text-sm text-error-600 flex items-center gap-1">
-                        <AlertCircleIcon className="size-3" />
-                        {securityFormik.errors.oldPassword}
-                      </p>
-                    )}
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-default-900">
+                    Reset Password
+                  </h3>
+                  <p className="text-sm text-default-600">
+                    Click the button below to receive a password reset link via
+                    email. You&apos;ll be able to set a new password without
+                    entering your old one.
+                  </p>
+
+                  {accountError && (
+                    <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+                      <AlertCircleIcon className="size-4 shrink-0" />
+                      <span>{accountError}</span>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handlePasswordReset}
+                    disabled={isPasswordResetLoading}
+                    className="bg-primary-600 hover:bg-primary-700 text-white"
+                  >
+                    {isPasswordResetLoading
+                      ? "Sending..."
+                      : "Send Password Reset Email"}
+                  </Button>
                 </div>
-
-                {/* New Password */}
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword" className="text-default-700">
-                    New Password <span className="text-error-600">*</span>
-                  </Label>
-                  <div className="relative">
-                    <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400 z-10" />
-                    <Input
-                      id="newPassword"
-                      name="newPassword"
-                      type={showNewPassword ? "text" : "password"}
-                      value={securityFormik.values.newPassword}
-                      onChange={securityFormik.handleChange}
-                      onBlur={securityFormik.handleBlur}
-                      className={`pl-10 pr-10 ${
-                        securityFormik.touched.newPassword &&
-                        securityFormik.errors.newPassword
-                          ? "border-error-500"
-                          : ""
-                      }`}
-                      placeholder="At least 12 characters with uppercase, lowercase, and numbers"
-                      disabled={isSecurityLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-default-400 hover:text-default-600 transition-colors"
-                      tabIndex={-1}
-                    >
-                      {showNewPassword ? (
-                        <EyeOffIcon className="size-5" />
-                      ) : (
-                        <EyeIcon className="size-5" />
-                      )}
-                    </button>
-                  </div>
-                  {securityFormik.touched.newPassword &&
-                    securityFormik.errors.newPassword && (
-                      <p className="text-sm text-error-600 flex items-center gap-1">
-                        <AlertCircleIcon className="size-3" />
-                        {securityFormik.errors.newPassword}
-                      </p>
-                    )}
-                </div>
-
-                {/* Confirm Password */}
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-default-700">
-                    Confirm New Password{" "}
-                    <span className="text-error-600">*</span>
-                  </Label>
-                  <div className="relative">
-                    <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400 z-10" />
-                    <Input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={securityFormik.values.confirmPassword}
-                      onChange={securityFormik.handleChange}
-                      onBlur={securityFormik.handleBlur}
-                      className={`pl-10 pr-10 ${
-                        securityFormik.touched.confirmPassword &&
-                        securityFormik.errors.confirmPassword
-                          ? "border-error-500"
-                          : ""
-                      }`}
-                      placeholder="Confirm your new password"
-                      disabled={isSecurityLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-default-400 hover:text-default-600 transition-colors"
-                      tabIndex={-1}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOffIcon className="size-5" />
-                      ) : (
-                        <EyeIcon className="size-5" />
-                      )}
-                    </button>
-                  </div>
-                  {securityFormik.touched.confirmPassword &&
-                    securityFormik.errors.confirmPassword && (
-                      <p className="text-sm text-error-600 flex items-center gap-1">
-                        <AlertCircleIcon className="size-3" />
-                        {securityFormik.errors.confirmPassword}
-                      </p>
-                    )}
-                </div>
-
-                {securityError && (
-                  <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-                    <AlertCircleIcon className="size-4 shrink-0" />
-                    <span>{securityError}</span>
-                  </div>
-                )}
-
-                {securitySuccess && (
-                  <div className="bg-primary-50 border border-primary-200 text-primary-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-                    <CheckCircleIcon className="size-4 shrink-0" />
-                    <span>{securitySuccess}</span>
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  disabled={isSecurityLoading}
-                  className="bg-primary-600 hover:bg-primary-700 text-white"
-                >
-                  {isSecurityLoading ? "Updating..." : "Update Password"}
-                </Button>
-              </form>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Password Reset Multi-Step Dialog */}
+      <Dialog
+        open={showPasswordDialog}
+        onOpenChange={handleClosePasswordDialog}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {passwordResetStep === "otp" && (
+                <>
+                  <CheckCircleIcon className="size-5 text-success-700" />
+                  Email Sent Successfully
+                </>
+              )}
+              {passwordResetStep === "password" && (
+                <>
+                  <LockIcon className="size-5 text-primary-600" />
+                  Reset Password
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {passwordResetStep === "otp" &&
+                "We've sent a 6-digit OTP to your email address."}
+              {passwordResetStep === "password" && "Enter your new password"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Step 1: OTP Entry */}
+            {passwordResetStep === "otp" && (
+              <>
+                <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 space-y-3">
+                  <p className="text-sm text-default-700">
+                    <span className="font-semibold">Email:</span>{" "}
+                    {passwordResetEmail}
+                  </p>
+                  <p className="text-sm text-default-600">
+                    Check your inbox and enter the 6-digit OTP below. The code
+                    will expire in 15 minutes.
+                  </p>
+                </div>
+
+                <div className="flex flex-col items-center space-y-2">
+                  <Label className="text-default-700">
+                    Enter 6-digit OTP <span className="text-error-600">*</span>
+                  </Label>
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(value) => {
+                        setOtpCode(value);
+                        setOtpError("");
+                      }}
+                      disabled={isPasswordResetLoading}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                  <p className="text-xs text-center text-default-500 mt-2">
+                    Enter the code sent to your email
+                  </p>
+                  {otpError && (
+                    <p className="text-sm text-error-600 flex items-center gap-1">
+                      <AlertCircleIcon className="size-3" />
+                      {otpError}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-center gap-2 text-sm border-t pt-4">
+                  <span className="text-default-600">
+                    Didn&apos;t receive the code?
+                  </span>
+                  {resendTimer > 0 ? (
+                    <span className="text-default-500 flex items-center gap-1">
+                      <ClockIcon className="size-4" />
+                      Resend in {formatTime(resendTimer)}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={isPasswordResetLoading}
+                      className="text-primary-600 hover:text-primary-700 font-medium transition-colors disabled:opacity-50"
+                    >
+                      Resend OTP
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleClosePasswordDialog}
+                    disabled={isPasswordResetLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleVerifyOtp}
+                    disabled={isPasswordResetLoading || otpCode.length !== 6}
+                    className="bg-primary-600 hover:bg-primary-700 text-white"
+                  >
+                    {isPasswordResetLoading ? "Verifying..." : "Verify OTP"}
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* Step 2: New Password Entry */}
+            {passwordResetStep === "password" && (
+              <>
+                <div className="space-y-4">
+                  {/* New Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword" className="text-default-700">
+                      New Password <span className="text-error-600">*</span>
+                    </Label>
+                    <div className="relative">
+                      <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400 z-10" />
+                      <Input
+                        id="newPassword"
+                        name="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => {
+                          setNewPassword(e.target.value);
+                          setPasswordError("");
+                        }}
+                        className="pl-10 pr-10"
+                        placeholder="At least 12 characters with uppercase, lowercase, and numbers"
+                        disabled={isPasswordResetLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-default-400 hover:text-default-600 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showNewPassword ? (
+                          <EyeOffIcon className="size-5" />
+                        ) : (
+                          <EyeIcon className="size-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="confirmNewPassword"
+                      className="text-default-700"
+                    >
+                      Confirm Password <span className="text-error-600">*</span>
+                    </Label>
+                    <div className="relative">
+                      <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400 z-10" />
+                      <Input
+                        id="confirmNewPassword"
+                        name="confirmNewPassword"
+                        type={showConfirmNewPassword ? "text" : "password"}
+                        value={confirmNewPassword}
+                        onChange={(e) => {
+                          setConfirmNewPassword(e.target.value);
+                          setPasswordError("");
+                        }}
+                        className="pl-10 pr-10"
+                        placeholder="Confirm new password"
+                        disabled={isPasswordResetLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmNewPassword(!showConfirmNewPassword)
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-default-400 hover:text-default-600 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showConfirmNewPassword ? (
+                          <EyeOffIcon className="size-5" />
+                        ) : (
+                          <EyeIcon className="size-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {passwordError && (
+                    <p className="text-sm text-error-600 flex items-center gap-1">
+                      <AlertCircleIcon className="size-3" />
+                      {passwordError}
+                    </p>
+                  )}
+
+                  {passwordResetSuccessMessage && (
+                    <div className="bg-success-50 border border-success-200 text-success-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+                      <CheckCircleIcon className="size-4 shrink-0" />
+                      <span>{passwordResetSuccessMessage}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleClosePasswordDialog}
+                    disabled={isPasswordResetLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleResetPassword}
+                    disabled={
+                      isPasswordResetLoading ||
+                      !newPassword ||
+                      !confirmNewPassword
+                    }
+                    className="bg-primary-600 hover:bg-primary-700 text-white"
+                  >
+                    {isPasswordResetLoading ? "Resetting..." : "Reset Password"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
