@@ -2,7 +2,7 @@ import axios, { type AxiosError, type AxiosInstance, type AxiosResponse, type In
 import { getSession } from "next-auth/react";
 
 function getBaseURL(): string {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL;
+  const baseUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!baseUrl) {
     throw new Error(`NEXT_PUBLIC_API_BASE_URL or API_BASE_URL is not defined, base URL :  ${baseUrl}, API_BASE_URL :  ${process.env.API_BASE_URL} `);
   }

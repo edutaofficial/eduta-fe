@@ -2,7 +2,7 @@ import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const API_BASE_URL =  process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
 
 async function parseResponseSafe(response: Response): Promise<unknown> {
   const contentType = response.headers.get("content-type") || "";
