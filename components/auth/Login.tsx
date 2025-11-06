@@ -63,8 +63,8 @@ export default function Login() {
     mutationFn: async (values: LoginFormValues) => {
       try {
         // Call backend first to get a precise error message
-        const baseURL = `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/login`;
-        setdebugURL(baseURL);
+        const baseURL = "http://54.183.140.154:3005/docs/api/v1/user/login";
+        setdebugURL(process.env.API_BASE_URL ? process.env.API_BASE_URL : "null");
         const resp = await fetch(
           baseURL,
           {
