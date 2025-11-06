@@ -2,8 +2,14 @@ import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-const API_BASE_URL =  process.env.API_BASE_URL || "http://54.183.140.154:3005";
-console.log(API_BASE_URL);
+const API_BASE_URL = process.env.API_BASE_URL 
+  ? process.env.API_BASE_URL 
+  : process.env.NODE_ENV === "production" 
+    ? "http://54.183.140.154:3005"
+    : "http://localhost:3005";
+
+console.log("API_BASE_URL:", API_BASE_URL);
+
 async function parseResponseSafe(response: Response): Promise<unknown> {
   const contentType = response.headers.get("content-type") || "";
   if (contentType.includes("application/json")) {
@@ -93,6 +99,7 @@ export const authOptions: NextAuthOptions = {
   logger: {
     error() {
       // suppress noisy fetch errors
+      
     },
     // eslint-disable-next-line no-console
     warn: console.warn,
