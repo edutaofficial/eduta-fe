@@ -2,13 +2,13 @@ import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-const API_BASE_URL = process.env.API_BASE_URL 
-  ? process.env.API_BASE_URL 
-  : process.env.NODE_ENV === "production" 
-    ? "http://54.183.140.154:3005"
-    : "http://localhost:3005";
+const API_BASE_URL = "http://54.183.140.154:3005";
+// const API_BASE_URL = process.env.API_BASE_URL 
+//   ? process.env.API_BASE_URL 
+//   : process.env.NODE_ENV === "production" 
+//     ? "http://54.183.140.154:3005"
+//     : "http://localhost:3005";
 
-console.log("API_BASE_URL:", API_BASE_URL);
 
 async function parseResponseSafe(response: Response): Promise<unknown> {
   const contentType = response.headers.get("content-type") || "";
@@ -50,7 +50,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
         console.log("API_BASE_URL in auth: ->", API_BASE_URL);
-        const response = await fetch(`${API_BASE_URL}/api/v1/user/login`, {
+        const response = await fetch("http://54.183.140.154:3005/api/v1/user/login", {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({ email: credentials.email, password: credentials.password }),
@@ -99,7 +99,7 @@ export const authOptions: NextAuthOptions = {
   logger: {
     error() {
       // suppress noisy fetch errors
-      
+
     },
     // eslint-disable-next-line no-console
     warn: console.warn,
