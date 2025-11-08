@@ -1,6 +1,6 @@
 import axiosInstance from "@/app/api/axiosInstance";
-import { extractErrorMessage } from "@/lib/utils/errorUtils";
-import type { UIBasicInfo, UICurriculum, UIPricing } from "@/types/course";
+import { extractErrorMessage } from "@/lib/errorUtils";
+import type { UIBasicInfo, UICurriculum, UIPricing, CourseDetailApiResponse } from "@/types/course";
 
 export interface CourseForEditResponse {
   courseId: string;
@@ -17,99 +17,77 @@ export async function getCourseForEdit(
   courseId: string
 ): Promise<CourseForEditResponse> {
   try {
-    const { data } = await axiosInstance.get<{
-      // Basic Info
-      title: string;
-      short_description: string;
-      description: string;
-      learning_level: string;
-      language: string;
-      category_id: string;
-      course_logo_id: number | null;
-      course_banner_id: number | null;
-      promo_video_id: number | null;
-      learning_points: Array<{ id: string; text: string }>;
-      target_audiences: Array<{ id: string; text: string }>;
-      prerequisites: Array<{ id: string; text: string }>;
-      // Curriculum
-      sections: Array<{
-        section_id: string;
-        title: string;
-        description: string;
-        order: number;
-        lectures: Array<{
-          lecture_id: string;
-          title: string;
-          description: string;
-          order: number;
-          duration: number;
-          is_free: boolean;
-          video_id: number | null;
-          resources: Array<{
-            resource_id: string;
-            title: string;
-            file_id: number;
-          }>;
-        }>;
-      }>;
-      // Pricing
-      price: number;
-      currency: string;
-      original_price: number;
-      discount_percentage: number;
-    }>(`/api/instructor/courses/${courseId}`);
+    const { data } = await axiosInstance.get<CourseDetailApiResponse>(
+      `/api/instructor/courses/${courseId}`
+    );
+
+    // eslint-disable-next-line no-console
+    console.log("API Response:", data);
+
+    const courseData = data.data;
 
     // Transform to UI format
     const basicInfo: UIBasicInfo = {
-      title: data.title || "",
-      shortDescription: data.short_description || "",
-      description: data.description || "",
-      learningLevel: data.learning_level || "",
-      language: data.language || "",
-      categoryId: data.category_id || "",
-      courseLogoId: data.course_logo_id,
-      courseBannerId: data.course_banner_id,
-      promoVideoId: data.promo_video_id,
-      learningPoints: data.learning_points || [],
-      targetAudiences: data.target_audiences || [],
-      prerequisites: data.prerequisites || [],
+      title: courseData.courseDetails.title || "",
+      shortDescription: courseData.courseDetails.description || "",
+      description: courseData.courseDetails.description || "",
+      learningLevel: courseData.courseDetails.learningLevel || "",
+      language: courseData.courseDetails.language || "",
+      categoryId: courseData.courseDetails.categoryId || "",
+      courseLogoId: courseData.courseDetails.courseLogoId,
+      courseBannerId: courseData.courseDetails.courseBannerId,
+      promoVideoId: courseData.courseDetails.promoVideoId,
+      learningPoints: courseData.courseDetails.learningPoints.map((lp, index) => ({
+        id: lp.learningPointId || `lp-${index}`,
+        text: lp.description,
+      })),
+      targetAudiences: courseData.courseDetails.targetAudience.map((ta, index) => ({
+        id: ta.audienceId || `ta-${index}`,
+        text: ta.description,
+      })),
+      prerequisites: courseData.courseDetails.requirements.map((req, index) => ({
+        id: req.requirementId || `req-${index}`,
+        text: req.description,
+      })),
     };
 
+    // eslint-disable-next-line no-console
+    console.log("Transformed basicInfo:", basicInfo);
+
     const curriculum: UICurriculum = {
-      sections:
-        data.sections?.map((section) => ({
-          id: section.section_id,
+      sections: courseData.curriculum.sections.map((section) => ({
+        id: section.sectionId,
           title: section.title,
           description: section.description,
-          order: section.order,
-          lectures:
-            section.lectures?.map((lecture) => ({
-              id: lecture.lecture_id,
+        order: section.displayOrder,
+        lectures: section.lectures.map((lecture) => ({
+          id: lecture.lectureId,
               title: lecture.title,
               description: lecture.description,
-              order: lecture.order,
+          order: lecture.displayOrder,
               duration: lecture.duration,
-              isFree: lecture.is_free,
-              videoId: lecture.video_id,
-              resources:
-                lecture.resources?.map((resource) => ({
-                  id: resource.resource_id,
-                  title: resource.title,
-                  fileId: resource.file_id,
-                })) || [],
-            })) || [],
-        })) || [],
+          isFree: lecture.isPreview,
+          videoId: lecture.videoId,
+          resources: lecture.resources.map((resource) => ({
+            id: resource.resourceId,
+            title: resource.resourceName,
+            fileId: resource.assetId,
+          })),
+        })),
+      })),
     };
 
     const pricing: UIPricing = {
-      price: data.price ?? 0,
-      currency: data.currency || "USD",
-      originalPrice: data.original_price,
-      discountPercentage: data.discount_percentage,
+      price: courseData.pricing.amount ?? 0,
+      currency: courseData.pricing.currency || "USD",
+      originalPrice: courseData.pricing.originalAmount,
+      discountPercentage: courseData.pricing.discountPercentage,
+      isFree: courseData.pricing.amount === 0,
+      priceTier: courseData.pricing.priceTier,
     };
 
     return {
-      courseId,
+      courseId: courseData.courseId,
       basicInfo,
       curriculum,
       pricing,

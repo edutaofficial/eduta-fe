@@ -1,5 +1,9 @@
-import { UnderDevelopment } from "@/components/Common";
+import { CourseEditWizard } from "@/components/Instructor/CourseEditWizard";
 
-export default function EditCoursePage() {
-  return <UnderDevelopment />;
+export default function EditCoursePage({
+  params,
+}: {
+  params: { courseId: string };
+}) {
+  return <CourseEditWizard courseId={params.courseId} isDraft={false} />;
 }

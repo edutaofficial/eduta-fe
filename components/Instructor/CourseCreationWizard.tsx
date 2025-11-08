@@ -33,6 +33,7 @@ export function CourseCreationWizard() {
     error,
     courseId,
     uploading,
+    resetStore,
   } = useCourseStore();
 
   type Validatable = {
@@ -53,15 +54,24 @@ export function CourseCreationWizard() {
     (currentStep === 1 && (uploading.promoVideo || uploading.coverBanner)) ||
     (currentStep === 2 && uploading.curriculum);
 
-  // Restore courseId from localStorage on mount
+  // Reset store when creating a NEW course (only on initial mount)
   React.useEffect(() => {
-    if (!courseId && typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
       const savedCourseId = localStorage.getItem("course_creation_courseId");
-      if (savedCourseId) {
+      
+      // If there's no saved courseId in localStorage, this is a fresh start
+      // Reset the store to clear any old data from previous edits
+      if (!savedCourseId) {
+        // eslint-disable-next-line no-console
+        console.log("Resetting store for new course creation");
+        resetStore();
+      } else {
+        // Restore the courseId if it exists
         useCourseStore.setState({ courseId: savedCourseId });
       }
     }
-  }, [courseId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps = only run once on mount
 
   // Scroll to top when step changes
   React.useEffect(() => {

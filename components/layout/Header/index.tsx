@@ -98,7 +98,7 @@ export default function Header() {
                   asChild
                   className={navigationMenuTriggerStyle()}
                 >
-                  <Link href="/">Explore</Link>
+                  <Link href="/all-courses">Explore</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <SearchComponent />
@@ -111,7 +111,7 @@ export default function Header() {
                   asChild
                   className={navigationMenuTriggerStyle()}
                 >
-                  <Link href="/courses">Courses</Link>
+                  <Link href="/all-courses">Courses</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>

@@ -59,7 +59,10 @@ export function CoursesGrid({
         </p>
 
         {/* Sort Dropdown */}
-        <Select value={sortBy} onValueChange={(value) => onSortChange(value as SortOption)}>
+        <Select
+          value={sortBy}
+          onValueChange={(value) => onSortChange(value as SortOption)}
+        >
           <SelectTrigger className="w-[180px] border-default-300 bg-white">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
@@ -68,7 +71,9 @@ export function CoursesGrid({
             <SelectItem value="created_at-asc">Oldest First</SelectItem>
             <SelectItem value="title-asc">Title: A-Z</SelectItem>
             <SelectItem value="title-desc">Title: Z-A</SelectItem>
-            <SelectItem value="published_at-desc">Recently Published</SelectItem>
+            <SelectItem value="published_at-desc">
+              Recently Published
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -89,11 +94,7 @@ export function CoursesGrid({
               className="block transition-transform hover:scale-[1.02]"
             >
               <CourseCard
-                image={
-                  course.courseBannerId
-                    ? `/api/assets/${course.courseBannerId}`
-                    : ""
-                }
+                image={course.courseBannerUrl}
                 title={course.title}
                 company={`${course.instructor.firstName} ${course.instructor.lastName}`}
                 rating={parseFloat(course.stats.avgRating) || 0}
@@ -135,7 +136,9 @@ export function CoursesGrid({
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
+                  onClick={() =>
+                    currentPage > 1 && onPageChange(currentPage - 1)
+                  }
                   className={cn(
                     "cursor-pointer",
                     currentPage === 1 && "pointer-events-none opacity-50"
@@ -184,7 +187,8 @@ export function CoursesGrid({
                   }
                   className={cn(
                     "cursor-pointer",
-                    currentPage === totalPages && "pointer-events-none opacity-50"
+                    currentPage === totalPages &&
+                      "pointer-events-none opacity-50"
                   )}
                 />
               </PaginationItem>
@@ -195,4 +199,3 @@ export function CoursesGrid({
     </div>
   );
 }
-

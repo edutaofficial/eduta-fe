@@ -2,12 +2,12 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/context/AuthContext";
 import { useFormik } from "formik";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signupUser, formatNameForSignup } from "@/app/api/auth/signup";
 import {
   Card,
   CardHeader,
@@ -91,65 +91,102 @@ export default function Signup() {
   const [activeTab, setActiveTab] = useState<TabType>("student");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { signup } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const signupStudentMutation = useMutation({
     mutationFn: async (values: StudentSignupFormValues) => {
-      const result = await signup(
-        values.email,
-        values.password,
-        "student",
-        values.name
-      );
-      if (!result.success) return result;
-      await signIn("credentials", {
-        redirect: false,
-        email: values.email,
-        password: values.password,
-      });
-      const redirect = searchParams.get("redirect");
-      const session = await getSession();
-      const role = (session as unknown as { role?: string })?.role;
-      const dest =
-        redirect ||
-        (role === "instructor"
-          ? "/instructor/dashboard"
-          : "/student/dashboard");
-      router.replace(dest);
-      return result;
+      try {
+        const { firstName, lastName } = formatNameForSignup(values.name);
+
+        // Call signup API
+        await signupUser({
+          first_name: firstName,
+          last_name: lastName,
+          email: values.email,
+          password: values.password,
+          confirm_password: values.password,
+          user_type: "learner",
+        });
+
+        // Auto-login after successful signup
+        const res = await signIn("credentials", {
+          redirect: false,
+          email: values.email,
+          password: values.password,
+        });
+
+        if (res?.error) {
+          return { success: false, error: "Signup succeeded but login failed" };
+        }
+
+        // Redirect based on role
+        const redirect = searchParams.get("redirect");
+        const session = await getSession();
+        const role = (session as unknown as { role?: string })?.role;
+        const dest =
+          redirect ||
+          (role === "instructor"
+            ? "/instructor/courses"
+            : "/student/dashboard");
+        router.replace(dest);
+
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Signup failed",
+        };
+      }
     },
   });
 
   const signupInstructorMutation = useMutation({
     mutationFn: async (values: InstructorSignupFormValues) => {
-      const result = await signup(
-        values.email,
-        values.password,
-        "instructor",
-        values.name,
-        {
-          professionalTitle: values.professionalTitle,
+      try {
+        const { firstName, lastName } = formatNameForSignup(values.name);
+
+        // Call signup API
+        await signupUser({
+          first_name: firstName,
+          last_name: lastName,
+          email: values.email,
+          password: values.password,
+          confirm_password: values.password,
+          user_type: "instructor",
+          professional_title: values.professionalTitle,
           bio: values.bio,
+        });
+
+        // Auto-login after successful signup
+        const res = await signIn("credentials", {
+          redirect: false,
+          email: values.email,
+          password: values.password,
+        });
+
+        if (res?.error) {
+          return { success: false, error: "Signup succeeded but login failed" };
         }
-      );
-      if (!result.success) return result;
-      await signIn("credentials", {
-        redirect: false,
-        email: values.email,
-        password: values.password,
-      });
-      const redirect = searchParams.get("redirect");
-      const session = await getSession();
-      const role = (session as unknown as { role?: string })?.role;
-      const dest =
-        redirect ||
-        (role === "instructor"
-          ? "/instructor/dashboard"
-          : "/student/dashboard");
-      router.replace(dest);
-      return result;
+
+        // Redirect based on role
+        const redirect = searchParams.get("redirect");
+        const session = await getSession();
+        const role = (session as unknown as { role?: string })?.role;
+        const dest =
+          redirect ||
+          (role === "instructor"
+            ? "/instructor/courses"
+            : "/student/dashboard");
+        router.replace(dest);
+
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Signup failed",
+        };
+      }
     },
   });
 

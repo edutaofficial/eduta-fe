@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { EditIcon, BookOpenIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -9,7 +10,7 @@ import type { InstructorCourse } from "@/app/api/course/getInstructorCourses";
 
 interface DraftCourseCardProps {
   course: InstructorCourse;
-  onEdit?: (courseId: string) => void;
+  onEdit?: (courseId: string) => void; // Kept for backwards compatibility but not used
 }
 
 // Calculate progress based on filled fields
@@ -37,7 +38,8 @@ function calculateProgress(course: InstructorCourse): number {
   return Math.round((completedFields / totalFields) * 100);
 }
 
-export function DraftCourseCard({ course, onEdit }: DraftCourseCardProps) {
+export function DraftCourseCard({ course }: DraftCourseCardProps) {
+  const router = useRouter();
   const [progress, setProgress] = React.useState(0);
   const actualProgress = calculateProgress(course);
 
@@ -49,6 +51,10 @@ export function DraftCourseCard({ course, onEdit }: DraftCourseCardProps) {
     return () => clearTimeout(timer);
   }, [actualProgress]);
 
+  const handleEdit = () => {
+    router.push(`/instructor/courses/${course.courseId}/draft-complete`);
+  };
+
   return (
     <div
       className={cn(
@@ -57,11 +63,11 @@ export function DraftCourseCard({ course, onEdit }: DraftCourseCardProps) {
         "hover:shadow-lg hover:border-primary-200 hover:-translate-y-1",
         "cursor-pointer"
       )}
-      onClick={() => onEdit?.(course.courseId)}
+      onClick={handleEdit}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onEdit?.(course.courseId);
+          handleEdit();
         }
       }}
       role="button"
@@ -77,7 +83,7 @@ export function DraftCourseCard({ course, onEdit }: DraftCourseCardProps) {
             {course.title || "Untitled Course"}
           </h3>
           <p className="text-sm text-muted-foreground mt-1.5">
-            {course.categoryName || "No category"} • {course.learningLevel || "No level"}
+            {course.instructorName || "Instructor"}
           </p>
         </div>
       </div>
@@ -109,7 +115,7 @@ export function DraftCourseCard({ course, onEdit }: DraftCourseCardProps) {
         className="w-full gap-2 border-primary-200 text-primary-600 hover:bg-primary-50 hover:border-primary-300 group-hover:shadow-md transition-all"
         onClick={(e) => {
           e.stopPropagation();
-          onEdit?.(course.courseId);
+          handleEdit();
         }}
       >
         <EditIcon className="size-4" />

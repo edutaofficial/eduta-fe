@@ -1,5 +1,5 @@
 import axiosInstance from "@/app/api/axiosInstance";
-import { extractErrorMessage } from "@/lib/utils/errorUtils";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 /**
  * Delete a course by ID

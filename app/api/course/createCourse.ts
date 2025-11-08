@@ -1,6 +1,6 @@
 import axiosInstance from "@/app/api/axiosInstance";
 import type { CreateCourseRequest } from "@/types/course";
-import { extractErrorMessage } from "@/lib/utils/errorUtils";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 export interface CreateCourseResponse {
   id: string; // courseId

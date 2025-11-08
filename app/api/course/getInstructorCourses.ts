@@ -1,5 +1,5 @@
 import axiosInstance from "@/app/api/axiosInstance";
-import { extractErrorMessage } from "@/lib/utils/errorUtils";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 export interface InstructorCoursesParams {
   instructorId: number;
@@ -28,7 +28,9 @@ export interface InstructorCourse {
   language: string;
   status: "draft" | "published" | "archived";
   courseBannerId: number | null;
+  courseBannerUrl: string | null;
   courseLogoId: number | null;
+  courseLogoUrl: string | null;
   instructorId: number;
   instructorName: string;
   categoryId: string;

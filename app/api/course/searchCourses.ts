@@ -49,6 +49,7 @@ export interface PublicCourse {
   slug: string;
   shortDescription: string;
   courseBannerId: number | null;
+  courseBannerUrl: string | null;
   learningLevel: string;
   language: string;
   instructor: CourseInstructor;

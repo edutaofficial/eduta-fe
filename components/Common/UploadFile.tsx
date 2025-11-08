@@ -10,7 +10,7 @@ export interface UploadFileProps {
   label: string;
   accept: string;
   value?: string | number | null; // asset ID (string or number)
-  onChange: (assetId: number | null) => void;
+  onChange: (assetId: number | null, file?: File) => void;
   onUploadStateChange?: (isUploading: boolean) => void;
   error?: string;
   className?: string;
@@ -195,7 +195,7 @@ export function UploadFile({
       const asset = response.data;
 
       if (asset && asset.asset_id) {
-        onChange(asset.asset_id);
+        onChange(asset.asset_id, file); // Pass the file to onChange
         setUploadProgress(100);
         // Show success animation before clearing
         setTimeout(() => {
@@ -343,10 +343,10 @@ export function UploadFile({
         role="button"
         tabIndex={disabled || isUploading ? -1 : 0}
         className={cn(
-          "border-2 border-dashed rounded-xl p-6 text-center transition-all duration-300",
+          "border-2 border-dashed rounded-xl p-6 text-center transition-all duration-300 bg-white",
           "min-h-[140px] flex flex-col items-center justify-center",
           disabled || isUploading
-            ? "cursor-not-allowed opacity-60 bg-muted/50"
+            ? "cursor-not-allowed opacity-60"
             : "cursor-pointer hover:border-primary-400 hover:shadow-md hover:bg-primary-50/30",
           isDragging && !disabled && !isUploading
             ? "border-primary-600 bg-linear-to-b from-primary-50 to-primary-100/50 scale-[1.02] shadow-lg"

@@ -1,28 +1,11 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { loginUser } from "@/app/api/auth/login";
 
-const API_BASE_URL = "http://54.183.140.154:3005";
-// const API_BASE_URL = process.env.API_BASE_URL 
-//   ? process.env.API_BASE_URL 
-//   : process.env.NODE_ENV === "production" 
-//     ? "http://54.183.140.154:3005"
-//     : "http://localhost:3005";
-
-
-async function parseResponseSafe(response: Response): Promise<unknown> {
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
-    return response.json();
-  }
-  const text = await response.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { message: text };
-  }
-}
-
+/**
+ * Decode JWT payload to extract user information
+ */
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const payload = token.split(".")[1];
@@ -48,33 +31,44 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
-        console.log("API_BASE_URL in auth: ->", API_BASE_URL);
-        const response = await fetch("http://54.183.140.154:3005/api/v1/user/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ email: credentials.email, password: credentials.password }),
-        });
-        const data = (await parseResponseSafe(response)) as {
-          status?: string;
-          message?: string;
-          data?: { token?: string };
-        };
-        if (!response.ok || data?.status !== "success") return null;
-        const token = data?.data?.token as string | undefined;
-        if (!token) return null;
-        const payload = decodeJwtPayload(token);
-        const role = payload?.user_type === "instructor" ? "instructor" : "student";
-        const name = [payload?.first_name, payload?.last_name].filter(Boolean).join(" ") || "User";
-        const payloadTyped = payload as { user_id?: string; email?: string };
-        const userObj = {
-          id: String(payloadTyped?.user_id || payloadTyped?.email),
-          email: payloadTyped?.email || credentials.email,
-          name,
-          role,
-          token,
-        } as { id: string; email: string; name: string; role: string; token: string };
-        return userObj;
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        try {
+          // Use the centralized login API function
+          const response = await loginUser({
+            email: credentials.email,
+            password: credentials.password,
+          });
+
+          const { token } = response.data;
+          if (!token) return null;
+
+          // Decode JWT to extract user information
+          const payload = decodeJwtPayload(token);
+          if (!payload) return null;
+
+          const role = payload.user_type === "instructor" ? "instructor" : "student";
+          const name =
+            [payload.first_name, payload.last_name]
+              .filter(Boolean)
+              .join(" ") || "User";
+
+          const userObj = {
+            id: String(payload.user_id || payload.email || credentials.email),
+            email: (payload.email as string) || credentials.email,
+            name,
+            role,
+            token,
+          };
+
+          return userObj;
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error("Login failed:", error);
+          return null;
+        }
       },
     }),
   ],

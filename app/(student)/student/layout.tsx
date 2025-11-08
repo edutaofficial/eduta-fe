@@ -16,6 +16,7 @@ export default function StudentLayout({
     { label: "Courses", href: "/student/courses" },
     { label: "Wishlist", href: "/student/wishlist" },
     { label: "Certificates", href: "/student/certificates" },
+    { label: "Settings", href: "/student/settings" },
   ];
 
   return (
@@ -53,7 +54,7 @@ export default function StudentLayout({
         </div>
 
         {/* Page Content */}
-        <div className="max-w-container mx-auto px-4">{children}</div>
+        <div className="max-w-container mx-auto px-4 pb-14">{children}</div>
       </div>
     </div>
   );

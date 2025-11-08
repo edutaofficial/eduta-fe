@@ -1,0 +1,130 @@
+"use client";
+
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import {
+  CourseAccordionItem,
+  CourseAccordionTrigger,
+  CourseAccordionContent,
+  CourseAccordion,
+} from "@/components/ui/course-accordion";
+import { PlusIcon } from "lucide-react";
+import type { UploadedFile } from "@/components/Common";
+import { TitleDescriptionFields } from "./TitleDescriptionFields";
+import { LectureItem } from "./LectureItem";
+import type { SectionFormData, LectureFormData } from "./types";
+
+interface SectionItemProps {
+  section: SectionFormData;
+  sectionIndex: number;
+  canRemove: boolean;
+  showErrors: boolean;
+  onRemove: () => void;
+  onUpdateSection: (field: keyof SectionFormData, value: string) => void;
+  onAddLecture: () => void;
+  onRemoveLecture: (lectureId: number | string) => void;
+  onUpdateLecture: (
+    lectureId: number | string,
+    field: keyof LectureFormData,
+    value: string | number | boolean | UploadedFile[]
+  ) => void;
+  onBatchUpdateLecture: (
+    lectureId: number | string,
+    updates: Partial<LectureFormData>
+  ) => void;
+  onLectureUploadStateChange: (
+    lectureId: number | string,
+    isUploading: boolean
+  ) => void;
+}
+
+/**
+ * Section Item Component
+ * Represents a single section containing multiple lectures
+ * Manages section metadata and lecture collection
+ */
+export const SectionItem: React.FC<SectionItemProps> = ({
+  section,
+  sectionIndex,
+  canRemove,
+  showErrors,
+  onRemove,
+  onUpdateSection,
+  onAddLecture,
+  onRemoveLecture,
+  onUpdateLecture,
+  onBatchUpdateLecture,
+  onLectureUploadStateChange,
+}) => {
+  return (
+    <CourseAccordionItem
+      key={section.id}
+      value={`section-${section.id}`}
+      className="mb-4"
+    >
+      <CourseAccordionTrigger
+        variant="section"
+        onClose={canRemove ? onRemove : undefined}
+      >
+        <span className="font-medium text-lg">
+          Section {sectionIndex + 1} | {section.name}
+        </span>
+      </CourseAccordionTrigger>
+      
+      <CourseAccordionContent>
+        <div className="p-6">
+          {/* Section Title & Description */}
+          <TitleDescriptionFields
+            id={section.id}
+            title={section.name}
+            description={section.description}
+            onTitleChange={(value) => onUpdateSection("name", value)}
+            onDescriptionChange={(value) => onUpdateSection("description", value)}
+            titleLabel="Section Name"
+            descriptionLabel="Section Description"
+            titlePlaceholder="Enter section name"
+            descriptionPlaceholder="Describe what students will learn in this section..."
+            showErrors={showErrors}
+            variant="section"
+          />
+
+          {/* Lectures */}
+          <div className="space-y-4 border-t pt-4 mt-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium">Lectures</h3>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onAddLecture}
+                className="gap-2"
+              >
+                <PlusIcon className="size-4" />
+                Add Lecture
+              </Button>
+            </div>
+
+            <CourseAccordion type="multiple" className="space-y-2">
+              {section.lectures.map((lecture, lectureIndex) => (
+                <LectureItem
+                  key={lecture.id}
+                  lecture={lecture}
+                  lectureIndex={lectureIndex}
+                  canRemove={section.lectures.length > 1}
+                  showErrors={showErrors}
+                  onRemove={() => onRemoveLecture(lecture.id)}
+                  onUpdate={(field, value) => onUpdateLecture(lecture.id, field, value)}
+                  onBatchUpdate={(updates) => onBatchUpdateLecture(lecture.id, updates)}
+                  onUploadStateChange={(isUploading) =>
+                    onLectureUploadStateChange(lecture.id, isUploading)
+                  }
+                />
+              ))}
+            </CourseAccordion>
+          </div>
+        </div>
+      </CourseAccordionContent>
+    </CourseAccordionItem>
+  );
+};
+

@@ -1,6 +1,6 @@
 import axiosInstance from "@/app/api/axiosInstance";
 import type { CurriculumRequest } from "@/types/course";
-import { extractErrorMessage } from "@/lib/utils/errorUtils";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 export async function updateCurriculum(courseId: string, payload: CurriculumRequest): Promise<void> {
   try {

@@ -1,9 +1,24 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, MoreVerticalIcon, TrashIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Pagination,
   PaginationContent,
@@ -13,40 +28,73 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { CourseCard } from "@/components/Common/CourseCard";
-import { CONSTANTS } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CourseCard } from "@/components/Common";
+import { useLearnerStore } from "@/store/useLearnerStore";
 import { cn } from "@/lib/utils";
 
 export function WishlistTab() {
+  const { wishlist, loading, fetchWishlist, removeFromWishlist } =
+    useLearnerStore();
+
   const [searchQuery, setSearchQuery] = React.useState("");
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [courseToDelete, setCourseToDelete] = React.useState<
+    (typeof wishlist)[0] | null
+  >(null);
 
   const itemsPerPage = 6;
 
-  // Filter courses
-  const filteredCourses = React.useMemo(() => {
-    let courses = [...CONSTANTS.STUDENT_WISHLIST];
+  // Fetch wishlist on mount
+  React.useEffect(() => {
+    fetchWishlist();
+  }, [fetchWishlist]);
+
+  // Filter and search wishlist
+  const filteredWishlist = React.useMemo(() => {
+    let items = [...wishlist];
 
     // Apply search filter
     if (searchQuery) {
-      courses = courses.filter(
-        (course) =>
-          course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          course.company.toLowerCase().includes(searchQuery.toLowerCase())
+      items = items.filter(
+        (item) =>
+          item.courseTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.instructorName.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    return courses;
-  }, [searchQuery]);
+    return items;
+  }, [wishlist, searchQuery]);
 
   // Pagination
-  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
-  const paginatedCourses = filteredCourses.slice(
+  const totalPages = Math.ceil(filteredWishlist.length / itemsPerPage);
+  const paginatedWishlist = filteredWishlist.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // Reset page when search changes
+  // Handle remove from wishlist
+  const handleRemoveClick = (item: (typeof wishlist)[0]) => {
+    setCourseToDelete(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!courseToDelete) return;
+
+    try {
+      await removeFromWishlist(courseToDelete.courseId);
+      setDeleteDialogOpen(false);
+      setCourseToDelete(null);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to remove from wishlist:", error);
+    }
+  };
+
+  // Reset page when filters change
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
@@ -54,14 +102,17 @@ export function WishlistTab() {
   return (
     <div className="space-y-6">
       {/* Search Bar */}
-      <div className="relative">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
-        <Input
-          placeholder="Search wishlist..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-11 bg-white border-default-300"
-        />
+      <div className="flex flex-col sm:flex-row gap-4">
+        {/* Search */}
+        <div className="relative flex-1">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
+          <Input
+            placeholder="Search wishlist..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-11 bg-white border-default-300"
+          />
+        </div>
       </div>
 
       {/* Results Count */}
@@ -69,32 +120,70 @@ export function WishlistTab() {
         <p className="text-sm text-default-700">
           Showing{" "}
           <span className="font-semibold text-default-900">
-            {filteredCourses.length}
+            {filteredWishlist.length}
           </span>{" "}
-          results
+          {filteredWishlist.length === 1 ? "course" : "courses"} in wishlist
         </p>
       </div>
 
-      {/* Courses Grid */}
-      {paginatedCourses.length > 0 ? (
+      {/* Wishlist Grid */}
+      {loading.fetchWishlist ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {paginatedCourses.map((course) => (
-            <Link
-              key={course.id}
-              href={`/courses/${course.courseId}`}
-              className="block transition-transform hover:scale-[1.02]"
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-lg border border-default-200 overflow-hidden"
             >
+              <Skeleton className="w-full h-48" />
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : paginatedWishlist.length > 0 ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {paginatedWishlist.map((item) => (
+            <div key={item.wishlistId} className="relative">
+              {/* Dropdown Menu */}
+              <div className="absolute top-4 right-4 z-10">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 bg-white/90 hover:bg-white shadow-sm"
+                    >
+                      <MoreVerticalIcon className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => handleRemoveClick(item)}
+                      className="text-error-600 focus:text-error-700"
+                    >
+                      <TrashIcon className="size-4 mr-2" />
+                      Remove from Wishlist
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
               <CourseCard
-                image={course.image}
-                title={course.title}
-                company={course.company}
-                rating={course.rating}
-                ratingCount={course.ratingCount}
-                enrollments={course.enrollments}
-                impressions={course.impressions}
-                price={course.price}
+                image={item.courseBannerId?.toString() || ""}
+                title={item.courseTitle}
+                company={item.instructorName}
+                rating={item.avgRating}
+                ratingCount={item.totalReviews}
+                enrollments={item.totalStudents}
+                impressions={item.totalStudents * 3} // Estimated impressions
+                price={item.price}
+                featured={false}
               />
-            </Link>
+            </div>
           ))}
         </div>
       ) : (
@@ -105,10 +194,12 @@ export function WishlistTab() {
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold text-default-900">
-                No courses in your wishlist
+                No courses in wishlist
               </h3>
               <p className="text-sm text-muted-foreground">
-                Start adding courses to your wishlist to see them here
+                {searchQuery
+                  ? "Try adjusting your search criteria"
+                  : "Start adding courses to your wishlist to see them here"}
               </p>
             </div>
           </div>
@@ -116,13 +207,15 @@ export function WishlistTab() {
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && paginatedCourses.length > 0 && (
+      {totalPages > 1 && paginatedWishlist.length > 0 && (
         <div className="flex justify-center mt-8">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  onClick={() => currentPage > 1 && setCurrentPage((p) => p - 1)}
+                  onClick={() =>
+                    currentPage > 1 && setCurrentPage((p) => p - 1)
+                  }
                   className={cn(
                     "cursor-pointer",
                     currentPage === 1 && "pointer-events-none opacity-50"
@@ -171,7 +264,8 @@ export function WishlistTab() {
                   }
                   className={cn(
                     "cursor-pointer",
-                    currentPage === totalPages && "pointer-events-none opacity-50"
+                    currentPage === totalPages &&
+                      "pointer-events-none opacity-50"
                   )}
                 />
               </PaginationItem>
@@ -179,7 +273,32 @@ export function WishlistTab() {
           </Pagination>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove from Wishlist</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove{" "}
+              <span className="font-semibold text-default-900">
+                {courseToDelete?.courseTitle}
+              </span>{" "}
+              from your wishlist? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRemove}
+              className="bg-error-600 hover:bg-error-700"
+              disabled={loading.removeFromWishlist}
+            >
+              {loading.removeFromWishlist ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-

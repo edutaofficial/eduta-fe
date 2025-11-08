@@ -68,20 +68,21 @@ export async function middleware(request: NextRequest) {
     "/instructor": ["instructor"],
   };
 
-  // Public routes that should redirect to dashboard if already logged in
-  // Include real routes used in app
-  const publicRoutes = ["/login", "/signup", "/forgot-password", "/"];
+  // Auth-only routes that should redirect to dashboard if already logged in
+  // These are pages like login/signup that don't make sense for logged-in users
+  const authOnlyRoutes = ["/login", "/signup", "/forgot-password"];
 
   // Check if current path matches a protected route
   const protectedRoute = Object.keys(protectedRoutes).find(route => 
     pathname.startsWith(route)
   );
 
-  // --- SCENARIO 1: User is logged in and accessing public routes ---
-  if (user && publicRoutes.includes(pathname)) {
+  // --- SCENARIO 1: User is logged in and accessing auth-only routes ---
+  // Redirect logged-in users away from login/signup pages
+  if (user && authOnlyRoutes.includes(pathname)) {
     const roleRoutes: Record<string, string> = {
-      student: "/student/dashboard",
-      instructor: "/instructor/dashboard",
+      student: "/student/courses",
+      instructor: "/instructor/courses",
       admin: "/admin",
     };
     
@@ -103,7 +104,7 @@ export async function middleware(request: NextRequest) {
     if (!allowedRoles.includes(user.role)) {
       const roleRoutes: Record<string, string> = {
         student: "/student/dashboard",
-        instructor: "/instructor/dashboard",
+        instructor: "/instructor/courses",
         admin: "/admin",
       };
       
@@ -114,15 +115,17 @@ export async function middleware(request: NextRequest) {
 
   // --- SCENARIO 2b: Additional RBAC enforcement beyond protected prefixes ---
   if (user) {
-    // Instructor cannot access any route other than those starting with /instructor
-    if (user.role === "instructor" && !pathname.startsWith("/instructor")) {
-      const dashboardUrl = new URL("/instructor/dashboard", request.url);
+    // Instructor can only access /instructor/* routes (and public routes like home, courses, blog)
+    // Block instructors from accessing /student/* routes
+    if (user.role === "instructor" && pathname.startsWith("/student")) {
+      const dashboardUrl = new URL("/instructor/courses", request.url);
       return NextResponse.redirect(dashboardUrl);
     }
 
-    // Student can access all except routes starting with /instructor
+    // Student can access everything EXCEPT /instructor/* routes
+    // Allow: /, /courses/*, /blog/*, /all-courses/*, /learn/*, /student/*, etc.
     if (user.role === "student" && pathname.startsWith("/instructor")) {
-      const dashboardUrl = new URL("/student/dashboard", request.url);
+      const dashboardUrl = new URL("/student/courses", request.url);
       return NextResponse.redirect(dashboardUrl);
     }
   }
@@ -161,12 +164,21 @@ export const config = {
  * 
  * 1. FILE LOCATION: This file MUST be in the root directory (same level as app/ folder)
  * 
- * 2. COOKIE vs TOKEN:
- *    - Current: Uses cookie with user data (NOT SECURE for production)
- *    - Production: Should use httpOnly cookie with JWT token
+ * 2. ACCESS CONTROL RULES:
+ *    - Students: Can access ALL routes EXCEPT /instructor/*
+ *      ✅ /, /courses/*, /blog/*, /all-courses/*, /learn/*, /student/*
+ *      ❌ /instructor/*
+ *    - Instructors: Can access public routes and /instructor/*
+ *      ✅ /, /courses/*, /blog/*, /all-courses/*, /instructor/*
+ *      ❌ /student/*
+ *    - Logged-in users: Cannot access /login, /signup, /forgot-password
  * 
- * 3. SECURITY CHECKLIST FOR PRODUCTION:
- *    ✅ Use JWT tokens instead of storing user data in cookies
+ * 3. COOKIE vs TOKEN:
+ *    - Current: Uses NextAuth JWT (secure)
+ *    - Production: Already using proper JWT with httpOnly cookies
+ * 
+ * 4. SECURITY CHECKLIST FOR PRODUCTION:
+ *    ✅ Use JWT tokens with NextAuth
  *    ✅ Use httpOnly, secure, sameSite cookies
  *    ✅ Implement token refresh mechanism
  *    ✅ Add rate limiting
@@ -174,15 +186,17 @@ export const config = {
  *    ✅ Use HTTPS in production
  *    ✅ Implement CSRF protection
  * 
- * 4. EDGE RUNTIME:
+ * 5. EDGE RUNTIME:
  *    - This middleware runs on Edge Runtime (not Node.js)
  *    - Cannot use Node.js-specific APIs
  *    - Keep it lightweight and fast
  *    - For heavy operations, use API routes instead
  * 
- * 5. TESTING:
+ * 6. TESTING:
  *    - Test all protected routes
- *    - Test role-based access (student accessing /instructor/*, etc.)
- *    - Test public route redirects when logged in
+ *    - Test student accessing public pages (/, /courses/*)
+ *    - Test student blocked from /instructor/*
+ *    - Test instructor blocked from /student/*
+ *    - Test logged-in users redirected from /login
  *    - Test invalid/expired tokens (in production)
  */

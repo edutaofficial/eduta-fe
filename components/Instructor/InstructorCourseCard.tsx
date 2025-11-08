@@ -34,7 +34,7 @@ interface InstructorCourseCardProps {
     id: string;
     title: string;
     subtitle: string;
-    image: string;
+    image: string | null;
     rating: number;
     ratingCount: number;
     enrollments: number;
@@ -82,7 +82,6 @@ export function InstructorCourseCard({
   const enrollments = course?.enrollments ?? 0;
   const impressions = course?.impressions ?? 0;
   const price = course?.price ?? 0;
-  const hasImage = course.image && course.image.trim() !== "";
 
   const handleEdit = () => {
     onEdit?.(course.id);
@@ -96,7 +95,7 @@ export function InstructorCourseCard({
   return (
     <div className="relative rounded-md bg-white shadow-sm overflow-hidden">
       <div className="relative aspect-3/2 w-full">
-        {hasImage ? (
+        {course.image ? (
           <Image
             src={course.image}
             alt={course.title}

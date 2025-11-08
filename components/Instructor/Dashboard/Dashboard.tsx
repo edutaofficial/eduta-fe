@@ -38,17 +38,11 @@ import {
   type InstructorCoursesParams,
   type InstructorCourse,
 } from "@/app/api/course/getInstructorCourses";
-import {
-  getCourseForEdit,
-  determineIncompleteStep,
-} from "@/app/api/course/getCourseForEdit";
 import { deleteCourse } from "@/app/api/course/deleteCourse";
-import { useCourseStore } from "@/store/useCourseStore";
-import { CourseEditDialog } from "../CourseEditDialog";
 
 export function InstructorDashboard() {
-  const _router = useRouter();
   const { user } = useAuth();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState<
     "all" | "draft" | "published" | "archived"
@@ -80,10 +74,6 @@ export function InstructorDashboard() {
   });
   const [loadingPublished, setLoadingPublished] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = React.useState(false);
-  const [editingCourseId, setEditingCourseId] = React.useState<string | null>(
-    null
-  );
 
   // Get instructorId from user token
   const instructorId = user?.instructorId;
@@ -177,118 +167,14 @@ export function InstructorDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
-  const handleEditDraft = async (courseId: string) => {
-    try {
-      setError(null);
-      // Fetch full course details
-      const courseData = await getCourseForEdit(courseId);
-
-      // Get the draft course to determine incomplete step
-      const draftCourse = draftCourses.find((c) => c.courseId === courseId);
-
-      // Determine which step to navigate to
-      const targetStep = determineIncompleteStep(draftCourse || {});
-
-      // Convert UIBasicInfo to CreateCourseRequest format
-      const basicInfoForStore = {
-        title: courseData.basicInfo.title,
-        categoryId: courseData.basicInfo.categoryId,
-        learningLevel: courseData.basicInfo.learningLevel,
-        description: courseData.basicInfo.description,
-        fullDescription: courseData.basicInfo.shortDescription || "", // Map shortDescription to fullDescription
-        language: courseData.basicInfo.language,
-        promoVideoId: courseData.basicInfo.promoVideoId,
-        courseBannerId: courseData.basicInfo.courseBannerId,
-        courseLogoId: courseData.basicInfo.courseLogoId,
-        learningPoints: courseData.basicInfo.learningPoints.map((lp) => ({
-          description: lp.text,
-        })),
-        requirements: courseData.basicInfo.prerequisites.map((p) => p.text),
-        targetAudience: courseData.basicInfo.targetAudiences.map(
-          (ta) => ta.text
-        ),
-        tags: [],
-      };
-
-      // Load data into store
-      useCourseStore.setState({
-        courseId,
-        basicInfo: basicInfoForStore,
-        curriculum: courseData.curriculum,
-        pricing: courseData.pricing,
-        step: targetStep,
-        // Save snapshots to enable change detection
-        savedSnapshots: {
-          basicInfo: JSON.stringify(basicInfoForStore),
-          curriculum: JSON.stringify(courseData.curriculum),
-          pricing: JSON.stringify(courseData.pricing),
-        },
-      });
-
-      // Open edit dialog
-      setEditingCourseId(courseId);
-      setEditDialogOpen(true);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load draft course. Please try again."
-      );
-    }
+  const handleEditDraft = (courseId: string) => {
+    // Navigate to draft-complete route
+    router.push(`/instructor/courses/${courseId}/draft-complete`);
   };
 
-  const handleEditCourse = async (courseId: string) => {
-    try {
-      setError(null);
-      // Fetch full course details
-      const courseData = await getCourseForEdit(courseId);
-
-      // Convert UIBasicInfo to CreateCourseRequest format
-      const basicInfoForStore = {
-        title: courseData.basicInfo.title,
-        categoryId: courseData.basicInfo.categoryId,
-        learningLevel: courseData.basicInfo.learningLevel,
-        description: courseData.basicInfo.description,
-        fullDescription: courseData.basicInfo.shortDescription || "", // Map shortDescription to fullDescription
-        language: courseData.basicInfo.language,
-        promoVideoId: courseData.basicInfo.promoVideoId,
-        courseBannerId: courseData.basicInfo.courseBannerId,
-        courseLogoId: courseData.basicInfo.courseLogoId,
-        learningPoints: courseData.basicInfo.learningPoints.map((lp) => ({
-          description: lp.text,
-        })),
-        requirements: courseData.basicInfo.prerequisites.map((p) => p.text),
-        targetAudience: courseData.basicInfo.targetAudiences.map(
-          (ta) => ta.text
-        ),
-        tags: [],
-      };
-
-      // Load data into store (start from step 1 for published courses)
-      useCourseStore.setState({
-        courseId,
-        basicInfo: basicInfoForStore,
-        curriculum: courseData.curriculum,
-        pricing: courseData.pricing,
-        step: 1, // Start from first step for editing published courses
-        // Save snapshots to enable change detection
-        savedSnapshots: {
-          basicInfo: JSON.stringify(basicInfoForStore),
-          curriculum: JSON.stringify(courseData.curriculum),
-          pricing: JSON.stringify(courseData.pricing),
-        },
-      });
-
-      // Open edit dialog
-      setEditingCourseId(courseId);
-      setEditDialogOpen(true);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load course. Please try again."
-      );
-    }
+  const handleEditCourse = (courseId: string) => {
+    // Navigate to edit route
+    router.push(`/instructor/courses/${courseId}/edit`);
   };
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -481,6 +367,12 @@ export function InstructorDashboard() {
             </p>
           </div>
           <Button
+            onClick={() => {
+              // Clear any existing course creation data
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("course_creation_courseId");
+              }
+            }}
             asChild
             className="gap-2 bg-primary-600 hover:bg-primary-700 shadow-md hover:shadow-lg transition-all self-start sm:self-auto"
             size="lg"
@@ -615,10 +507,8 @@ export function InstructorDashboard() {
                 course={{
                   id: course.courseId,
                   title: course.title,
-                  subtitle: course.shortDescription,
-                  image: course.courseBannerId
-                    ? `/api/assets/${course.courseBannerId}`
-                    : "",
+                  subtitle: course.instructorName || "Anonymous Instructor",
+                  image: course.courseBannerUrl,
                   rating: course.avgRating || 0,
                   ratingCount: course.totalReviews || 0,
                   enrollments: course.totalStudents || 0,
@@ -749,20 +639,6 @@ export function InstructorDashboard() {
           </div>
         )}
       </section>
-
-      {/* Course Edit Dialog */}
-      {editingCourseId && (
-        <CourseEditDialog
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-          courseId={editingCourseId}
-          onSaveSuccess={() => {
-            // Refresh both draft and published courses after edit
-            fetchDraftCourses();
-            fetchPublishedCourses();
-          }}
-        />
-      )}
     </div>
   );
 }

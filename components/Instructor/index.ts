@@ -6,3 +6,4 @@ export { InstructorAnnouncements } from "./Announcements";
 export { InstructorAnalytics } from "./Analytics";
 export { InstructorPayments } from "./Payments";
 export { CourseCreationWizard } from "./CourseCreationWizard";
+export { CourseEditWizard } from "./CourseEditWizard";

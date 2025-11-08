@@ -40,65 +40,31 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
-  const [debugURL, setdebugURL] = useState("");
   useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  type ApiJson = { [key: string]: unknown };
-  async function parseResponseSafe(response: Response): Promise<ApiJson> {
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      return response.json();
-    }
-    const text = await response.text();
-    try {
-      return JSON.parse(text) as ApiJson;
-    } catch {
-      return { message: text } as ApiJson;
-    }
-  }
-
   const loginMutation = useMutation({
     mutationFn: async (values: LoginFormValues) => {
       try {
-        // Call backend first to get a precise error message
-        const baseURL = "http://54.183.140.154:3005/api/v1/user/login";
-        setdebugURL(process.env.API_BASE_URL ? process.env.API_BASE_URL : "null");
-        const resp = await fetch(
-          baseURL,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            body: JSON.stringify({
-              email: values.email,
-              password: values.password,
-            }),
-          }
-        );
-        const data = await parseResponseSafe(resp);
-        if (!resp.ok || data?.status !== "success") {
-          const message = data?.message || "Login failed";
-          return { success: false, error: String(message) };
-        }
-
-        // If backend ok, create NextAuth session
+        // NextAuth handles the API call internally via CredentialsProvider
         const res = await signIn("credentials", {
           redirect: false,
           email: values.email,
           password: values.password,
         });
+
         if (!res || res.error) {
           return {
             success: false,
-            error: "Something went wrong. Please try again.",
+            error: res?.error || "Invalid email or password",
           };
         }
+
         return { success: true };
-      } catch {
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("Login error:", error);
         return {
           success: false,
           error: "Something went wrong. Please try again.",
@@ -140,7 +106,7 @@ export default function Login() {
         const dest =
           redirect ||
           (role === "instructor"
-            ? "/instructor/dashboard"
+            ? "/instructor/courses"
             : "/student/dashboard");
         router.replace(dest);
       }
@@ -166,8 +132,6 @@ export default function Login() {
             </CardTitle>
             <CardDescription className="text-default-600">
               Sign in to your Eduta account
-              <br />
-              {debugURL}
             </CardDescription>
           </CardHeader>
 

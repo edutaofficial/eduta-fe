@@ -9,7 +9,7 @@ import { updateCurriculum as updateCurriculumApi } from "@/app/api/course/update
 import { updatePricing as updatePricingApi } from "@/app/api/course/updatePricing";
 import { saveDraft as saveDraftApi } from "@/app/api/course/saveDraft";
 import { publishCourse as publishCourseApi } from "@/app/api/course/publishCourse";
-import { extractErrorMessage } from "@/lib/utils/errorUtils";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 const initialBasicInfo: CreateCourseRequest = {
   title: "",
@@ -101,6 +101,21 @@ function transformCurriculumToAPI(uiCurriculum: UICurriculum): CurriculumRequest
               type: "file"
             })));
           }
+          // If it's an array of UploadedFile objects (from form with fileName)
+          else if (Array.isArray(resourceData) && resourceData.length > 0 && "fileName" in resourceData[0]) {
+            resources.push(...resourceData.map(r => {
+              // Extract file extension from fileName
+              const fileName = r.fileName || "";
+              const lastDotIndex = fileName.lastIndexOf(".");
+              const fileExtension = lastDotIndex > -1 ? fileName.substring(lastDotIndex + 1) : "file";
+              
+              return {
+                assetId: r.assetId,
+                name: fileName,
+                type: fileExtension
+              };
+            }));
+          }
           // If it's a string (from Formik format)
           else if (typeof resourceData === "string") {
             resourceData = JSON.parse(resourceData);
@@ -112,10 +127,10 @@ function transformCurriculumToAPI(uiCurriculum: UICurriculum): CurriculumRequest
               resources.push(resourceData as LectureResource);
             }
           }
-          // If it's an array of LectureResource objects
+          // If it's an array of LectureResource objects (already in correct format)
           else if (Array.isArray(resourceData)) {
             resources.push(...resourceData.filter((r): r is LectureResource => 
-              r && typeof r === "object" && "assetId" in r
+              r && typeof r === "object" && "assetId" in r && "name" in r && "type" in r
             ));
           } else if (resourceData && typeof resourceData === "object" && "assetId" in resourceData) {
             resources.push(resourceData as LectureResource);
@@ -180,6 +195,10 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
   basicInfo: initialBasicInfo,
   curriculum: initialUICurriculum,
   pricing: initialPricing,
+  finalize: {
+    welcomeMessage: "",
+    congratulationMessage: "",
+  },
   validationErrors: null,
   isDraft: true,
   isPublished: false,
@@ -212,6 +231,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
   setBasicInfo: (info) => set((state) => ({ basicInfo: { ...state.basicInfo, ...info } })),
   setCurriculum: (curriculum) => set((state) => ({ curriculum: { ...state.curriculum, ...curriculum } as UICurriculum })), // UI structure - will be transformed on API call
   setPricing: (pricing) => set((state) => ({ pricing: { ...state.pricing, ...pricing } as UIPricing })),
+  setFinalize: (finalize) => set((state) => ({ finalize: { ...state.finalize, ...finalize } })),
   setUploading: (uploading) => set((state) => ({ uploading: { ...state.uploading, ...uploading } })),
   clearValidationErrors: () => set({ validationErrors: null }),
 
@@ -506,6 +526,10 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
       basicInfo: initialBasicInfo,
       curriculum: initialUICurriculum,
       pricing: initialPricing,
+      finalize: {
+        welcomeMessage: "",
+        congratulationMessage: "",
+      },
       step: 1,
       saved: { step1: false, step2: false, step3: false },
       savedSnapshots: { basicInfo: "", curriculum: "", pricing: "" },

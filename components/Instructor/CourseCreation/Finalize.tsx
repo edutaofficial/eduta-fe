@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useFormik } from "formik";
 import * as z from "zod";
+import { useCourseStore } from "@/store/useCourseStore";
 
 export type FinalizeHandle = { validateAndFocus: () => Promise<boolean> };
 
@@ -18,8 +19,13 @@ const finalizeSchema = z.object({
 type FinalizeValues = z.infer<typeof finalizeSchema>;
 
 const FinalizeInner = (_: object, ref: React.Ref<FinalizeHandle>) => {
+  const { finalize, setFinalize } = useCourseStore();
+  
   const formik = useFormik<FinalizeValues>({
-    initialValues: { welcomeMessage: "", congratulationsMessage: "" },
+    initialValues: {
+      welcomeMessage: finalize?.welcomeMessage || "",
+      congratulationsMessage: finalize?.congratulationMessage || "",
+    },
     validate: (values) => {
       const result = finalizeSchema.safeParse(values);
       if (result.success)
@@ -33,6 +39,14 @@ const FinalizeInner = (_: object, ref: React.Ref<FinalizeHandle>) => {
     },
     onSubmit: () => {},
   });
+
+  // Sync formik values to store
+  React.useEffect(() => {
+    setFinalize({
+      welcomeMessage: formik.values.welcomeMessage,
+      congratulationMessage: formik.values.congratulationsMessage,
+    });
+  }, [formik.values.welcomeMessage, formik.values.congratulationsMessage, setFinalize]);
 
   React.useImperativeHandle(ref, () => ({
     validateAndFocus: async () => {

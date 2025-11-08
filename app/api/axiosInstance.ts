@@ -1,14 +1,6 @@
 import axios, { type AxiosError, type AxiosInstance, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { getSession } from "next-auth/react";
-
-function getBaseURL(): string {
-  // const baseUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-  const baseUrl = "http://54.183.140.154:3005";
-  if (!baseUrl) {
-    throw new Error(`NEXT_PUBLIC_API_BASE_URL or API_BASE_URL is not defined, base URL :  ${baseUrl}, API_BASE_URL :  ${process.env.API_BASE_URL} `);
-  }
-  return baseUrl;
-}
+import { getBaseUrl } from "@/lib/config/api";
 
 async function getToken(): Promise<string | null> {
   if (typeof window === "undefined") return null;
@@ -22,7 +14,7 @@ async function getToken(): Promise<string | null> {
 }
 
 const axiosInstance: AxiosInstance = axios.create({
-  baseURL: getBaseURL(),
+  baseURL: getBaseUrl(),
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -32,7 +24,7 @@ const axiosInstance: AxiosInstance = axios.create({
 
 // Create a separate instance for file uploads with no timeout
 export const axiosUploadInstance: AxiosInstance = axios.create({
-  baseURL: getBaseURL(),
+  baseURL: getBaseUrl(),
   headers: {
     "Content-Type": "multipart/form-data",
     Accept: "application/json",

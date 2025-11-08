@@ -21,40 +21,59 @@ import {
 } from "@/components/ui/pagination";
 import { StudentCourseCard } from "./StudentCourseCard";
 import { RatingDialog } from "./RatingDialog";
-import { CONSTANTS } from "@/lib/constants";
+import { useLearnerStore } from "@/store/useLearnerStore";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
-type FilterStatus = "all" | "completed" | "ongoing";
+type FilterStatus = "all" | "completed" | "in_progress";
 
 export function CoursesTab() {
+  const { 
+    enrolledCourses, 
+    loading, 
+    fetchEnrolledCourses 
+  } = useLearnerStore();
+
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState<FilterStatus>("all");
   const [currentPage, setCurrentPage] = React.useState(1);
   const [ratingDialogOpen, setRatingDialogOpen] = React.useState(false);
-  const [selectedCourse, setSelectedCourse] = React.useState<typeof CONSTANTS.STUDENT_COURSES[0] | null>(null);
+  const [selectedCourse, setSelectedCourse] = React.useState<typeof enrolledCourses[0] | null>(null);
 
   const itemsPerPage = 6;
 
+  // Fetch courses on mount
+  React.useEffect(() => {
+    fetchEnrolledCourses();
+  }, [fetchEnrolledCourses]);
+
   // Filter and search courses
   const filteredCourses = React.useMemo(() => {
-    let courses = [...CONSTANTS.STUDENT_COURSES];
+    let courses = [...enrolledCourses];
 
     // Apply search filter
     if (searchQuery) {
       courses = courses.filter(
         (course) =>
-          course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          course.instructor.toLowerCase().includes(searchQuery.toLowerCase())
+          course.courseTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          course.instructorName.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     // Apply status filter
     if (filterStatus !== "all") {
-      courses = courses.filter((course) => course.status === filterStatus);
+      courses = courses.filter((course) => {
+        if (filterStatus === "completed") {
+          return course.status === "completed";
+        } else if (filterStatus === "in_progress") {
+          return course.status === "in_progress" || course.status === "ongoing";
+        }
+        return true;
+      });
     }
 
     return courses;
-  }, [searchQuery, filterStatus]);
+  }, [enrolledCourses, searchQuery, filterStatus]);
 
   // Pagination
   const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
@@ -64,8 +83,8 @@ export function CoursesTab() {
   );
 
   // Handle rating
-  const handleRate = (courseId: string) => {
-    const course = CONSTANTS.STUDENT_COURSES.find((c) => c.id === courseId);
+  const handleRate = (enrollmentId: string) => {
+    const course = enrolledCourses.find((c) => c.enrollmentId === enrollmentId);
     setSelectedCourse(course || null);
     setRatingDialogOpen(true);
   };
@@ -73,7 +92,7 @@ export function CoursesTab() {
   const handleSubmitRating = async (rating: number, review: string) => {
     // TODO: Integrate with API
     // eslint-disable-next-line no-console
-    console.log("Submitting rating:", { courseId: selectedCourse?.id, rating, review });
+    console.log("Submitting rating:", { courseId: selectedCourse?.courseId, rating, review });
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
@@ -108,7 +127,7 @@ export function CoursesTab() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All</SelectItem>
-            <SelectItem value="ongoing">Ongoing</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
           </SelectContent>
         </Select>
@@ -126,19 +145,33 @@ export function CoursesTab() {
       </div>
 
       {/* Courses Grid */}
-      {paginatedCourses.length > 0 ? (
+      {loading.fetchEnrolledCourses ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white rounded-lg border border-default-200 overflow-hidden">
+              <Skeleton className="w-full h-48" />
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : paginatedCourses.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {paginatedCourses.map((course) => (
             <StudentCourseCard
-              key={course.id}
-              id={course.id}
+              key={course.enrollmentId}
+              id={course.enrollmentId}
               courseId={course.courseId}
-              title={course.title}
-              instructor={course.instructor}
-              image={course.image}
-              progress={course.progress}
-              rating={course.rating}
-              hasRated={course.hasRated}
+              title={course.courseTitle}
+              instructor={course.instructorName}
+              image={course.courseBannerId?.toString() || ""}
+              progress={course.progressPercentage}
+              rating={0}
+              hasRated={false}
               onRate={handleRate}
             />
           ))}
@@ -231,7 +264,7 @@ export function CoursesTab() {
         <RatingDialog
           open={ratingDialogOpen}
           onOpenChange={setRatingDialogOpen}
-          courseTitle={selectedCourse.title}
+          courseTitle={selectedCourse.courseTitle}
           onSubmit={handleSubmitRating}
         />
       )}

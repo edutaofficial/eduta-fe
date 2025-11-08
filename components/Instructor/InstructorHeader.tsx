@@ -1,8 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpenIcon,
@@ -94,18 +92,7 @@ export function InstructorHeader() {
 
   return (
     <header className="bg-white shadow-md fixed top-0 right-0 z-30 py-4 px-6 left-0 md:left-20">
-      <div className="flex items-center justify-between w-full max-w-[1400px] mx-auto">
-        {/* Logo - Only visible on mobile */}
-        <Link href="/instructor/courses" className="block md:hidden">
-          <Image
-            src="/logo-main.webp"
-            alt="Eduta Logo"
-            width={100}
-            height={32}
-            className="min-w-[6.25rem] min-h-[2rem]"
-          />
-        </Link>
-
+      <div className="flex items-center md:justify-between justify-end w-full max-w-[1400px] mx-auto">
         {/* Page Title - Hidden on mobile */}
         <div className="hidden md:block">
           <h1 className="text-xl font-semibold text-default-900">

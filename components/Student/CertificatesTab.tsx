@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SearchIcon, ExternalLinkIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -13,26 +14,38 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CONSTANTS } from "@/lib/constants";
+import { useLearnerStore } from "@/store/useLearnerStore";
 
 export function CertificatesTab() {
+  const { 
+    certificates, 
+    loading, 
+    fetchCertificates 
+  } = useLearnerStore();
+
   const [searchQuery, setSearchQuery] = React.useState("");
+
+  // Fetch certificates on mount
+  React.useEffect(() => {
+    fetchCertificates();
+  }, [fetchCertificates]);
 
   // Filter certificates
   const filteredCertificates = React.useMemo(() => {
-    let certificates = [...CONSTANTS.STUDENT_CERTIFICATES];
+    let certs = [...certificates];
 
     // Apply search filter
     if (searchQuery) {
-      certificates = certificates.filter(
+      certs = certs.filter(
         (cert) =>
           cert.courseTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          cert.issuedBy.toLowerCase().includes(searchQuery.toLowerCase())
+          cert.instructorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          cert.certificateNumber.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    return certificates;
-  }, [searchQuery]);
+    return certs;
+  }, [certificates, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -59,7 +72,7 @@ export function CertificatesTab() {
       </div>
 
       {/* Certificates Table */}
-      {filteredCertificates.length > 0 ? (
+      {loading.fetchCertificates ? (
         <div className="bg-white rounded-lg border border-default-200 overflow-hidden">
           <Table>
             <TableHeader>
@@ -77,8 +90,45 @@ export function CertificatesTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {[...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <Skeleton className="h-5 w-48" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-28" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-9 w-full" />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : filteredCertificates.length > 0 ? (
+        <div className="bg-white rounded-lg border border-default-200 overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-default-50">
+                <TableHead className="font-semibold text-default-900">
+                  Course
+                </TableHead>
+                <TableHead className="font-semibold text-default-900">
+                  Issued By
+                </TableHead>
+                <TableHead className="font-semibold text-default-900">
+                  Issued Date
+                </TableHead>
+                <TableHead className="w-[180px]"/>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredCertificates.map((certificate) => (
-                <TableRow key={certificate.id} className="hover:bg-default-50">
+                <TableRow key={certificate.certificateId} className="hover:bg-default-50">
                   <TableCell className="font-medium">
                     <Link
                       href={certificate.certificateUrl}
@@ -90,10 +140,10 @@ export function CertificatesTab() {
                     </Link>
                   </TableCell>
                   <TableCell className="text-default-700">
-                    {certificate.issuedBy}
+                    {certificate.instructorName}
                   </TableCell>
                   <TableCell className="text-default-700">
-                    {new Date(certificate.enrollmentDate).toLocaleDateString(
+                    {new Date(certificate.issuedAt).toLocaleDateString(
                       "en-US",
                       {
                         year: "numeric",
@@ -109,7 +159,7 @@ export function CertificatesTab() {
                       size="sm"
                       className="w-full"
                     >
-                      <Link href={certificate.verificationUrl}>
+                      <Link href={`/certificate/verify?code=${certificate.verificationCode}`}>
                         Verification Link
                       </Link>
                     </Button>
@@ -130,7 +180,9 @@ export function CertificatesTab() {
                 No certificates found
               </h3>
               <p className="text-sm text-muted-foreground">
-                Complete courses to earn certificates
+                {searchQuery
+                  ? "Try adjusting your search criteria"
+                  : "Complete courses to earn certificates"}
               </p>
             </div>
           </div>
@@ -139,4 +191,3 @@ export function CertificatesTab() {
     </div>
   );
 }
-

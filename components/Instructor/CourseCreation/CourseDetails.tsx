@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MultiSelect } from "@/components/ui/multi-select";
 import { PlusIcon, XIcon, EyeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCourseStore } from "@/store/useCourseStore";
@@ -26,9 +25,7 @@ import { UploadFile } from "@/components/Common";
 // Zod schema for validation
 const courseDetailsSchema = z.object({
   courseTitle: z.string().min(1, "Course title is required"),
-  selectedCategories: z
-    .array(z.string())
-    .min(1, "At least one category is required"),
+  selectedCategory: z.string().min(1, "Category is required"),
   learningLevel: z.string().min(1, "Learning level is required"),
   description: z.string().min(1, "Course description is required"),
   learningPoints: z
@@ -70,6 +67,23 @@ const CourseDetailsInner = (
     clearValidationErrors,
   } = useCourseStore();
 
+  // Debug: Log basicInfo when component mounts
+  React.useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log("CourseDetails mounted with basicInfo:", {
+      title: basicInfo.title,
+      categoryId: basicInfo.categoryId,
+      learningLevel: basicInfo.learningLevel,
+      learningPoints: basicInfo.learningPoints,
+    });
+    // eslint-disable-next-line no-console
+    console.log(
+      "Formik initialValues.selectedCategory:",
+      formik.values.selectedCategory
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps = only on mount
+
   // Clear server validation errors when user starts typing
   React.useEffect(() => {
     if (validationErrors) {
@@ -106,7 +120,7 @@ const CourseDetailsInner = (
   const formik = useFormik<CourseDetailsFormValues>({
     initialValues: {
       courseTitle: basicInfo.title || "",
-      selectedCategories: basicInfo.categoryId ? [basicInfo.categoryId] : [],
+      selectedCategory: basicInfo.categoryId || "",
       learningLevel: normalizeLearningLevel(basicInfo.learningLevel || ""),
       description: basicInfo.description || "",
       learningPoints:
@@ -121,6 +135,7 @@ const CourseDetailsInner = (
               { id: 3, text: "" },
             ],
     },
+    enableReinitialize: false, // Keep as false since we use key prop for remounting
     validate: (values) => {
       const result = courseDetailsSchema.safeParse(values);
       if (result.success)
@@ -150,7 +165,7 @@ const CourseDetailsInner = (
 
       setBasicInfo({
         title: vals.courseTitle,
-        categoryId: vals.selectedCategories[0] || "",
+        categoryId: vals.selectedCategory,
         learningLevel: vals.learningLevel,
         description: vals.description,
         fullDescription: vals.description,
@@ -171,8 +186,8 @@ const CourseDetailsInner = (
     // Only update if values actually changed
     const hasChanged =
       prevValuesRef.current.courseTitle !== formik.values.courseTitle ||
-      JSON.stringify(prevValuesRef.current.selectedCategories) !==
-        JSON.stringify(formik.values.selectedCategories) ||
+      prevValuesRef.current.selectedCategory !==
+        formik.values.selectedCategory ||
       prevValuesRef.current.learningLevel !== formik.values.learningLevel ||
       prevValuesRef.current.description !== formik.values.description ||
       JSON.stringify(prevValuesRef.current.learningPoints) !==
@@ -187,7 +202,7 @@ const CourseDetailsInner = (
 
       setBasicInfo({
         title: formik.values.courseTitle,
-        categoryId: formik.values.selectedCategories[0] || "",
+        categoryId: formik.values.selectedCategory,
         learningLevel: formik.values.learningLevel,
         description: formik.values.description,
         fullDescription: formik.values.description,
@@ -201,7 +216,7 @@ const CourseDetailsInner = (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     formik.values.courseTitle,
-    formik.values.selectedCategories,
+    formik.values.selectedCategory,
     formik.values.learningLevel,
     formik.values.description,
     formik.values.learningPoints,
@@ -356,27 +371,33 @@ const CourseDetailsInner = (
         <Label>
           Category <span className="text-destructive">*</span>
         </Label>
-        <MultiSelect
-          options={categoryOptions}
-          value={formik.values.selectedCategories}
-          onValueChange={(vals) =>
-            formik.setFieldValue("selectedCategories", vals)
-          }
-          placeholder="Select categories..."
-          emptyIndicator="No category found."
-          aria-invalid={
-            !!(
-              formik.touched.selectedCategories &&
-              formik.errors.selectedCategories
-            )
-          }
-        />
-        {formik.touched.selectedCategories &&
-          formik.errors.selectedCategories && (
-            <p className="text-sm text-destructive mt-1">
-              {String(formik.errors.selectedCategories)}
-            </p>
-          )}
+        <Select
+          value={formik.values.selectedCategory}
+          onValueChange={(val) => formik.setFieldValue("selectedCategory", val)}
+        >
+          <SelectTrigger
+            aria-invalid={
+              !!(
+                formik.touched.selectedCategory &&
+                formik.errors.selectedCategory
+              )
+            }
+          >
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent>
+            {categoryOptions?.map((cat) => (
+              <SelectItem key={cat.value} value={cat.value}>
+                {cat.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {formik.touched.selectedCategory && formik.errors.selectedCategory && (
+          <p className="text-sm text-destructive mt-1">
+            {String(formik.errors.selectedCategory)}
+          </p>
+        )}
       </div>
 
       {/* Course Description */}

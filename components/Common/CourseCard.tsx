@@ -29,7 +29,7 @@ function getPlaceholderColor(title?: string): string {
 }
 
 export interface CourseCardProps {
-  image: string;
+  image: string | null;
   title: string;
   company: string;
   rating: number; // e.g., 4.5
@@ -53,8 +53,6 @@ export function CourseCard({
   price = 0,
   className,
 }: CourseCardProps) {
-  const hasImage =
-    image && image.trim() !== "" && image !== "undefined" && image !== "null";
   const [imageError, setImageError] = React.useState(false);
 
   return (
@@ -62,7 +60,7 @@ export function CourseCard({
       className={cn("rounded-md bg-white shadow-sm overflow-hidden", className)}
     >
       <div className="relative aspect-[3/2] w-full bg-default-100">
-        {hasImage && !imageError ? (
+        {image && !imageError ? (
           <Image
             src={image}
             alt={title}

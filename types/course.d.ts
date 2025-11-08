@@ -122,6 +122,86 @@ export interface DraftRequest {
   isDraft: boolean;
 }
 
+// API Response structure for getCourseById and getCourseForEdit
+export interface CourseDetailApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    courseId: string;
+    status: string;
+    currentStep: number;
+    courseDetails: {
+      title: string;
+      categoryId: string;
+      learningLevel: string;
+      description: string;
+      fullDescription: string;
+      language: string;
+      promoVideoId: number | null;
+      courseBannerId: number | null;
+      courseLogoId: number | null;
+      learningPoints: Array<{
+        learningPointId: string;
+        description: string;
+        displayOrder: number;
+      }>;
+      requirements: Array<{
+        requirementId?: string;
+        description: string;
+        displayOrder?: number;
+      }>;
+      targetAudience: Array<{
+        audienceId?: string;
+        description: string;
+        displayOrder?: number;
+      }>;
+      tags: Array<{
+        tagId?: string;
+        tagName?: string;
+      }>;
+    };
+    curriculum: {
+      sections: Array<{
+        sectionId: string;
+        title: string;
+        description: string;
+        displayOrder: number;
+        lectureCount: number;
+        totalDuration: number;
+        lectures: Array<{
+          lectureId: string;
+          title: string;
+          description: string;
+          videoId: number | null;
+          duration: number;
+          durationFormatted: string;
+          displayOrder: number;
+          isPreview: boolean;
+          resources: Array<{
+            resourceId: string;
+            assetId: number;
+            resourceName: string;
+            resourceType: string;
+            displayOrder: number;
+          }>;
+        }>;
+      }>;
+    };
+    pricing: {
+      pricingId: string;
+      currency: string;
+      amount: number;
+      originalAmount: number | null;
+      discountPercentage: number;
+      priceTier: string;
+    };
+    finalize: {
+      welcomeMessage: string | null;
+      congratulationMessage: string | null;
+    };
+  };
+}
+
 export interface CreateCourseRequest {
   title: string;
   categoryId: string;
@@ -168,6 +248,10 @@ export interface CourseState {
   basicInfo: CreateCourseRequest;
   curriculum: UICurriculum; // UI format - transformed to API format on send
   pricing: UIPricing; // UI format - transformed to API format on send
+  finalize?: {
+    welcomeMessage?: string;
+    congratulationMessage?: string;
+  };
   isDraft?: boolean;
   isPublished?: boolean;
   
@@ -208,6 +292,7 @@ export interface CourseActions {
   setBasicInfo: (info: Partial<CreateCourseRequest>) => void;
   setCurriculum: (curriculum: Partial<UICurriculum>) => void;
   setPricing: (pricing: Partial<UIPricing>) => void;
+  setFinalize: (finalize: Partial<CourseState["finalize"]>) => void;
   setUploading: (uploading: Partial<CourseState["uploading"]>) => void;
   clearValidationErrors: () => void;
 
@@ -230,6 +315,7 @@ export interface PublicCourse {
   slug: string;
   shortDescription: string;
   courseBannerId: number | null;
+  courseBannerUrl: string | null;
   learningLevel: string;
   language: string;
   instructor: {
