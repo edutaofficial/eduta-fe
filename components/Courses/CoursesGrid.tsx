@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { SearchIcon } from "lucide-react";
 import { CourseCard } from "@/components/Common/CourseCard";
 import { CourseCardSkeleton } from "@/components/skeleton";
@@ -88,27 +87,23 @@ export function CoursesGrid({
       ) : courses.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {courses.map((course) => (
-            <Link
+            <CourseCard
               key={course.courseId}
-              href={`/courses/${course.courseId}`}
-              className="block transition-transform hover:scale-[1.02]"
-            >
-              <CourseCard
-                image={course.courseBannerUrl}
-                title={course.title}
-                company={`${course.instructor.firstName} ${course.instructor.lastName}`}
-                rating={parseFloat(course.stats.avgRating) || 0}
-                ratingCount={course.stats.totalReviews}
-                enrollments={course.stats.totalStudents}
-                impressions={0}
-                featured={false}
-                price={
-                  course.pricing && course.pricing.amount
-                    ? parseFloat(course.pricing.amount)
-                    : 0
-                }
-              />
-            </Link>
+              id={course.courseId}
+              image={course.courseBannerUrl}
+              title={course.title}
+              company={`${course.instructor.firstName} ${course.instructor.lastName}`}
+              rating={parseFloat(course.stats.avgRating) || 0}
+              ratingCount={course.stats.totalReviews}
+              enrollments={course.stats.totalStudents}
+              impressions={0}
+              featured={false}
+              price={
+                course.pricing && course.pricing.amount
+                  ? parseFloat(course.pricing.amount)
+                  : 0
+              }
+            />
           ))}
         </div>
       ) : (

@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,9 +14,18 @@ import {
   MailIcon,
   PhoneIcon,
 } from "lucide-react";
+import { useCategoryStore } from "@/store/useCategoryStore";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const { categories, loading, fetchCategories } = useCategoryStore();
+
+  // Fetch categories on mount
+  React.useEffect(() => {
+    if (categories.length === 0) {
+      fetchCategories();
+    }
+  }, [categories.length, fetchCategories]);
 
   const socialIcons = [
     {
@@ -89,25 +100,54 @@ export default function Footer() {
 
         {/* Categories Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12 mb-12">
-          {CONSTANTS.FOOTER_CATEGORIES.map((category) => (
-            <div key={`${category.id}-${category.title}`}>
-              <h3 className="text-default-50 font-bold text-base mb-4">
-                {category.title}
-              </h3>
-              <ul className="space-y-2.5">
-                {category.links.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {loading ? (
+            // Skeleton Loading State
+            <>
+              {[...Array(4)].map((_, i) => (
+                <div key={i}>
+                  <div className="h-6 w-32 bg-primary-800 animate-pulse rounded mb-4" />
+                  <div className="space-y-2.5">
+                    {[...Array(5)].map((_, j) => (
+                      <div key={j} className="h-4 w-full bg-primary-800 animate-pulse rounded" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            // Dynamic Categories
+            <>
+              {categories.slice(0, 4).map((category) => (
+                <div key={category.categoryId}>
+                  <h3 className="text-default-50 font-bold text-base mb-4">
+                    {category.name}
+                  </h3>
+                  <ul className="space-y-2.5">
+                    {category.subcategories.slice(0, 5).map((subcategory) => (
+                      <li key={subcategory.categoryId}>
+                        <Link
+                          href={`/all-courses?category=${subcategory.categoryId}`}
+                          className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                        >
+                          {subcategory.name}
+                        </Link>
+                      </li>
+                    ))}
+                    {category.subcategories.length > 5 && (
+                      <li>
+                        <Link
+                          href={`/all-courses?category=${category.categoryId}`}
+                          className="text-primary-300 text-sm hover:text-primary-200 transition-colors inline-block font-medium"
+                        >
+                          View all →
+                        </Link>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              ))}
+            </>
+          )}
         </div>
 
         {/* Separator */}

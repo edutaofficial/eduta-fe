@@ -1,9 +1,18 @@
 import axiosInstance from "@/app/api/axiosInstance";
 import { extractErrorMessage } from "@/lib/errorUtils";
 
-export async function publishCourse(courseId: string): Promise<void> {
+export interface PublishCourseRequest {
+  isDraft: boolean;
+  welcomeMessage?: string; // Optional for publish
+  congratulationMessage?: string; // Optional for publish
+}
+
+export async function publishCourse(
+  courseId: string,
+  data: PublishCourseRequest
+): Promise<void> {
   try {
-    await axiosInstance.put(`/api/instructor/courses/${courseId}/publish`, { isDraft: false });
+    await axiosInstance.put(`/api/instructor/courses/${courseId}/publish`, data);
   } catch (error: unknown) {
     // eslint-disable-next-line no-console
     console.error("Error publishing course:", error);

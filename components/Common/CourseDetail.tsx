@@ -36,10 +36,18 @@ import axiosInstance from "@/app/api/axiosInstance";
 import type { Asset } from "@/types/course";
 import FAQComponent from "../Home/FAQ";
 
+import type { CourseDetail as CourseDetailAPI } from "@/app/api/course/getCourseDetail";
+
 interface CourseDetailProps {
   courseId?: string;
   isPreview?: boolean;
   onBack?: () => void;
+  courseData?: CourseDetailAPI;
+  isWishlisted?: boolean;
+  onEnroll?: () => void;
+  onWishlistToggle?: () => void;
+  enrolling?: boolean;
+  wishlistLoading?: boolean;
 }
 
 interface CourseData {
@@ -127,14 +135,25 @@ export function CourseDetail({
   courseId,
   isPreview = false,
   onBack,
+  courseData: apiCourseData,
+  isWishlisted: isWishlistedProp = false,
+  onEnroll,
+  onWishlistToggle,
+  enrolling = false,
+  wishlistLoading = false,
 }: CourseDetailProps) {
   const { basicInfo, curriculum, pricing } = useCourseStore();
-  const [isWishlisted, setIsWishlisted] = React.useState(false);
+  const [isWishlisted, setIsWishlisted] = React.useState(isWishlistedProp);
   const [showAllSections, setShowAllSections] = React.useState(false);
   const [showFullDescription, setShowFullDescription] = React.useState(false);
 
+  // Update wishlist state when prop changes
+  React.useEffect(() => {
+    setIsWishlisted(isWishlistedProp);
+  }, [isWishlistedProp]);
+
   // Get asset URLs
-  const promoVideoUrl = useAssetUrl(basicInfo.promoVideoId);
+  const promoVideoUrl = useAssetUrl(basicInfo?.promoVideoId);
 
   // Calculate total duration from curriculum
   const totalDuration = React.useMemo(() => {
@@ -151,15 +170,61 @@ export function CourseDetail({
 
   // Transform store data to course data format
   const courseData: CourseData = React.useMemo(() => {
+    // If we have API course data, transform it
+    if (apiCourseData) {
+      return {
+        id: apiCourseData.courseId,
+        category: apiCourseData.category.name,
+        subCategory: apiCourseData.learningLevel,
+        title: apiCourseData.title,
+        subHeading: apiCourseData.category.name,
+        duration: formatDuration(apiCourseData.stats.totalDuration),
+        exercises: String(apiCourseData.stats.totalExercises),
+        projects: String(apiCourseData.stats.totalProjects),
+        rating: apiCourseData.stats.avgRating,
+        ratingCount: apiCourseData.stats.totalReviews,
+        enrollments: apiCourseData.stats.totalStudents,
+        learningPoints: apiCourseData.learningPoints.map(
+          (lp) => lp.description
+        ),
+        description: apiCourseData.fullDescription,
+        outline:
+          apiCourseData.previewLectures.length > 0
+            ? [
+                {
+                  id: "preview",
+                  title: "Preview Lectures",
+                  lectures: apiCourseData.previewLectures.map((lecture) => ({
+                    id: lecture.lectureId,
+                    title: lecture.title,
+                    duration: lecture.durationFormatted,
+                  })),
+                },
+              ]
+            : [],
+        promoVideo: apiCourseData.courseBannerUrl,
+        instructor: {
+          name: apiCourseData.instructor.name,
+          title: apiCourseData.instructor.professionalTitle,
+          bio: apiCourseData.instructor.bio,
+          avatar: apiCourseData.instructor.profilePictureId,
+          rating: undefined,
+          studentCount: undefined,
+          courseCount: undefined,
+        },
+        reviews: [], // Reviews would come from a separate API
+      };
+    }
+
     // If preview mode, use store data
     if (isPreview) {
-      const categoryName = "Category"; // You might want to fetch this from categories
+      const categoryName = "Category";
 
       return {
         id: courseId,
         category: categoryName,
-        subCategory: basicInfo.learningLevel || "",
-        title: basicInfo.title || "Untitled Course",
+        subCategory: basicInfo?.learningLevel || "",
+        title: basicInfo?.title || "Untitled Course",
         subHeading: categoryName,
         duration: formatDuration(totalDuration),
         exercises: "0",
@@ -167,8 +232,9 @@ export function CourseDetail({
         rating: 0,
         ratingCount: 0,
         enrollments: 0,
-        learningPoints: basicInfo.learningPoints.map((lp) => lp.description),
-        description: basicInfo.description || "",
+        learningPoints:
+          basicInfo?.learningPoints?.map((lp) => lp.description) || [],
+        description: basicInfo?.description || "",
         outline:
           curriculum?.sections?.map((section, sectionIndex) => ({
             id: String(section.id),
@@ -179,9 +245,9 @@ export function CourseDetail({
               duration: lecture.duration || 15,
             })),
           })) || [],
-        promoVideo: promoVideoUrl || basicInfo.promoVideoId,
+        promoVideo: promoVideoUrl || basicInfo?.promoVideoId,
         instructor: {
-          name: "Instructor", // You might want to get this from user context
+          name: "Instructor",
           title: "Course Instructor",
           bio: "Instructor information will be displayed here.",
           avatar: null,
@@ -196,6 +262,7 @@ export function CourseDetail({
     // Otherwise use constants data
     return CONSTANTS.COURSE_DETAIL as CourseData;
   }, [
+    apiCourseData,
     isPreview,
     courseId,
     basicInfo,
@@ -651,13 +718,16 @@ export function CourseDetail({
                           <Button
                             className="w-full bg-primary-400 hover:bg-primary-500 text-white"
                             size="lg"
+                            onClick={onEnroll}
+                            disabled={enrolling}
                           >
-                            Enroll Now
+                            {enrolling ? "Enrolling..." : "Enroll Now"}
                           </Button>
                           <Button
                             variant="outline"
                             className="w-full"
-                            onClick={() => setIsWishlisted(!isWishlisted)}
+                            onClick={onWishlistToggle}
+                            disabled={wishlistLoading}
                           >
                             <HeartIcon
                               className={`size-5 mr-2 ${

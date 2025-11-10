@@ -168,7 +168,7 @@ export function CoursesTab() {
               courseId={course.courseId}
               title={course.courseTitle}
               instructor={course.instructorName}
-              image={course.courseBannerId?.toString() || ""}
+              image={course.courseBannerUrl || ""} // Use banner URL if available, otherwise placeholder
               progress={course.progressPercentage}
               rating={0}
               hasRated={false}

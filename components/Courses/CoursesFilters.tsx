@@ -1,3 +1,5 @@
+"use client";
+
 import { ChevronDownIcon, StarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,7 +9,8 @@ import {
 } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { CONSTANTS } from "@/lib/constants";
+import { useCategoryStore } from "@/store/useCategoryStore";
+import { useEffect } from "react";
 
 export type SkillLevel = "beginner" | "intermediate" | "advanced";
 
@@ -34,6 +37,15 @@ export function CoursesFilters({
   onRatingChange,
   onClearAll,
 }: CoursesFiltersProps) {
+  const { categories, loading: categoriesLoading, fetchCategories } = useCategoryStore();
+  
+  // Fetch categories on mount
+  useEffect(() => {
+    if (categories.length === 0) {
+      fetchCategories();
+    }
+  }, [categories.length, fetchCategories]);
+
   const hasActiveFilters =
     selectedLevels.length > 0 ||
     selectedDomains.length > 0 ||
@@ -73,31 +85,50 @@ export function CoursesFilters({
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Domains Filter */}
+          {/* Categories Filter (with subcategories) */}
           <Collapsible defaultOpen>
             <CollapsibleTrigger className="flex items-center justify-between w-full py-3 hover:text-primary-600 transition-colors">
-              <span className="font-medium text-default-900">Domains</span>
+              <span className="font-medium text-default-900">Categories</span>
               <ChevronDownIcon className="size-4 transition-transform duration-200 data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="pb-4 pt-2 space-y-3">
-              {CONSTANTS.COURSE_CATEGORIES.map((category) => (
-                <div
-                  key={category.id}
-                  className="flex items-center space-x-2"
-                >
-                  <Checkbox
-                    id={`domain-${category.id}`}
-                    checked={selectedDomains.includes(category.id)}
-                    onCheckedChange={() => onDomainToggle(category.id)}
-                  />
-                  <Label
-                    htmlFor={`domain-${category.id}`}
-                    className="text-sm font-normal cursor-pointer"
-                  >
-                    {category.name}
-                  </Label>
+            <CollapsibleContent className="pb-4 pt-2 space-y-4">
+              {categoriesLoading ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-5 w-full bg-default-200 animate-pulse rounded" />
+                  ))}
                 </div>
-              ))}
+              ) : (
+                categories.map((category) => (
+                  <div key={category.categoryId} className="space-y-2">
+                    {/* Category as heading */}
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      {category.name}
+                    </p>
+                    {/* Subcategories as checkboxes */}
+                    <div className="space-y-2 pl-2">
+                      {category.subcategories.map((subcategory) => (
+                        <div
+                          key={subcategory.categoryId}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            id={`domain-${subcategory.categoryId}`}
+                            checked={selectedDomains.includes(subcategory.categoryId)}
+                            onCheckedChange={() => onDomainToggle(subcategory.categoryId)}
+                          />
+                          <Label
+                            htmlFor={`domain-${subcategory.categoryId}`}
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            {subcategory.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
             </CollapsibleContent>
           </Collapsible>
 

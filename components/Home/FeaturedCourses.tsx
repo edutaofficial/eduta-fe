@@ -1,10 +1,39 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { CourseCard } from "@/components/Common/CourseCard";
-
-import { CONSTANTS } from "@/lib/constants";
+import { CourseCardSkeleton } from "@/components/skeleton/CourseCardSkeleton";
+import { useState, useEffect } from "react";
+import { getFeaturedCourses } from "@/app/api/course/getFeaturedCourses";
+import type { PublicCourse } from "@/app/api/course/searchCourses";
 
 export default function FeaturedCourses() {
+  const [courses, setCourses] = useState<PublicCourse[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFeaturedCourses = async () => {
+      try {
+        const response = await getFeaturedCourses({ limit: 10 });
+        setCourses(response.data);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("Error fetching featured courses:", error);
+        setCourses([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeaturedCourses();
+  }, []);
+
+  // Don't render the section if there are no featured courses
+  if (!loading && courses.length === 0) {
+    return null;
+  }
+
   return (
     <section className="w-full mx-auto  py-16 space-y-14">
       {/* Top Badge + Headings */}
@@ -20,40 +49,67 @@ export default function FeaturedCourses() {
           </p>
         </div>
 
-        <Slider
-          slidesPerView={1}
-          spaceBetween={16}
-          breakpoints={{
-            640: { slidesPerView: 2, spaceBetween: 16 },
-            1024: { slidesPerView: 3, spaceBetween: 20 },
-            1280: { slidesPerView: 4, spaceBetween: 24 },
-          }}
-          navigation={{
-            enabled: true,
-            position: "center",
-            showArrows: true,
-            spacing: "",
-          }}
-          slideClassName="pb-4"
-          pagination={{
-            enabled: false,
-          }}
-        >
-          {CONSTANTS.COURSES.map((course) => (
-            <CourseCard
-              key={course.id}
-              image={course.image}
-              title={course.title}
-              company={course.company}
-              rating={course.rating}
-              ratingCount={course.ratingCount}
-              enrollments={course.enrollments}
-              impressions={course.impressions}
-              featured={course.featured}
-              price={course.price}
-            />
-          ))}
-        </Slider>
+        {loading ? (
+          <Slider
+            slidesPerView={1}
+            spaceBetween={16}
+            breakpoints={{
+              640: { slidesPerView: 2, spaceBetween: 16 },
+              1024: { slidesPerView: 3, spaceBetween: 20 },
+              1280: { slidesPerView: 4, spaceBetween: 24 },
+            }}
+            navigation={{
+              enabled: false,
+              position: "center",
+              showArrows: false,
+              spacing: "",
+            }}
+            slideClassName="pb-4"
+            pagination={{
+              enabled: false,
+            }}
+          >
+            {[...Array(4)].map((_, i) => (
+              <CourseCardSkeleton key={i} />
+            ))}
+          </Slider>
+        ) : (
+          <Slider
+            slidesPerView={1}
+            spaceBetween={16}
+            breakpoints={{
+              640: { slidesPerView: 2, spaceBetween: 16 },
+              1024: { slidesPerView: 3, spaceBetween: 20 },
+              1280: { slidesPerView: 4, spaceBetween: 24 },
+            }}
+            navigation={{
+              enabled: true,
+              position: "center",
+              showArrows: true,
+              spacing: "",
+            }}
+            slideClassName="pb-4"
+            pagination={{
+              enabled: false,
+            }}
+          >
+            {courses.map((course) => (
+              <CourseCard
+                key={course.courseId}
+                id={course.courseId}
+                image={course.courseBannerUrl || "/placeholder-course.png"}
+                title={course.title}
+                company={`${course.instructor.firstName} ${course.instructor.lastName}`}
+                rating={parseFloat(course.stats.avgRating) || 0}
+                ratingCount={course.stats.totalReviews}
+                enrollments={course.stats.totalStudents}
+                impressions={0}
+                featured={true}
+                price={course.pricing ? parseFloat(course.pricing.amount) : 0}
+              />
+            ))}
+          </Slider>
+        )}
       </div>
     </section>
   );

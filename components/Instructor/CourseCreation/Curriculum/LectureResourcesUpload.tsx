@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { UploadMultipleFiles } from "@/components/Common";
-import type { LectureResourcesUploadProps } from "./types";
+import type { LectureResourcesUploadProps } from "@/types/curriculum";
 
 /**
  * Component for uploading lecture resources (PDFs, docs, etc.)

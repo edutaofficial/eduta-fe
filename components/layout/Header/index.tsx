@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 
 import {
   NavigationMenu,
@@ -30,20 +31,83 @@ import {
   GraduationCapIcon,
   AwardIcon,
   ShoppingCartIcon,
-  CreditCardIcon,
   MessageSquareIcon,
   SettingsIcon,
   LogOutIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useCategoryStore } from "@/store/useCategoryStore";
+
+// Category Dropdown Component
+function CategoryDropdown({
+  categoriesTriggerRef,
+}: {
+  categoriesTriggerRef: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const { categories, loading } = useCategoryStore();
+
+  return (
+    <NavigationMenuItem>
+      <NavigationMenuTrigger ref={categoriesTriggerRef}>
+        Categories
+      </NavigationMenuTrigger>
+      <NavMenuContentModified triggerRef={categoriesTriggerRef}>
+        <ul className="grid w-[25rem] gap-2 p-4 md:w-[31.25rem] md:grid-cols-2 lg:w-[37.5rem]">
+          {loading ? (
+            // Skeleton
+            <>
+              {[...Array(6)].map((_, i) => (
+                <li key={i} className="p-3">
+                  <div className="h-4 w-32 bg-default-200 animate-pulse rounded mb-2" />
+                  <div className="h-3 w-full bg-default-200 animate-pulse rounded" />
+                </li>
+              ))}
+            </>
+          ) : (
+            categories.slice(0, 6).map((category) => (
+              <li key={category.categoryId}>
+                <NavigationMenuLink asChild>
+                  <Link
+                    href={`/all-courses?category=${category.categoryId}`}
+                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-hidden transition-colors hover:bg-primary-100 hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                  >
+                    <div className="text-sm font-semibold leading-none line-clamp-1">
+                      {category.name}
+                    </div>
+                    <p className="text-sm leading-snug text-muted-foreground line-clamp-2">
+                      {category.subcategories.length} subcategories
+                    </p>
+                  </Link>
+                </NavigationMenuLink>
+              </li>
+            ))
+          )}
+        </ul>
+      </NavMenuContentModified>
+    </NavigationMenuItem>
+  );
+}
 
 export default function Header() {
+  // Fetch categories on mount
+  const { fetchCategories, categories } = useCategoryStore();
+
+  React.useEffect(() => {
+    if (categories.length === 0) {
+      fetchCategories();
+    }
+  }, [categories.length, fetchCategories]);
   const { user, logout } = useAuth();
   const loggedIn = Boolean(user);
+  const pathname = usePathname();
+  const router = useRouter();
   const blogTriggerRef = React.useRef<HTMLButtonElement>(null);
   const categoriesTriggerRef = React.useRef<HTMLButtonElement>(null);
   const avatarTriggerRef = React.useRef<HTMLButtonElement>(null);
   const [showSearch, setShowSearch] = React.useState(false);
+
+  // Check if user is on the home page
+  const isHomePage = pathname === "/";
 
   return (
     <header className="bg-white shadow-md fixed top-0 left-0 right-0 z-50 py-4 px-6">
@@ -155,52 +219,63 @@ export default function Header() {
                   </ul>
                 </NavMenuContentModified>
               </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger ref={categoriesTriggerRef}>
-                  Categories
-                </NavigationMenuTrigger>
-                <NavMenuContentModified triggerRef={categoriesTriggerRef}>
-                  <ul className="grid w-[25rem] gap-2 p-4 md:w-[31.25rem] md:grid-cols-2 lg:w-[37.5rem]">
-                    {CONSTANTS.CATEGORIES.slice(0, 6).map((category) => (
-                      <li key={category.id}>
-                        <NavigationMenuLink asChild>
-                          <Link
-                            href={category.href}
-                            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-hidden transition-colors hover:bg-primary-100 hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                          >
-                            <div className="text-sm font-semibold leading-none line-clamp-1">
-                              {category.name}
-                            </div>
-                            <p className="text-sm leading-snug text-muted-foreground line-clamp-2">
-                              {category.description}
-                            </p>
-                          </Link>
-                        </NavigationMenuLink>
-                      </li>
-                    ))}
-                  </ul>
-                </NavMenuContentModified>
-              </NavigationMenuItem>
+              <CategoryDropdown categoriesTriggerRef={categoriesTriggerRef} />
               <NavigationMenuItem>
                 {loggedIn ? (
-                  <div className="flex items-center">
-                    <Button variant="ghost" size="icon">
-                      <BellIcon className="size-5" />
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                      <HeartIcon className="size-5" />
-                    </Button>
-                    <NavigationMenuTrigger
-                      ref={avatarTriggerRef}
-                      className="ml-2 p-0 hover:bg-transparent"
-                    >
-                      <Avatar className="size-10">
-                        <AvatarImage src={CONSTANTS.USER_DATA.avatar} />
-                        <AvatarFallback>
-                          {user?.name?.charAt(0).toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                    </NavigationMenuTrigger>
+                  <>
+                    {user?.role === "instructor" ? (
+                      // Instructor - Show Dashboard link and Wishlist icon on home page
+                      <div className="flex items-center gap-2">
+                        <Button asChild>
+                          <Link href="/instructor/courses">Dashboard</Link>
+                        </Button>
+                        {isHomePage && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => router.push("/student/wishlist")}
+                          >
+                            <HeartIcon className="size-5" />
+                          </Button>
+                        )}
+                        <NavigationMenuTrigger
+                          ref={avatarTriggerRef}
+                          className="ml-2 p-0 hover:bg-transparent"
+                        >
+                          <Avatar className="size-10">
+                            <AvatarImage src={CONSTANTS.USER_DATA.avatar} />
+                            <AvatarFallback>
+                              {user?.name?.charAt(0).toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                        </NavigationMenuTrigger>
+                      </div>
+                    ) : (
+                      // Student - Show normal navigation
+                      <div className="flex items-center">
+                        <Button variant="ghost" size="icon">
+                          <BellIcon className="size-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => router.push("/student/wishlist")}
+                        >
+                          <HeartIcon className="size-5" />
+                        </Button>
+                        <NavigationMenuTrigger
+                          ref={avatarTriggerRef}
+                          className="ml-2 p-0 hover:bg-transparent"
+                        >
+                          <Avatar className="size-10">
+                            <AvatarImage src={CONSTANTS.USER_DATA.avatar} />
+                            <AvatarFallback>
+                              {user?.name?.charAt(0).toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                        </NavigationMenuTrigger>
+                      </div>
+                    )}
                     <NavMenuContentModified triggerRef={avatarTriggerRef}>
                       <div className="w-[18.75rem]">
                         {/* User Info Section */}
@@ -223,62 +298,85 @@ export default function Header() {
 
                         <Separator className="my-4" />
 
-                        {/* Learning Section */}
+                        {/* Show different menus based on role */}
+                        {user?.role === "instructor" ? (
+                          // Instructor Menu
+                          <>
+                            <Link
+                              href="/instructor/courses"
+                              className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
+                            >
+                              <GraduationCapIcon className="size-5" />
+                              <span className="text-sm">My Courses</span>
+                            </Link>
+                            <Link
+                              href="/instructor/analytics"
+                              className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
+                            >
+                              <MessageSquareIcon className="size-5" />
+                              <span className="text-sm">Analytics</span>
+                            </Link>
 
-                        <Link
-                          href="/student/courses"
-                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
-                        >
-                          <GraduationCapIcon className="size-5" />
-                          <span className="text-sm">My Learning</span>
-                        </Link>
-                        <Link
-                          href="/student/certificates"
-                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
-                        >
-                          <AwardIcon className="size-5" />
-                          <span className="text-sm">My Certificates</span>
-                        </Link>
+                            <Separator className="my-4" />
 
-                        <Separator className="my-4" />
+                            <Link
+                              href="/instructor/settings"
+                              className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
+                            >
+                              <SettingsIcon className="size-5" />
+                              <span className="text-sm font-bold">
+                                Account Settings
+                              </span>
+                            </Link>
+                          </>
+                        ) : (
+                          // Student Menu
+                          <>
+                            <Link
+                              href="/student/courses"
+                              className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
+                            >
+                              <GraduationCapIcon className="size-5" />
+                              <span className="text-sm">My Learning</span>
+                            </Link>
+                            <Link
+                              href="/student/certificates"
+                              className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
+                            >
+                              <AwardIcon className="size-5" />
+                              <span className="text-sm">My Certificates</span>
+                            </Link>
 
-                        {/* Orders Section */}
+                            <Separator className="my-4" />
 
-                        <Link
-                          href="/student/wishlist"
-                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
-                        >
-                          <ShoppingCartIcon className="size-5" />
-                          <span className="text-sm">My Wishlist</span>
-                        </Link>
-                        <Link
-                          href="/student/certificates"
-                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
-                        >
-                          <CreditCardIcon className="size-5" />
-                          <span className="text-sm">Certificates</span>
-                        </Link>
+                            <Link
+                              href="/student/wishlist"
+                              className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
+                            >
+                              <ShoppingCartIcon className="size-5" />
+                              <span className="text-sm">My Wishlist</span>
+                            </Link>
 
-                        <Separator className="my-4" />
+                            <Separator className="my-4" />
 
-                        {/* Settings Section */}
-
-                        <Link
-                          href="/blog"
-                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
-                        >
-                          <MessageSquareIcon className="size-5" />
-                          <span className="text-sm">Blog</span>
-                        </Link>
-                        <Link
-                          href="/student/settings"
-                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
-                        >
-                          <SettingsIcon className="size-5" />
-                          <span className="text-sm font-bold">
-                            Account Settings
-                          </span>
-                        </Link>
+                            <Link
+                              href="/blog"
+                              className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
+                            >
+                              <MessageSquareIcon className="size-5" />
+                              <span className="text-sm">Blog</span>
+                            </Link>
+                            <Link
+                              href="/student/settings"
+                              className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-100 transition-colors"
+                            >
+                              <SettingsIcon className="size-5" />
+                              <span className="text-sm font-bold">
+                                Account Settings
+                              </span>
+                            </Link>
+                          </>
+                        )}
 
                         <Separator className="my-4" />
 
@@ -293,7 +391,7 @@ export default function Header() {
                         </button>
                       </div>
                     </NavMenuContentModified>
-                  </div>
+                  </>
                 ) : (
                   <div className="flex gap-4">
                     <Button asChild>

@@ -173,7 +173,8 @@ export function WishlistTab() {
               </div>
 
               <CourseCard
-                image={item.courseBannerId?.toString() || ""}
+                id={item.courseId}
+                image={item.courseBannerUrl || ""} // Use banner URL if available, otherwise placeholder
                 title={item.courseTitle}
                 company={item.instructorName}
                 rating={item.avgRating}

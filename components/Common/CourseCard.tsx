@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import Link from "next/link";
 import Image from "next/image";
 import { StarIcon, UsersIcon, EyeIcon, BookOpenIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ function getPlaceholderColor(title?: string): string {
 }
 
 export interface CourseCardProps {
+  id: string; // Course ID for routing - MANDATORY
   image: string | null;
   title: string;
   company: string;
@@ -42,6 +44,7 @@ export interface CourseCardProps {
 }
 
 export function CourseCard({
+  id,
   image,
   title,
   company,
@@ -56,8 +59,12 @@ export function CourseCard({
   const [imageError, setImageError] = React.useState(false);
 
   return (
-    <div
-      className={cn("rounded-md bg-white shadow-sm overflow-hidden", className)}
+    <Link
+      href={`/course/${id}`}
+      className={cn(
+        "block rounded-md bg-white shadow-sm overflow-hidden transition-transform hover:scale-[1.02]",
+        className
+      )}
     >
       <div className="relative aspect-[3/2] w-full bg-default-100">
         {image && !imageError ? (
@@ -135,6 +142,6 @@ export function CourseCard({
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

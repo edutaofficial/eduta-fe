@@ -8,7 +8,9 @@ export interface EnrolledCourse {
   courseSlug: string;
   shortDescription: string;
   courseBannerId: number;
+  courseBannerUrl?: string; // Optional: URL to course banner image
   courseLogoId: number;
+  courseLogoUrl?: string; // Optional: URL to course logo image
   instructorName: string;
   categoryName: string;
   enrolledAt: string;

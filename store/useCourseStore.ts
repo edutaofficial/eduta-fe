@@ -40,7 +40,7 @@ const initialPricing: UIPricing = {
 };
 
 // Transform UI pricing to API format
-function transformPricingToAPI(uiPricing: UIPricing): PricingRequest {
+export function transformPricingToAPI(uiPricing: UIPricing): PricingRequest {
   // Calculate amount (final price after discount)
   let amount = uiPricing.isFree ? 0 : uiPricing.price;
   const originalAmount = uiPricing.price; // Original price before discount
@@ -70,7 +70,7 @@ function transformPricingToAPI(uiPricing: UIPricing): PricingRequest {
 }
 
 // Transform UI curriculum to API format
-function transformCurriculumToAPI(uiCurriculum: UICurriculum): CurriculumRequest {
+export function transformCurriculumToAPI(uiCurriculum: UICurriculum): CurriculumRequest {
   let totalDuration = 0;
 
   const apiSections = uiCurriculum.sections.map((section, sectionIndex) => {
@@ -211,6 +211,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     basicInfo: "",
     curriculum: "",
     pricing: "",
+    finalize: "",
   },
   loading: {
     categories: false,
@@ -399,12 +400,14 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     
     // If no changes, just move to next step
     if (!hasChanged) {
+      // eslint-disable-next-line no-console
+      console.log("✓ Curriculum unchanged - skipping API call");
       set({ step: 3 });
       return;
     }
 
     // eslint-disable-next-line no-console
-    console.log("Updating curriculum for course:", courseId);
+    console.log("✏️ Curriculum changed - calling API to update course:", courseId);
 
     set((s) => ({ loading: { ...s.loading, updateCurriculum: true }, error: null }));
     try {
@@ -459,6 +462,8 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     
     // If no changes, just move to next step
     if (!hasChanged) {
+      // eslint-disable-next-line no-console
+      console.log("✓ Pricing unchanged - skipping API call");
       set({ step: 4 });
       return;
     }
@@ -466,7 +471,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     set((s) => ({ loading: { ...s.loading, updatePricing: true }, error: null }));
     try {
       // eslint-disable-next-line no-console
-      console.log("Sending pricing to API:", apiPricing);
+      console.log("✏️ Pricing changed - calling API to update. Sending:", apiPricing);
       
       await updatePricingApi(courseId, apiPricing);
       set((s) => ({ 
@@ -493,11 +498,21 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
   },
 
   saveDraft: async () => {
-    const { courseId } = get();
+    const { courseId, finalize } = get();
     if (!courseId) throw new Error("Course ID is missing");
+    
+    // Validate that finalize messages are provided for draft
+    if (!finalize?.welcomeMessage || !finalize?.congratulationMessage) {
+      throw new Error("Welcome and congratulation messages are required for saving draft");
+    }
+    
     set((state) => ({ loading: { ...state.loading, saveDraft: true }, error: null }));
     try {
-      await saveDraftApi(courseId);
+      await saveDraftApi(courseId, {
+        isDraft: true,
+        welcomeMessage: finalize.welcomeMessage,
+        congratulationMessage: finalize.congratulationMessage,
+      });
       set((state) => ({ loading: { ...state.loading, saveDraft: false }, isDraft: true, error: null }));
     } catch (error: unknown) {
       const errorMessage = extractErrorMessage(error);
@@ -507,11 +522,16 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
   },
 
   publishCourse: async () => {
-    const { courseId } = get();
+    const { courseId, finalize } = get();
     if (!courseId) throw new Error("Course ID is missing");
     set((state) => ({ loading: { ...state.loading, publishCourse: true }, error: null }));
     try {
-      await publishCourseApi(courseId);
+      // Include finalize messages in publish (optional - backend may already have them from draft)
+      await publishCourseApi(courseId, {
+        isDraft: false,
+        welcomeMessage: finalize?.welcomeMessage || undefined,
+        congratulationMessage: finalize?.congratulationMessage || undefined,
+      });
       set((state) => ({ loading: { ...state.loading, publishCourse: false }, isDraft: false, isPublished: true, error: null }));
     } catch (error: unknown) {
       const errorMessage = extractErrorMessage(error);
@@ -532,7 +552,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
       },
       step: 1,
       saved: { step1: false, step2: false, step3: false },
-      savedSnapshots: { basicInfo: "", curriculum: "", pricing: "" },
+      savedSnapshots: { basicInfo: "", curriculum: "", pricing: "", finalize: "" },
       courseId: undefined,
       loading: {
         categories: false,

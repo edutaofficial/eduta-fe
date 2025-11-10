@@ -1,3 +1,8 @@
+/**
+ * Curriculum Types
+ * Type definitions for the Curriculum form and components
+ */
+
 import type { UploadedFile } from "@/components/Common";
 
 export interface LectureFormData {

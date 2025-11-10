@@ -12,28 +12,71 @@ import {
   EmptyDescription,
   EmptyMedia,
 } from "@/components/ui/empty";
-import { CONSTANTS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { SearchIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useCategoryStore } from "@/store/useCategoryStore";
+import {
+  searchCourses,
+  type PublicCourse,
+} from "@/app/api/course/searchCourses";
+import { CourseCardSkeleton } from "@/components/skeleton/CourseCardSkeleton";
+
 export default function ExploreCourses() {
-  const [activeCategory, setActiveCategory] = useState(
-    CONSTANTS.COURSE_CATEGORIES[0]?.id
+  const {
+    categories,
+    loading: categoriesLoading,
+    fetchCategories,
+  } = useCategoryStore();
+  const [activeCategory, setActiveCategory] = useState<string>("");
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(
+    null
   );
+  const [courses, setCourses] = useState<PublicCourse[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
 
-  const [activeSubcategory, setActiveSubcategory] = useState<
-    string | null
-  >(null);
+  // Fetch categories on mount
+  useEffect(() => {
+    if (categories.length === 0) {
+      fetchCategories();
+    }
+  }, [categories.length, fetchCategories]);
 
-  const filteredCourses = activeSubcategory
-    ? CONSTANTS.COURSES.filter(
-        (c) =>
-          c.categoryId === activeCategory && c.subcategory === activeSubcategory
-      )
-    : CONSTANTS.COURSES.filter((c) => c.categoryId === activeCategory);
+  // Set initial active category when categories load
+  useEffect(() => {
+    if (categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0].categoryId);
+    }
+  }, [categories, activeCategory]);
 
-  const activeCategoryData = CONSTANTS.COURSE_CATEGORIES.find(
-    (c) => c.id === activeCategory
+  // Fetch courses when category or subcategory changes
+  useEffect(() => {
+    if (!activeCategory) return;
+
+    const loadCourses = async () => {
+      setLoadingCourses(true);
+      try {
+        const response = await searchCourses({
+          categoryId: activeSubcategory || activeCategory,
+          pageSize: 12,
+          sortBy: "created_at",
+          order: "desc",
+        });
+        setCourses(response.data);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("Error fetching courses:", error);
+        setCourses([]);
+      } finally {
+        setLoadingCourses(false);
+      }
+    };
+
+    loadCourses();
+  }, [activeCategory, activeSubcategory]);
+
+  const activeCategoryData = categories.find(
+    (c) => c.categoryId === activeCategory
   );
 
   const handleCategoryClick = (categoryId: string) => {
@@ -59,49 +102,23 @@ export default function ExploreCourses() {
       {/* Main Categories Tabs (underline style) */}
       <div className="flex flex-col ">
         <div className="max-w-container w-full mx-auto md:px-6 px-4">
-          <Slider
-            slidesPerView="auto"
-            spaceBetween={24}
-            className="subcategories-slider"
-            slideClassName="!w-auto"
-            navigation={{
-              enabled: true,
-              showArrows: true,
-              spacing: "px-12",
-            }}
-            pagination={{
-              enabled: false,
-              clickable: false,
-            }}
-          >
-            {CONSTANTS.COURSE_CATEGORIES.map((category) => (
-              <div key={category.id}>
-                <button
-                  className={`text-sm md:text-base pb-5 transition-colors whitespace-nowrap cursor-pointer ${
-                    activeCategory === category.id
-                      ? "border-default-700 text-default-900 border-b-2"
-                      : " text-default-500 hover:text-default-700 "
-                  }`}
-                  onClick={() => handleCategoryClick(category.id)}
-                  type="button"
-                >
-                  {category.name}
-                </button>
-              </div>
-            ))}
-          </Slider>
-        </div>
-        <div className="flex flex-col bg-default-100 py-8 gap-8">
-          {/* Subcategories Slider (button style) */}
-          <div className="bg-default-100 rounded-xl p-4 max-w-container mx-auto md:px-6 px-4 w-full">
+          {categoriesLoading ? (
+            <div className="flex gap-6 overflow-hidden">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-10 w-32 bg-default-200 animate-pulse rounded"
+                />
+              ))}
+            </div>
+          ) : (
             <Slider
               slidesPerView="auto"
-              spaceBetween={12}
+              spaceBetween={24}
               className="subcategories-slider"
               slideClassName="!w-auto"
               navigation={{
                 enabled: true,
-                position: "center",
                 showArrows: true,
                 spacing: "px-12",
               }}
@@ -110,41 +127,115 @@ export default function ExploreCourses() {
                 clickable: false,
               }}
             >
-              {/* making a all filter to see all the subcategories and set the active subcategory to null */}
-              <div key="all">
-                <button
-                  className={cn(
-                    "text-sm px-4 py-2 rounded-md bg-default-200 text-default-900 hover:bg-default-300 transition-colors whitespace-nowrap",
-                    activeSubcategory === null && "bg-default-900 text-white"
-                  )}
-                  type="button"
-                  onClick={() => setActiveSubcategory(null)}
-                >
-                  All
-                </button>
-              </div>
-              {activeCategoryData?.subcategories?.map((subcategory) => (
-                <div key={subcategory}>
+              {categories.map((category) => (
+                <div key={category.categoryId}>
                   <button
-                    className={cn(
-                      "text-sm px-4 py-2 rounded-md bg-default-200 text-default-900 hover:bg-default-300 transition-colors whitespace-nowrap",
-                      activeSubcategory === subcategory &&
-                        "bg-default-900 text-white"
-                    )}
+                    className={`text-sm md:text-base pb-5 transition-colors whitespace-nowrap cursor-pointer ${
+                      activeCategory === category.categoryId
+                        ? "border-default-700 text-default-900 border-b-2"
+                        : " text-default-500 hover:text-default-700 "
+                    }`}
+                    onClick={() => handleCategoryClick(category.categoryId)}
                     type="button"
-                    onClick={() => setActiveSubcategory(subcategory)}
                   >
-                    {subcategory}
+                    {category.name}
                   </button>
                 </div>
               ))}
             </Slider>
+          )}
+        </div>
+        <div className="flex flex-col bg-default-100 py-8 gap-8">
+          {/* Subcategories Slider (button style) */}
+          <div className="bg-default-100 rounded-xl p-4 max-w-container mx-auto md:px-6 px-4 w-full">
+            {categoriesLoading ? (
+              <div className="flex gap-3 overflow-hidden">
+                {[...Array(8)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-9 w-24 bg-default-200 animate-pulse rounded-md"
+                  />
+                ))}
+              </div>
+            ) : (
+              <Slider
+                slidesPerView="auto"
+                spaceBetween={12}
+                className="subcategories-slider"
+                slideClassName="!w-auto"
+                navigation={{
+                  enabled: true,
+                  position: "center",
+                  showArrows: true,
+                  spacing: "px-12",
+                }}
+                pagination={{
+                  enabled: false,
+                  clickable: false,
+                }}
+              >
+                {/* making a all filter to see all the subcategories and set the active subcategory to null */}
+                <div key="all">
+                  <button
+                    className={cn(
+                      "text-sm px-4 py-2 rounded-md bg-default-200 text-default-900 hover:bg-default-300 transition-colors whitespace-nowrap",
+                      activeSubcategory === null && "bg-default-900 text-white"
+                    )}
+                    type="button"
+                    onClick={() => setActiveSubcategory(null)}
+                  >
+                    All
+                  </button>
+                </div>
+                {activeCategoryData?.subcategories?.map((subcategory) => (
+                  <div key={subcategory.categoryId}>
+                    <button
+                      className={cn(
+                        "text-sm px-4 py-2 rounded-md bg-default-200 text-default-900 hover:bg-default-300 transition-colors whitespace-nowrap",
+                        activeSubcategory === subcategory.categoryId &&
+                          "bg-default-900 text-white"
+                      )}
+                      type="button"
+                      onClick={() =>
+                        setActiveSubcategory(subcategory.categoryId)
+                      }
+                    >
+                      {subcategory.name}
+                    </button>
+                  </div>
+                ))}
+              </Slider>
+            )}
           </div>
 
           {/* Courses Slider or Empty State */}
           <div className="space-y-6 max-w-container mx-auto md:px-6 px-4 w-full ">
             <div className="min-h-[26.25rem]">
-              {filteredCourses.length > 0 ? (
+              {loadingCourses ? (
+                <Slider
+                  slidesPerView={1}
+                  spaceBetween={16}
+                  breakpoints={{
+                    640: { slidesPerView: 2, spaceBetween: 16 },
+                    1024: { slidesPerView: 3, spaceBetween: 20 },
+                    1280: { slidesPerView: 4, spaceBetween: 24 },
+                  }}
+                  navigation={{
+                    enabled: false,
+                    position: "center",
+                    showArrows: false,
+                    spacing: "",
+                  }}
+                  pagination={{
+                    enabled: false,
+                    clickable: false,
+                  }}
+                >
+                  {[...Array(4)].map((_, i) => (
+                    <CourseCardSkeleton key={i} />
+                  ))}
+                </Slider>
+              ) : courses.length > 0 ? (
                 <Slider
                   slidesPerView={1}
                   spaceBetween={16}
@@ -165,18 +256,23 @@ export default function ExploreCourses() {
                     className: "hero-pagination",
                   }}
                 >
-                  {filteredCourses.map((course) => (
+                  {courses.map((course) => (
                     <CourseCard
-                      key={course.id}
-                      image={course.image}
+                      key={course.courseId}
+                      id={course.courseId}
+                      image={
+                        course.courseBannerUrl || "/placeholder-course.png"
+                      }
                       title={course.title}
-                      company={course.company}
-                      rating={course.rating}
-                      ratingCount={course.ratingCount}
-                      enrollments={course.enrollments}
-                      impressions={course.impressions}
-                      featured={course.featured}
-                      price={course.price}
+                      company={`${course.instructor.firstName} ${course.instructor.lastName}`}
+                      rating={parseFloat(course.stats.avgRating) || 0}
+                      ratingCount={course.stats.totalReviews}
+                      enrollments={course.stats.totalStudents}
+                      impressions={0}
+                      featured={false}
+                      price={
+                        course.pricing ? parseFloat(course.pricing.amount) : 0
+                      }
                     />
                   ))}
                 </Slider>
@@ -191,7 +287,7 @@ export default function ExploreCourses() {
                     </EmptyTitle>
                     <EmptyDescription className="text-base">
                       {activeSubcategory
-                        ? `We couldn't find any ${activeSubcategory} courses in ${activeCategoryData?.name}. Try selecting a different subcategory or browse all ${activeCategoryData?.name} courses.`
+                        ? `We couldn't find any courses in this subcategory. Try selecting a different subcategory or browse all ${activeCategoryData?.name} courses.`
                         : `We couldn't find any courses in ${activeCategoryData?.name}. Try selecting a different category.`}
                     </EmptyDescription>
                   </EmptyHeader>
@@ -199,18 +295,20 @@ export default function ExploreCourses() {
               )}
             </div>
             {/* Show All Button */}
-            <div className="md:text-start text-center w-full ">
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="px-8 bg-transparent"
-              >
-                <Link href={`/all-courses?category=${activeCategory}`}>
-                  Show all {activeCategoryData?.name} Courses
-                </Link>
-              </Button>
-            </div>
+            {!loadingCourses && courses.length > 0 && (
+              <div className="md:text-start text-center w-full ">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="px-8 bg-transparent"
+                >
+                  <Link href={`/all-courses?category=${activeCategory}`}>
+                    Show all {activeCategoryData?.name} Courses
+                  </Link>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

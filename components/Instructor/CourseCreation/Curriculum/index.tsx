@@ -6,7 +6,7 @@ import { CourseAccordion } from "@/components/ui/course-accordion";
 import { PlusIcon, EyeIcon } from "lucide-react";
 import { SectionItem } from "./SectionItem";
 import { useCurriculumForm } from "@/hooks/useCurriculumForm";
-import type { CurriculumHandle } from "./types";
+import type { CurriculumHandle } from "@/types/curriculum";
 
 interface CurriculumProps {
   onPreview?: () => void;
@@ -58,11 +58,66 @@ const CurriculumInner = (
 
     // Validation
     validateAndFocus,
+    getFirstInvalidIds,
   } = useCurriculumForm();
+
+  // Track which accordion items should be open
+  const [openSections, setOpenSections] = React.useState<string[]>([
+    sections[0] ? `section-${sections[0].id}` : "",
+  ]);
+  const [openLectures, setOpenLectures] = React.useState<string[]>([]);
+
+  // Update open sections when sections change (e.g., adding new section)
+  React.useEffect(() => {
+    if (sections.length > 0 && openSections.length === 0) {
+      setOpenSections([`section-${sections[0].id}`]);
+    }
+  }, [sections, openSections.length]);
+
+  // Enhanced validation that expands accordions
+  const validateAndFocusWithExpand = React.useCallback(async (): Promise<boolean> => {
+    const isValid = await validateAndFocus();
+    
+    if (!isValid) {
+      // Get the first invalid field location
+      const { sectionId, lectureId, fieldId } = getFirstInvalidIds();
+      
+      if (sectionId !== null) {
+        const sectionKey = `section-${sectionId}`;
+        
+        // Open the section with the error
+        if (!openSections.includes(sectionKey)) {
+          setOpenSections((prev) => [...prev, sectionKey]);
+        }
+        
+        // If error is in a lecture, open that lecture too
+        if (lectureId !== null) {
+          const lectureKey = `lecture-${lectureId}`;
+          if (!openLectures.includes(lectureKey)) {
+            setOpenLectures((prev) => [...prev, lectureKey]);
+          }
+          
+          // Scroll to the field after accordion animation
+          setTimeout(() => {
+            const element = document.getElementById(fieldId || "");
+            element?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 400); // Wait for accordion animation
+        } else {
+          // Error is in section fields, scroll immediately
+          setTimeout(() => {
+            const element = document.getElementById(fieldId || "");
+            element?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 400);
+        }
+      }
+    }
+    
+    return isValid;
+  }, [validateAndFocus, getFirstInvalidIds, openSections, openLectures]);
 
   // Expose validation method via ref
   React.useImperativeHandle(ref, () => ({
-    validateAndFocus,
+    validateAndFocus: validateAndFocusWithExpand,
   }));
 
   return (
@@ -84,7 +139,8 @@ const CurriculumInner = (
       {/* Sections */}
       <CourseAccordion
         type="multiple"
-        defaultValue={[`section-${sections[0]?.id}`]}
+        value={openSections}
+        onValueChange={setOpenSections}
       >
         {sections.map((section, sectionIndex) => (
           <SectionItem
@@ -93,6 +149,8 @@ const CurriculumInner = (
             sectionIndex={sectionIndex}
             canRemove={sections.length > 1}
             showErrors={showErrors}
+            openLectures={openLectures}
+            onOpenLecturesChange={setOpenLectures}
             onRemove={() => removeSection(section.id)}
             onUpdateSection={(field, value) =>
               updateSection(section.id, field, value)

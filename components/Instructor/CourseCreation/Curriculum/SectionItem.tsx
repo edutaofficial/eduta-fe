@@ -12,13 +12,15 @@ import { PlusIcon } from "lucide-react";
 import type { UploadedFile } from "@/components/Common";
 import { TitleDescriptionFields } from "./TitleDescriptionFields";
 import { LectureItem } from "./LectureItem";
-import type { SectionFormData, LectureFormData } from "./types";
+import type { SectionFormData, LectureFormData } from "@/types/curriculum";
 
 interface SectionItemProps {
   section: SectionFormData;
   sectionIndex: number;
   canRemove: boolean;
   showErrors: boolean;
+  openLectures: string[];
+  onOpenLecturesChange: (value: string[]) => void;
   onRemove: () => void;
   onUpdateSection: (field: keyof SectionFormData, value: string) => void;
   onAddLecture: () => void;
@@ -48,6 +50,8 @@ export const SectionItem: React.FC<SectionItemProps> = ({
   sectionIndex,
   canRemove,
   showErrors,
+  openLectures,
+  onOpenLecturesChange,
   onRemove,
   onUpdateSection,
   onAddLecture,
@@ -67,7 +71,13 @@ export const SectionItem: React.FC<SectionItemProps> = ({
         onClose={canRemove ? onRemove : undefined}
       >
         <span className="font-medium text-lg">
-          Section {sectionIndex + 1} | {section.name}
+          Section {sectionIndex + 1}
+          {section.name.trim() && (
+            <>
+              {" | "}
+              {section.name}
+            </>
+          )}
         </span>
       </CourseAccordionTrigger>
       
@@ -104,7 +114,12 @@ export const SectionItem: React.FC<SectionItemProps> = ({
               </Button>
             </div>
 
-            <CourseAccordion type="multiple" className="space-y-2">
+            <CourseAccordion
+              type="multiple"
+              className="space-y-2"
+              value={openLectures}
+              onValueChange={onOpenLecturesChange}
+            >
               {section.lectures.map((lecture, lectureIndex) => (
                 <LectureItem
                   key={lecture.id}

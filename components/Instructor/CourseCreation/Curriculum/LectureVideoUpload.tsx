@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { UploadFile } from "@/components/Common";
-import type { LectureVideoUploadProps } from "./types";
+import type { LectureVideoUploadProps } from "@/types/curriculum";
 
 /**
  * Component for uploading lecture videos

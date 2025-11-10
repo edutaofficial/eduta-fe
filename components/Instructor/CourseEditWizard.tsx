@@ -5,12 +5,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CourseDetails } from "./CourseCreation/CourseDetails";
+import {
+  CourseDetails,
+  type CourseDetailsHandle,
+} from "./CourseCreation/CourseDetails";
 import { Curriculum } from "./CourseCreation/Curriculum";
 import { Price } from "./CourseCreation/Price";
 import { Finalize } from "./CourseCreation/Finalize";
 import { Separator } from "@radix-ui/react-separator";
-import { useCourseStore } from "@/store/useCourseStore";
+import {
+  useCourseStore,
+  transformCurriculumToAPI,
+  transformPricingToAPI,
+} from "@/store/useCourseStore";
 import { CourseDetail } from "@/components/Common";
 import { getCourseById } from "@/app/api/course/getCourseById";
 import { getCourseForEdit } from "@/app/api/course/getCourseForEdit";
@@ -42,18 +49,17 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
     basicInfo,
     curriculum,
     pricing,
+    finalize,
     savedSnapshots,
   } = useCourseStore();
 
   type Validatable = {
     validateAndFocus: () => Promise<boolean>;
   };
-  const detailsRef = React.useRef<Validatable>(null as unknown as Validatable);
-  const curriculumRef = React.useRef<Validatable>(
-    null as unknown as Validatable
-  );
-  const priceRef = React.useRef<Validatable>(null as unknown as Validatable);
-  const finalizeRef = React.useRef<Validatable>(null as unknown as Validatable);
+  const detailsRef = React.useRef<CourseDetailsHandle>(null);
+  const curriculumRef = React.useRef<Validatable>(null);
+  const priceRef = React.useRef<Validatable>(null);
+  const finalizeRef = React.useRef<Validatable>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const showPreview = searchParams.get("preview") === "true";
@@ -158,6 +164,10 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
             finalize: finalizeForStore,
           });
 
+          // Transform to API format for snapshot comparison
+          const apiCurriculum = transformCurriculumToAPI(curriculumForStore);
+          const apiPricing = transformPricingToAPI(pricingForStore);
+
           // Load data into store
           useCourseStore.setState({
             courseId,
@@ -168,8 +178,9 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
             step: data.currentStep as 1 | 2 | 3 | 4, // Start from currentStep
             savedSnapshots: {
               basicInfo: JSON.stringify(basicInfoForStore),
-              curriculum: JSON.stringify(curriculumForStore),
-              pricing: JSON.stringify(pricingForStore),
+              curriculum: JSON.stringify(apiCurriculum), // Store API format
+              pricing: JSON.stringify(apiPricing), // Store API format
+              finalize: JSON.stringify(finalizeForStore),
             },
           });
 
@@ -221,21 +232,35 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
           // eslint-disable-next-line no-console
           console.log("CategoryId being set:", basicInfoForStore.categoryId);
 
+          // Transform to API format for snapshot comparison
+          const apiCurriculum = transformCurriculumToAPI(courseData.curriculum);
+          const apiPricing = transformPricingToAPI(courseData.pricing);
+
+          // Transform finalize data (or use empty if not available)
+          const finalizeForStore = courseData.finalize
+            ? {
+                welcomeMessage: courseData.finalize.welcomeMessage || "",
+                congratulationMessage:
+                  courseData.finalize.congratulationMessage || "",
+              }
+            : {
+                welcomeMessage: "",
+                congratulationMessage: "",
+              };
+
           // Load data into store (start from step 1 for editing)
           useCourseStore.setState({
             courseId,
             basicInfo: basicInfoForStore,
             curriculum: courseData.curriculum,
             pricing: courseData.pricing,
-            finalize: {
-              welcomeMessage: "",
-              congratulationMessage: "",
-            },
+            finalize: finalizeForStore,
             step: 1, // Always start from step 1 for editing
             savedSnapshots: {
               basicInfo: JSON.stringify(basicInfoForStore),
-              curriculum: JSON.stringify(courseData.curriculum),
-              pricing: JSON.stringify(courseData.pricing),
+              curriculum: JSON.stringify(apiCurriculum), // Store API format
+              pricing: JSON.stringify(apiPricing), // Store API format
+              finalize: JSON.stringify(finalizeForStore),
             },
           });
 
@@ -289,21 +314,18 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
 
   // Check if current step has changes by comparing with saved snapshots
   const hasStepChanges = (step: number): boolean => {
-    if (step === 4) {
-      // Finalize step - no data to track changes
-      return false;
-    }
-
     const currentSnapshot = {
       1: JSON.stringify(basicInfo),
       2: JSON.stringify(curriculum),
       3: JSON.stringify(pricing),
+      4: JSON.stringify(finalize),
     }[step];
 
     const savedSnapshot = {
       1: savedSnapshots.basicInfo,
       2: savedSnapshots.curriculum,
       3: savedSnapshots.pricing,
+      4: savedSnapshots.finalize,
     }[step];
 
     const hasChanges = currentSnapshot !== savedSnapshot;
@@ -380,6 +402,10 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
   };
 
   const handleSaveDraft = async () => {
+    // Validate finalize form before saving draft (required for draft)
+    const ok = await finalizeRef.current?.validateAndFocus();
+    if (!ok) return;
+
     try {
       await saveDraft();
       // eslint-disable-next-line no-console
@@ -432,15 +458,28 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
   };
 
   const handleSaveChanges = async () => {
-    // For edit mode - all changes have been saved during navigation
-    // Just validate and go back home
+    // For edit mode - validate and save via publish API if there are changes
     const ok = await finalizeRef.current?.validateAndFocus();
     if (!ok) return;
 
-    // eslint-disable-next-line no-console
-    console.log("All changes have been saved successfully!");
-    // Navigate back to home
-    router.push("/instructor/courses");
+    try {
+      // Check if finalize step has changes and update via publish API
+      if (hasStepChanges(4)) {
+        await publishCourse(); // Use publish API to update finalize messages
+        // eslint-disable-next-line no-console
+        console.log("Finalize messages updated via publish API!");
+      }
+
+      // eslint-disable-next-line no-console
+      console.log("All changes have been saved successfully!");
+      // Navigate back to home
+      router.push("/instructor/courses");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to save changes.";
+      // eslint-disable-next-line no-console
+      console.error(errorMessage);
+    }
   };
 
   // Show loading state

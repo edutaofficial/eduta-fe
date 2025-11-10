@@ -7,6 +7,10 @@ export interface CourseForEditResponse {
   basicInfo: UIBasicInfo;
   curriculum: UICurriculum;
   pricing: UIPricing;
+  finalize?: {
+    welcomeMessage: string;
+    congratulationMessage: string;
+  };
 }
 
 /**
@@ -86,11 +90,18 @@ export async function getCourseForEdit(
       priceTier: courseData.pricing.priceTier,
     };
 
+    // Extract finalize data if available
+    const finalize = courseData.finalize ? {
+      welcomeMessage: courseData.finalize.welcomeMessage || "",
+      congratulationMessage: courseData.finalize.congratulationMessage || "",
+    } : undefined;
+
     return {
       courseId: courseData.courseId,
       basicInfo,
       curriculum,
       pricing,
+      finalize,
     };
   } catch (error: unknown) {
     // eslint-disable-next-line no-console

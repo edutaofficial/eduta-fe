@@ -56,9 +56,16 @@ export function StudentCourseCard({
   onRate,
   className,
 }: StudentCourseCardProps) {
-  const hasImage =
-    image && image.trim() !== "" && image !== "undefined" && image !== "null";
   const [imageError, setImageError] = React.useState(false);
+
+  // Simple check: backend provides URL or not
+  const hasImage =
+    image &&
+    image.trim() !== "" &&
+    (image.startsWith("http://") ||
+      image.startsWith("https://") ||
+      image.startsWith("/")) &&
+    !imageError;
 
   return (
     <div
@@ -70,16 +77,14 @@ export function StudentCourseCard({
       {/* Course Image */}
       <Link href={`/learn/${courseId}/lectures`}>
         <div className="relative aspect-[3/2] w-full bg-default-100">
-          {hasImage && !imageError ? (
+          {hasImage ? (
             <Image
               src={image}
               alt={title}
               fill
               className="object-cover"
               onError={() => setImageError(true)}
-              unoptimized={
-                image.includes("placehold.co") || image.includes("pravatar")
-              }
+              unoptimized
             />
           ) : (
             <div
@@ -155,4 +160,3 @@ export function StudentCourseCard({
     </div>
   );
 }
-

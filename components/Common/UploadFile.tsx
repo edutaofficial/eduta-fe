@@ -16,6 +16,7 @@ export interface UploadFileProps {
   className?: string;
   disabled?: boolean;
   hint?: string; // Custom hint text (e.g., "Supports MP4, MOV, AVI")
+  required?: boolean; // Show required asterisk
 }
 
 /**
@@ -35,6 +36,7 @@ export function UploadFile({
   className,
   disabled = false,
   hint,
+  required = false,
 }: UploadFileProps) {
   const [isDragging, setIsDragging] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
@@ -312,6 +314,7 @@ export function UploadFile({
       {label && (
         <Label className={cn(disabled && "text-muted-foreground")}>
           {label}
+          {required && <span className="text-destructive ml-1">*</span>}
         </Label>
       )}
 

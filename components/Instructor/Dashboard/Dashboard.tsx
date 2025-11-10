@@ -5,7 +5,6 @@ import {
   PlusIcon,
   EditIcon,
   SearchIcon,
-  FilterIcon,
   CheckCircle2Icon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,12 +20,6 @@ import {
 } from "@/components/ui/pagination";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { InstructorCourseCard } from "../InstructorCourseCard";
 import { DraftCourseCard } from "./DraftCourseCard";
 import { DraftCourseCardSkeleton } from "@/components/skeleton/DraftCourseCardSkeleton";
@@ -44,9 +37,6 @@ export function InstructorDashboard() {
   const { user } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [filterStatus, setFilterStatus] = React.useState<
-    "all" | "draft" | "published" | "archived"
-  >("all");
 
   // Draft courses state
   const [draftCourses, setDraftCourses] = React.useState<InstructorCourse[]>(
@@ -112,7 +102,7 @@ export function InstructorDashboard() {
     }
   }, [instructorId, draftPage]);
 
-  // Fetch published courses
+  // Fetch published courses (only published, not drafts or archived)
   const fetchPublishedCourses = React.useCallback(async () => {
     if (!instructorId) return;
 
@@ -122,7 +112,7 @@ export function InstructorDashboard() {
     try {
       const params: InstructorCoursesParams = {
         instructorId,
-        status: filterStatus === "all" ? undefined : filterStatus,
+        status: "published", // Always fetch only published courses
         query: searchQuery || undefined,
         page: publishedPage,
         pageSize: 9, // 9 courses per page (3x3 grid)
@@ -145,7 +135,7 @@ export function InstructorDashboard() {
     } finally {
       setLoadingPublished(false);
     }
-  }, [instructorId, publishedPage, filterStatus, searchQuery]);
+  }, [instructorId, publishedPage, searchQuery]);
 
   // Fetch data on mount and when dependencies change
   React.useEffect(() => {
@@ -175,6 +165,11 @@ export function InstructorDashboard() {
   const handleEditCourse = (courseId: string) => {
     // Navigate to edit route
     router.push(`/instructor/courses/${courseId}/edit`);
+  };
+
+  const handlePublishSuccess = async () => {
+    // Refresh both drafts and published courses after publishing
+    await Promise.all([fetchDraftCourses(), fetchPublishedCourses()]);
   };
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -249,6 +244,7 @@ export function InstructorDashboard() {
                 key={course.courseId}
                 course={course}
                 onEdit={handleEditDraft}
+                onPublish={handlePublishSuccess}
               />
             ))}
           </div>
@@ -384,109 +380,32 @@ export function InstructorDashboard() {
           </Button>
         </div>
 
-        {/* Search and Filter Bar */}
+        {/* Search Bar */}
         <div className="bg-white rounded-xl border border-default-200 p-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
-              <Input
-                placeholder="Search courses by title or description..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-11 border-default-300 focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
-              />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="gap-2 h-11 min-w-[140px] border-default-300 hover:border-primary-400 hover:bg-primary-50"
-                >
-                  <FilterIcon className="size-4" />
-                  {filterStatus === "all"
-                    ? "All Status"
-                    : filterStatus.charAt(0).toUpperCase() +
-                      filterStatus.slice(1)}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={() => {
-                    setFilterStatus("all");
-                    setPublishedPage(1);
-                  }}
-                  className={cn(
-                    "cursor-pointer",
-                    filterStatus === "all" &&
-                      "bg-primary-50 text-primary-600 font-medium"
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    {filterStatus === "all" && (
-                      <CheckCircle2Icon className="size-4" />
-                    )}
-                    All Status
-                  </span>
-                </DropdownMenuItem>
-                <div className="my-1 h-px bg-default-200" />
-                <DropdownMenuItem
-                  onClick={() => {
-                    setFilterStatus("published");
-                    setPublishedPage(1);
-                  }}
-                  className={cn(
-                    "cursor-pointer",
-                    filterStatus === "published" &&
-                      "bg-primary-50 text-primary-600 font-medium"
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    {filterStatus === "published" && (
-                      <CheckCircle2Icon className="size-4" />
-                    )}
-                    Published
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setFilterStatus("archived");
-                    setPublishedPage(1);
-                  }}
-                  className={cn(
-                    "cursor-pointer",
-                    filterStatus === "archived" &&
-                      "bg-primary-50 text-primary-600 font-medium"
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    {filterStatus === "archived" && (
-                      <CheckCircle2Icon className="size-4" />
-                    )}
-                    Archived
-                  </span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
+            <Input
+              placeholder="Search courses by title or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-11 border-default-300 focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+            />
           </div>
 
           {/* Results Count */}
-          {(searchQuery || filterStatus !== "all") && (
+          {searchQuery && (
             <div className="mt-3 pt-3 border-t border-default-200">
               <p className="text-sm text-muted-foreground">
                 Found{" "}
                 <span className="font-semibold text-default-900">
                   {publishedMeta.totalItems}
                 </span>{" "}
-                course{publishedMeta.totalItems !== 1 ? "s" : ""}{" "}
-                {searchQuery && (
-                  <>
-                    matching &quot;
-                    <span className="font-medium text-default-900">
-                      {searchQuery}
-                    </span>
-                    &quot;
-                  </>
-                )}
+                course{publishedMeta.totalItems !== 1 ? "s" : ""} matching
+                &quot;
+                <span className="font-medium text-default-900">
+                  {searchQuery}
+                </span>
+                &quot;
               </p>
             </div>
           )}
@@ -529,17 +448,15 @@ export function InstructorDashboard() {
               </div>
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold text-default-900">
-                  {searchQuery || filterStatus !== "all"
-                    ? "No courses found"
-                    : "No courses yet"}
+                  {searchQuery ? "No courses found" : "No published courses yet"}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {searchQuery || filterStatus !== "all"
-                    ? "Try adjusting your search or filter criteria"
-                    : "Create your first course to get started"}
+                  {searchQuery
+                    ? "Try adjusting your search criteria"
+                    : "Complete your draft courses to publish them"}
                 </p>
               </div>
-              {!searchQuery && filterStatus === "all" && (
+              {!searchQuery && (
                 <Button asChild className="gap-2 mt-4" size="lg">
                   <Link href="/instructor/courses/create">
                     <PlusIcon className="size-5" />

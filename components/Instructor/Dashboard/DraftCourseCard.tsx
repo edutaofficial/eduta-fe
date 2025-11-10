@@ -2,46 +2,57 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { EditIcon, BookOpenIcon } from "lucide-react";
+import { EditIcon, BookOpenIcon, RocketIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import type { InstructorCourse } from "@/app/api/course/getInstructorCourses";
+import { publishCourse } from "@/app/api/course/publishCourse";
 
 interface DraftCourseCardProps {
   course: InstructorCourse;
   onEdit?: (courseId: string) => void; // Kept for backwards compatibility but not used
+  onPublish?: () => void; // Callback to refresh after publishing
 }
 
-// Calculate progress based on filled fields
+// Calculate progress based on required fields for publishing
+// Note: Finalize messages are checked on the backend before publishing
 function calculateProgress(course: InstructorCourse): number {
   const fields = {
-    // Basic info
+    // Step 1: Basic info (Course Details)
     title: !!course.title,
     shortDescription: !!course.shortDescription,
     learningLevel: !!course.learningLevel,
     language: !!course.language,
     categoryId: !!course.categoryId,
-    // Media assets
     courseBannerId: course.courseBannerId !== null && course.courseBannerId > 0,
-    courseLogoId: course.courseLogoId !== null && course.courseLogoId > 0,
-    // Curriculum
+    // Note: courseLogoId is optional, not required for publishing
+    
+    // Step 2: Curriculum
     hasLectures: course.totalLectures > 0,
     hasDuration: course.totalDuration > 0,
-    // Pricing
-    hasPricing: course.price >= 0,
+    
+    // Step 3: Pricing
+    hasPricing: course.price !== null && course.price !== undefined,
+    
+    // Step 4: Finalize (messages are required but not returned in list API)
+    // We assume if all above steps are complete, finalize is also complete
+    // since the course can only be in draft with all fields if finalize is done
   };
 
   const totalFields = Object.keys(fields).length;
   const completedFields = Object.values(fields).filter(Boolean).length;
-
+  
+  // If all required fields are complete, it's 100% ready to publish
   return Math.round((completedFields / totalFields) * 100);
 }
 
-export function DraftCourseCard({ course }: DraftCourseCardProps) {
+export function DraftCourseCard({ course, onPublish }: DraftCourseCardProps) {
   const router = useRouter();
   const [progress, setProgress] = React.useState(0);
+  const [isPublishing, setIsPublishing] = React.useState(false);
   const actualProgress = calculateProgress(course);
+  const isComplete = actualProgress === 100;
 
   // Animate progress on mount
   React.useEffect(() => {
@@ -53,6 +64,28 @@ export function DraftCourseCard({ course }: DraftCourseCardProps) {
 
   const handleEdit = () => {
     router.push(`/instructor/courses/${course.courseId}/draft-complete`);
+  };
+
+  const handlePublish = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      setIsPublishing(true);
+      await publishCourse(course.courseId, {
+        isDraft: false,
+      });
+      
+      // Refresh the dashboard to show updated courses
+      if (onPublish) {
+        onPublish();
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to publish course:", error);
+      // You could show a toast notification here
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   return (
@@ -110,17 +143,37 @@ export function DraftCourseCard({ course }: DraftCourseCardProps) {
       </div>
 
       {/* Action Button */}
-      <Button
-        variant="outline"
-        className="w-full gap-2 border-primary-200 text-primary-600 hover:bg-primary-50 hover:border-primary-300 group-hover:shadow-md transition-all"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleEdit();
-        }}
-      >
-        <EditIcon className="size-4" />
-        Continue Editing
-      </Button>
+      {isComplete ? (
+        <Button
+          className="w-full gap-2 bg-success-600 hover:bg-success-700 text-white shadow-md hover:shadow-lg transition-all"
+          onClick={handlePublish}
+          disabled={isPublishing}
+        >
+          {isPublishing ? (
+            <>
+              <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Publishing...
+            </>
+          ) : (
+            <>
+              <RocketIcon className="size-4" />
+              Publish Course
+            </>
+          )}
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          className="w-full gap-2 border-primary-200 text-primary-600 hover:bg-primary-50 hover:border-primary-300 group-hover:shadow-md transition-all"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEdit();
+          }}
+        >
+          <EditIcon className="size-4" />
+          Continue Editing
+        </Button>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import type { TitleDescriptionFieldsProps } from "./types";
+import type { TitleDescriptionFieldsProps } from "@/types/curriculum";
 
 /**
  * Reusable component for title and description fields
@@ -60,6 +60,7 @@ export const TitleDescriptionFields: React.FC<TitleDescriptionFieldsProps> = ({
             onChange={onDescriptionChange}
             placeholder={descriptionPlaceholder}
             maxLength={2500}
+            error={showErrors && !description.trim()}
           />
         </div>
         {showErrors && !description.trim() && (

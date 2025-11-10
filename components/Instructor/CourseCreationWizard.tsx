@@ -5,10 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CourseDetails } from "./CourseCreation/CourseDetails";
-import { Curriculum } from "./CourseCreation/Curriculum";
+import {
+  CourseDetails,
+  type CourseDetailsHandle,
+} from "./CourseCreation/CourseDetails";
+import { Curriculum, type CurriculumHandle } from "./CourseCreation/Curriculum";
 import { Price } from "./CourseCreation/Price";
-import { Finalize } from "./CourseCreation/Finalize";
+import { Finalize, type FinalizeHandle } from "./CourseCreation/Finalize";
 import { Separator } from "@radix-ui/react-separator";
 import { useCourseStore } from "@/store/useCourseStore";
 import { CourseDetail } from "@/components/Common";
@@ -36,15 +39,18 @@ export function CourseCreationWizard() {
     resetStore,
   } = useCourseStore();
 
-  type Validatable = {
-    validateAndFocus: () => Promise<boolean>;
-  };
-  const detailsRef = React.useRef<Validatable>(null as unknown as Validatable);
-  const curriculumRef = React.useRef<Validatable>(
-    null as unknown as Validatable
+  const detailsRef = React.useRef<CourseDetailsHandle>(
+    null as unknown as CourseDetailsHandle
   );
-  const priceRef = React.useRef<Validatable>(null as unknown as Validatable);
-  const finalizeRef = React.useRef<Validatable>(null as unknown as Validatable);
+  const curriculumRef = React.useRef<CurriculumHandle>(
+    null as unknown as CurriculumHandle
+  );
+  const priceRef = React.useRef<{ validateAndFocus: () => Promise<boolean> }>(
+    null as unknown as { validateAndFocus: () => Promise<boolean> }
+  );
+  const finalizeRef = React.useRef<FinalizeHandle>(
+    null as unknown as FinalizeHandle
+  );
   const router = useRouter();
   const searchParams = useSearchParams();
   const showPreview = searchParams.get("preview") === "true";
@@ -58,7 +64,7 @@ export function CourseCreationWizard() {
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const savedCourseId = localStorage.getItem("course_creation_courseId");
-      
+
       // If there's no saved courseId in localStorage, this is a fresh start
       // Reset the store to clear any old data from previous edits
       if (!savedCourseId) {
@@ -123,6 +129,10 @@ export function CourseCreationWizard() {
   };
 
   const handleSaveDraft = async () => {
+    // Validate finalize form before saving draft (required for draft)
+    const ok = await finalizeRef.current?.validateAndFocus();
+    if (!ok) return;
+
     try {
       await saveDraft();
       // eslint-disable-next-line no-console

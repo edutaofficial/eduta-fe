@@ -240,30 +240,6 @@ export default function Login() {
           </CardContent>
 
           <CardFooter className="flex flex-col gap-4 border-t border-primary-200 pt-6">
-            <div className="relative w-full">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-primary-200" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-card text-default-500">
-                  Demo Credentials
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-primary-50 rounded-lg p-4 space-y-2 text-sm border border-primary-100 w-full">
-              <p className="font-medium text-default-700">Test Accounts:</p>
-              <div className="space-y-1 text-default-600">
-                <p>• Student: student@eduta.org</p>
-                <p>• Instructor: instructor@eduta.org</p>
-                <p>• Admin: admin@eduta.org</p>
-                <p className="text-xs mt-2 text-default-500">
-                  Passwords: StudentPassword123 / InstructorPass123 /
-                  AdminPassword123
-                </p>
-              </div>
-            </div>
-
             <div className="text-center w-full pt-2">
               <p className="text-default-600 text-sm">
                 Don&apos;t have an account?{" "}

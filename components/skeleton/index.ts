@@ -1,4 +1,4 @@
+export { CourseCardSkeleton } from "./CourseCardSkeleton";
 export { DraftCourseCardSkeleton } from "./DraftCourseCardSkeleton";
 export { InstructorCourseCardSkeleton } from "./InstructorCourseCardSkeleton";
-export { CourseCardSkeleton } from "./CourseCardSkeleton";
-
+export { CourseDetailSkeleton } from "./CourseDetailSkeleton";

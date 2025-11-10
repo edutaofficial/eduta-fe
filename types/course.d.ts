@@ -267,6 +267,7 @@ export interface CourseState {
     basicInfo: string; // JSON stringified
     curriculum: string; // JSON stringified
     pricing: string; // JSON stringified
+    finalize: string; // JSON stringified
   };
 
   loading: {

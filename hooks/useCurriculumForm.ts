@@ -4,7 +4,7 @@ import * as z from "zod";
 import { useCourseStore } from "@/store/useCourseStore";
 import type { UICurriculum } from "@/types/course";
 import type { UploadedFile } from "@/components/Common";
-import type { CurriculumFormData, SectionFormData, LectureFormData } from "@/components/Instructor/CourseCreation/Curriculum/types";
+import type { CurriculumFormData, SectionFormData, LectureFormData } from "@/types/curriculum";
 import {
   transformStoreToFormData,
   createDefaultSection,
@@ -229,16 +229,44 @@ export function useCurriculumForm() {
 
     setShowErrors(true);
     
-    // Find and scroll to first invalid field
+    // Find first invalid field and return info to expand its accordion
     for (const section of formik.values.sections) {
       const invalid = findFirstInvalidField(section);
       if (invalid) {
-        scrollToElement(`${invalid.type}-${invalid.id}`);
         return false;
       }
     }
 
     return false;
+  }, [formik.values.sections]);
+
+  // Get first invalid section and lecture for accordion expansion
+  const getFirstInvalidIds = React.useCallback((): {
+    sectionId: string | number | null;
+    lectureId: string | number | null;
+    fieldId: string | null;
+  } => {
+    for (const section of formik.values.sections) {
+      const invalid = findFirstInvalidField(section);
+      if (invalid) {
+        // Check if error is in section or lecture
+        if (invalid.type.startsWith("section")) {
+          return {
+            sectionId: section.id,
+            lectureId: null,
+            fieldId: `${invalid.type}-${invalid.id}`,
+          };
+        } else {
+          // Error is in a lecture
+          return {
+            sectionId: section.id,
+            lectureId: invalid.id,
+            fieldId: `${invalid.type}-${invalid.id}`,
+          };
+        }
+      }
+    }
+    return { sectionId: null, lectureId: null, fieldId: null };
   }, [formik.values.sections]);
 
   return {
@@ -260,6 +288,7 @@ export function useCurriculumForm() {
     
     // Validation
     validateAndFocus,
+    getFirstInvalidIds,
   };
 }
 

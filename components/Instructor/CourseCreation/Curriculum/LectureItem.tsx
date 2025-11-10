@@ -12,7 +12,7 @@ import type { UploadedFile } from "@/components/Common";
 import { TitleDescriptionFields } from "./TitleDescriptionFields";
 import { LectureVideoUpload } from "./LectureVideoUpload";
 import { LectureResourcesUpload } from "./LectureResourcesUpload";
-import type { LectureFormData } from "./types";
+import type { LectureFormData } from "@/types/curriculum";
 
 interface LectureItemProps {
   lecture: LectureFormData;
@@ -94,7 +94,13 @@ export const LectureItem: React.FC<LectureItemProps> = ({
         onClose={canRemove ? onRemove : undefined}
       >
         <span className="text-sm">
-          Lecture {lectureIndex + 1} | {lecture.name}
+          Lecture {lectureIndex + 1}
+          {lecture.name.trim() && (
+            <>
+              {" | "}
+              {lecture.name}
+            </>
+          )}
         </span>
       </CourseAccordionTrigger>
 

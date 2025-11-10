@@ -1,5 +1,5 @@
 import type { UICurriculum } from "@/types/course";
-import type { LectureFormData, SectionFormData } from "@/components/Instructor/CourseCreation/Curriculum/types";
+import type { LectureFormData, SectionFormData } from "@/types/curriculum";
 
 /**
  * Transform store curriculum data to form data structure
@@ -49,7 +49,7 @@ export function transformStoreToFormData(
 export function createDefaultSection(id: number | string): SectionFormData {
   return {
     id,
-    name: "Untitled",
+    name: "",
     description: "",
     lectures: [createDefaultLecture(id)],
   };
@@ -61,7 +61,7 @@ export function createDefaultSection(id: number | string): SectionFormData {
 export function createDefaultLecture(id: number | string): LectureFormData {
   return {
     id,
-    name: "Untitled",
+    name: "",
     description: "",
     video: 0,
     resources: [],

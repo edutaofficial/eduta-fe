@@ -10,7 +10,9 @@ export interface WishlistItem {
   learningLevel: string;
   language: string;
   courseBannerId: number;
+  courseBannerUrl?: string; // Optional: URL to course banner image
   courseLogoId: number;
+  courseLogoUrl?: string; // Optional: URL to course logo image
   instructorId: number;
   instructorName: string;
   categoryId: string;

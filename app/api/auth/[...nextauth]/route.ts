@@ -32,7 +32,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          throw new Error("Email and password are required");
         }
 
         try {
@@ -42,32 +42,50 @@ export const authOptions: NextAuthOptions = {
             password: credentials.password,
           });
 
-          const { token } = response.data;
-          if (!token) return null;
+          const { token, refresh_token } = response.data;
+          if (!token) {
+            throw new Error("Login failed: No token received from server");
+          }
 
           // Decode JWT to extract user information
           const payload = decodeJwtPayload(token);
-          if (!payload) return null;
+          if (!payload) {
+            throw new Error("Login failed: Invalid token received");
+          }
 
-          const role = payload.user_type === "instructor" ? "instructor" : "student";
+          const role: "instructor" | "student" = payload.user_type === "instructor" ? "instructor" : "student";
           const name =
             [payload.first_name, payload.last_name]
               .filter(Boolean)
               .join(" ") || "User";
 
-          const userObj = {
+          const userObj: {
+            id: string;
+            email: string;
+            name: string;
+            role: "instructor" | "student";
+            token: string;
+            refreshToken?: string;
+          } = {
             id: String(payload.user_id || payload.email || credentials.email),
             email: (payload.email as string) || credentials.email,
             name,
             role,
             token,
+            refreshToken: refresh_token,
           };
 
           return userObj;
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error("Login failed:", error);
-          return null;
+          
+          // Extract and throw the actual error message from the backend
+          if (error instanceof Error) {
+            throw new Error(error.message);
+          }
+          
+          throw new Error("Login failed. Please check your credentials and try again.");
         }
       },
     }),
@@ -77,12 +95,14 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         (token as unknown as Record<string, unknown>).role = (user as unknown as { role?: string }).role;
         (token as unknown as Record<string, unknown>).accessToken = (user as unknown as { token?: string }).token;
+        (token as unknown as Record<string, unknown>).refreshToken = (user as unknown as { refreshToken?: string }).refreshToken;
       }
       return token;
     },
     async session({ session, token }) {
       (session as unknown as Record<string, unknown>).role = (token as unknown as { role?: string }).role;
       (session as unknown as Record<string, unknown>).accessToken = (token as unknown as { accessToken?: string }).accessToken;
+      (session as unknown as Record<string, unknown>).refreshToken = (token as unknown as { refreshToken?: string }).refreshToken;
       return session;
     },
   },

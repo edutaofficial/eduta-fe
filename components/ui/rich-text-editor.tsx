@@ -25,6 +25,7 @@ interface RichTextEditorProps {
   placeholder?: string;
   className?: string;
   maxLength?: number; // Maximum character count (plain text)
+  error?: boolean; // Show error state with red border
 }
 
 export function RichTextEditor({
@@ -33,6 +34,7 @@ export function RichTextEditor({
   placeholder,
   className,
   maxLength,
+  error,
 }: RichTextEditorProps) {
   const [isMounted, setIsMounted] = React.useState(false);
   const [charCount, setCharCount] = React.useState(0);
@@ -114,7 +116,10 @@ export function RichTextEditor({
   return (
     <div
       className={cn(
-        "border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary-400 focus-within:border-primary-400",
+        "border rounded-lg overflow-hidden",
+        error
+          ? "border-destructive border-2 focus-within:ring-2 focus-within:ring-destructive/50"
+          : "focus-within:ring-2 focus-within:ring-primary-400 focus-within:border-primary-400",
         className
       )}
     >

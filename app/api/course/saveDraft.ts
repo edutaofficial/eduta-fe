@@ -1,9 +1,18 @@
 import axiosInstance from "@/app/api/axiosInstance";
 import { extractErrorMessage } from "@/lib/errorUtils";
 
-export async function saveDraft(courseId: string): Promise<void> {
+export interface SaveDraftRequest {
+  isDraft: boolean;
+  welcomeMessage: string;
+  congratulationMessage: string;
+}
+
+export async function saveDraft(
+  courseId: string,
+  data: SaveDraftRequest
+): Promise<void> {
   try {
-    await axiosInstance.put(`/api/instructor/courses/${courseId}/draft`, { isDraft: true });
+    await axiosInstance.put(`/api/instructor/courses/${courseId}/draft`, data);
   } catch (error: unknown) {
     // eslint-disable-next-line no-console
     console.error("Error saving draft:", error);

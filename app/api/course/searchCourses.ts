@@ -50,6 +50,8 @@ export interface PublicCourse {
   shortDescription: string;
   courseBannerId: number | null;
   courseBannerUrl: string | null;
+  courseLogoId: number | null;
+  courseLogoUrl: string | null;
   learningLevel: string;
   language: string;
   instructor: CourseInstructor;
