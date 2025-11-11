@@ -14,12 +14,10 @@ import {
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 import { SearchIcon } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useCategoryStore } from "@/store/useCategoryStore";
-import {
-  searchCourses,
-  type PublicCourse,
-} from "@/app/api/course/searchCourses";
+import { searchCourses } from "@/app/api/course/searchCourses";
 import { CourseCardSkeleton } from "@/components/skeleton/CourseCardSkeleton";
 
 export default function ExploreCourses() {
@@ -28,12 +26,10 @@ export default function ExploreCourses() {
     loading: categoriesLoading,
     fetchCategories,
   } = useCategoryStore();
-  const [activeCategory, setActiveCategory] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(
     null
   );
-  const [courses, setCourses] = useState<PublicCourse[]>([]);
-  const [loadingCourses, setLoadingCourses] = useState(false);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -42,45 +38,34 @@ export default function ExploreCourses() {
     }
   }, [categories.length, fetchCategories]);
 
-  // Set initial active category when categories load
-  useEffect(() => {
-    if (categories.length > 0 && !activeCategory) {
-      setActiveCategory(categories[0].categoryId);
-    }
-  }, [categories, activeCategory]);
+  // Derive the active category: use selected category, or default to first category
+  const activeCategory = useMemo(() => {
+    if (selectedCategory) return selectedCategory;
+    return categories.length > 0 ? categories[0].categoryId : "";
+  }, [selectedCategory, categories]);
 
-  // Fetch courses when category or subcategory changes
-  useEffect(() => {
-    if (!activeCategory) return;
+  // Use TanStack Query for courses
+  const { data: coursesData, isLoading: loadingCourses } = useQuery({
+    queryKey: ["exploreCourses", activeSubcategory || activeCategory],
+    queryFn: () =>
+      searchCourses({
+        categoryId: activeSubcategory || activeCategory,
+        pageSize: 12,
+        sortBy: "created_at",
+        order: "desc",
+      }),
+    enabled: !!activeCategory,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-    const loadCourses = async () => {
-      setLoadingCourses(true);
-      try {
-        const response = await searchCourses({
-          categoryId: activeSubcategory || activeCategory,
-          pageSize: 12,
-          sortBy: "created_at",
-          order: "desc",
-        });
-        setCourses(response.data);
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error("Error fetching courses:", error);
-        setCourses([]);
-      } finally {
-        setLoadingCourses(false);
-      }
-    };
-
-    loadCourses();
-  }, [activeCategory, activeSubcategory]);
+  const courses = coursesData?.data || [];
 
   const activeCategoryData = categories.find(
     (c) => c.categoryId === activeCategory
   );
 
   const handleCategoryClick = (categoryId: string) => {
-    setActiveCategory(categoryId);
+    setSelectedCategory(categoryId);
     setActiveSubcategory(null);
   };
   return (

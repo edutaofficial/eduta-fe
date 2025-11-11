@@ -7,7 +7,7 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signupUser, formatNameForSignup } from "@/app/api/auth/signup";
+import { signupUser } from "@/app/api/auth/signup";
 import {
   Card,
   CardHeader,
@@ -42,10 +42,14 @@ const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,}$/;
 const nameRegex = /^[a-zA-Z\s]+$/;
 
 const baseSignupSchema = z.object({
-  name: z
+  firstName: z
     .string()
-    .min(1, "Full name is required")
-    .regex(nameRegex, "Name must contain only letters and spaces"),
+    .min(1, "First name is required")
+    .regex(nameRegex, "First name must contain only letters and spaces"),
+  lastName: z
+    .string()
+    .min(1, "Last name is required")
+    .regex(nameRegex, "Last name must contain only letters and spaces"),
   email: z
     .string()
     .min(1, "Email is required")
@@ -97,12 +101,10 @@ export default function Signup() {
   const signupStudentMutation = useMutation({
     mutationFn: async (values: StudentSignupFormValues) => {
       try {
-        const { firstName, lastName } = formatNameForSignup(values.name);
-
         // Call signup API
         await signupUser({
-          first_name: firstName,
-          last_name: lastName,
+          first_name: values.firstName,
+          last_name: values.lastName,
           email: values.email,
           password: values.password,
           confirm_password: values.password,
@@ -144,12 +146,10 @@ export default function Signup() {
   const signupInstructorMutation = useMutation({
     mutationFn: async (values: InstructorSignupFormValues) => {
       try {
-        const { firstName, lastName } = formatNameForSignup(values.name);
-
         // Call signup API
         await signupUser({
-          first_name: firstName,
-          last_name: lastName,
+          first_name: values.firstName,
+          last_name: values.lastName,
           email: values.email,
           password: values.password,
           confirm_password: values.password,
@@ -192,7 +192,8 @@ export default function Signup() {
 
   const studentFormik = useFormik<StudentSignupFormValues>({
     initialValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -224,7 +225,8 @@ export default function Signup() {
 
   const instructorFormik = useFormik<InstructorSignupFormValues>({
     initialValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -365,38 +367,74 @@ export default function Signup() {
             </div>
 
             <form onSubmit={formik.handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-default-700">
-                  Full Name <span className="text-error-600">*</span>
-                </Label>
-                <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
-                  <Input
-                    id="name"
-                    name="name"
-                    type="text"
-                    value={formik.values.name}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    className={`pl-10 ${
-                      formik.touched.name && formik.errors.name
-                        ? "border-error-500"
-                        : ""
-                    }`}
-                    placeholder="John Doe"
-                    disabled={
-                      activeTab === "student"
-                        ? signupStudentMutation.isPending
-                        : signupInstructorMutation.isPending
-                    }
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName" className="text-default-700">
+                    First Name <span className="text-error-600">*</span>
+                  </Label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      value={formik.values.firstName}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      className={`pl-10 ${
+                        formik.touched.firstName && formik.errors.firstName
+                          ? "border-error-500"
+                          : ""
+                      }`}
+                      placeholder="John"
+                      disabled={
+                        activeTab === "student"
+                          ? signupStudentMutation.isPending
+                          : signupInstructorMutation.isPending
+                      }
+                    />
+                  </div>
+                  {formik.touched.firstName && formik.errors.firstName && (
+                    <p className="text-sm text-error-600 flex items-center gap-1">
+                      <AlertCircleIcon className="size-3" />
+                      {formik.errors.firstName}
+                    </p>
+                  )}
                 </div>
-                {formik.touched.name && formik.errors.name && (
-                  <p className="text-sm text-error-600 flex items-center gap-1">
-                    <AlertCircleIcon className="size-3" />
-                    {formik.errors.name}
-                  </p>
-                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="lastName" className="text-default-700">
+                    Last Name <span className="text-error-600">*</span>
+                  </Label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      value={formik.values.lastName}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      className={`pl-10 ${
+                        formik.touched.lastName && formik.errors.lastName
+                          ? "border-error-500"
+                          : ""
+                      }`}
+                      placeholder="Doe"
+                      disabled={
+                        activeTab === "student"
+                          ? signupStudentMutation.isPending
+                          : signupInstructorMutation.isPending
+                      }
+                    />
+                  </div>
+                  {formik.touched.lastName && formik.errors.lastName && (
+                    <p className="text-sm text-error-600 flex items-center gap-1">
+                      <AlertCircleIcon className="size-3" />
+                      {formik.errors.lastName}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">

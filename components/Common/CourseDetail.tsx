@@ -35,8 +35,10 @@ import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/app/api/axiosInstance";
 import type { Asset } from "@/types/course";
 import FAQComponent from "../Home/FAQ";
+import { useAuth } from "@/lib/context/AuthContext";
 
 import type { CourseDetail as CourseDetailAPI } from "@/app/api/course/getCourseDetail";
+import type { CourseReview } from "@/app/api/learner/reviews";
 
 interface CourseDetailProps {
   courseId?: string;
@@ -48,6 +50,10 @@ interface CourseDetailProps {
   onWishlistToggle?: () => void;
   enrolling?: boolean;
   wishlistLoading?: boolean;
+  reviews?: CourseReview[];
+  averageRating?: number;
+  totalReviews?: number;
+  onWriteReview?: () => void;
 }
 
 interface CourseData {
@@ -141,8 +147,13 @@ export function CourseDetail({
   onWishlistToggle,
   enrolling = false,
   wishlistLoading = false,
+  reviews: apiReviews = [],
+  averageRating: apiAverageRating,
+  totalReviews: apiTotalReviews,
+  onWriteReview,
 }: CourseDetailProps) {
   const { basicInfo, curriculum, pricing } = useCourseStore();
+  const { user } = useAuth();
   const [isWishlisted, setIsWishlisted] = React.useState(isWishlistedProp);
   const [showAllSections, setShowAllSections] = React.useState(false);
   const [showFullDescription, setShowFullDescription] = React.useState(false);
@@ -456,13 +467,13 @@ export function CourseDetail({
                   <h2 className="text-2xl font-semibold text-default-900">
                     Course Outline
                   </h2>
-                  <Accordion type="multiple" className="w-full">
+                  <Accordion type="multiple" className="w-full bg-white">
                     {(showAllSections
                       ? courseData.outline
                       : courseData.outline.slice(0, 4)
                     ).map((section, sectionIndex) => (
                       <AccordionItem key={section.id} value={section.id}>
-                        <AccordionTrigger className="text-left hover:no-underline">
+                        <AccordionTrigger className="text-left hover:no-underline ">
                           <div className="flex items-center gap-3 flex-1">
                             <span className="text-default-900 font-medium">
                               Section {sectionIndex + 1}: {section.title}
@@ -532,9 +543,10 @@ export function CourseDetail({
                         __html: courseData.description,
                       }}
                     />
-                    {!showFullDescription && (
-                      <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-white to-transparent" />
-                    )}
+                    {!showFullDescription &&
+                      courseData.description.length > 500 && (
+                        <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-white to-transparent" />
+                      )}
                   </div>
                   {courseData.description.length > 500 && (
                     <Button
@@ -555,12 +567,41 @@ export function CourseDetail({
                 </div>
               )}
 
-              {/* Why This Course - Reviews */}
-              {courseData.reviews && courseData.reviews.length > 0 && (
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-semibold text-default-900">
-                    Why This Course?
-                  </h2>
+              {/* Student Reviews */}
+              {!isPreview && apiReviews.length > 0 && (
+                <div className="space-y-6 pb-8">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-semibold text-default-900">
+                        Student Reviews
+                      </h2>
+                      {apiAverageRating !== undefined &&
+                        apiTotalReviews !== undefined && (
+                          <div className="flex items-center gap-2 mt-2 text-default-600">
+                            <div className="flex items-center gap-1">
+                              <StarIcon className="size-5 fill-warning-500 text-warning-500" />
+                              <span className="font-semibold text-lg">
+                                {apiAverageRating.toFixed(1)}
+                              </span>
+                            </div>
+                            <span className="text-sm">
+                              ({apiTotalReviews}{" "}
+                              {apiTotalReviews === 1 ? "review" : "reviews"})
+                            </span>
+                          </div>
+                        )}
+                    </div>
+                    {apiCourseData?.isEnrolled && onWriteReview && (
+                      <Button
+                        onClick={onWriteReview}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        <StarIcon className="size-4" />
+                        Write a Review
+                      </Button>
+                    )}
+                  </div>
                   <Slider
                     slidesPerView={1}
                     spaceBetween={16}
@@ -578,9 +619,9 @@ export function CourseDetail({
                       enabled: false,
                     }}
                   >
-                    {courseData.reviews.map((review) => (
+                    {apiReviews.map((review) => (
                       <div
-                        key={review.id}
+                        key={review.reviewId}
                         className="bg-default-50 border border-default-200 rounded-lg p-6 h-full"
                       >
                         <div className="flex items-center gap-3 mb-3">
@@ -596,18 +637,55 @@ export function CourseDetail({
                               />
                             ))}
                           </div>
-                          <span className="text-sm font-semibold text-default-900">
-                            {review.userName}
+                          <span className="text-sm font-semibold text-default-900 break-words">
+                            {review.userName || `User ${review.userId}`}
                           </span>
                         </div>
-                        <p className="text-default-700 leading-relaxed">
-                          {review.comment}
+                        {review.reviewText && (
+                          <p className="text-default-700 leading-relaxed break-words">
+                            {review.reviewText}
+                          </p>
+                        )}
+                        <p className="text-xs text-default-500 mt-3">
+                          {new Date(review.createdAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            }
+                          )}
                         </p>
                       </div>
                     ))}
                   </Slider>
                 </div>
               )}
+
+              {/* No reviews - Show write review button if enrolled */}
+              {!isPreview &&
+                apiReviews.length === 0 &&
+                apiCourseData?.isEnrolled &&
+                onWriteReview && (
+                  <div className="space-y-4 pb-8">
+                    <h2 className="text-2xl font-semibold text-default-900">
+                      Student Reviews
+                    </h2>
+                    <div className="bg-default-50 border border-default-200 rounded-lg p-8 text-center">
+                      <p className="text-default-600 mb-4">
+                        No reviews yet. Be the first to share your experience!
+                      </p>
+                      <Button
+                        onClick={onWriteReview}
+                        variant="outline"
+                        className="flex items-center gap-2 mx-auto"
+                      >
+                        <StarIcon className="size-4" />
+                        Write a Review
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
               {/* Instructor Information */}
               {courseData.instructor && (
@@ -723,23 +801,25 @@ export function CourseDetail({
                           >
                             {enrolling ? "Enrolling..." : "Enroll Now"}
                           </Button>
-                          <Button
-                            variant="outline"
-                            className="w-full"
-                            onClick={onWishlistToggle}
-                            disabled={wishlistLoading}
-                          >
-                            <HeartIcon
-                              className={`size-5 mr-2 ${
-                                isWishlisted
-                                  ? "fill-destructive text-destructive"
-                                  : ""
-                              }`}
-                            />
-                            {isWishlisted
-                              ? "Remove from Wishlist"
-                              : "Add to Wishlist"}
-                          </Button>
+                          {user?.role !== "instructor" && (
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              onClick={onWishlistToggle}
+                              disabled={wishlistLoading}
+                            >
+                              <HeartIcon
+                                className={`size-5 mr-2 ${
+                                  isWishlisted
+                                    ? "fill-destructive text-destructive"
+                                    : ""
+                                }`}
+                              />
+                              {isWishlisted
+                                ? "Remove from Wishlist"
+                                : "Add to Wishlist"}
+                            </Button>
+                          )}
                         </>
                       )}
                       {isPreview && pricing && (

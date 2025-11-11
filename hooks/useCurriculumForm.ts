@@ -11,7 +11,6 @@ import {
   createDefaultLecture,
   isSectionValid,
   findFirstInvalidField,
-  scrollToElement,
 } from "@/lib/curriculumUtils";
 
 // Zod schema for validation

@@ -83,6 +83,8 @@ export interface CourseDetail {
   courseLogoUrl: string;
   welcomeMessage: string;
   congratulationMessage: string;
+  isEnrolled: boolean;
+  enrollmentId: string | null;
   instructor: CourseDetailInstructor;
   category: CourseDetailCategory;
   pricing: CourseDetailPricing;

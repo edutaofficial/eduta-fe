@@ -2,13 +2,15 @@ import axios from "../axiosInstance";
 
 export interface SearchCoursesParams {
   query?: string | null;
-  categoryId?: string | null;
-  learningLevel?: string | null;
+  categoryId?: string | null; // Can be comma-separated list of category IDs
+  learningLevel?: string | null; // Can be comma-separated list of levels
   language?: string | null;
   minPrice?: number | null;
   maxPrice?: number | null;
   isFree?: boolean | null;
   minRating?: number | null;
+  minDuration?: number | null; // Minimum duration in hours
+  maxDuration?: number | null; // Maximum duration in hours
   sortBy?: "created_at" | "title" | "published_at";
   order?: "asc" | "desc";
   page?: number;
@@ -102,6 +104,12 @@ export async function searchCourses(
     }
     if (params.minRating !== null && params.minRating !== undefined) {
       queryParams.append("minRating", params.minRating.toString());
+    }
+    if (params.minDuration !== null && params.minDuration !== undefined) {
+      queryParams.append("minDuration", params.minDuration.toString());
+    }
+    if (params.maxDuration !== null && params.maxDuration !== undefined) {
+      queryParams.append("maxDuration", params.maxDuration.toString());
     }
     if (params.sortBy) queryParams.append("sortBy", params.sortBy);
     if (params.order) queryParams.append("order", params.order);

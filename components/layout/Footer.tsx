@@ -98,10 +98,72 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12 mb-12">
+        {/* Links Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-8 lg:gap-12 mb-12">
+          {/* Company Section */}
+          <div>
+            <h3 className="text-default-50 font-bold text-base mb-4">Company</h3>
+            <ul className="space-y-2.5">
+              <li>
+                <Link
+                  href="/about"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/contact"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/blog"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  Blog
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Support Section */}
+          <div>
+            <h3 className="text-default-50 font-bold text-base mb-4">Support</h3>
+            <ul className="space-y-2.5">
+              <li>
+                <Link
+                  href="/faqs"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  FAQs
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/privacy"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  Terms & Conditions
+                </Link>
+              </li>
+            </ul>
+          </div>
+
           {loading ? (
-            // Skeleton Loading State
+            // Skeleton Loading State for Categories
             <>
               {[...Array(4)].map((_, i) => (
                 <div key={i}>
@@ -126,7 +188,7 @@ export default function Footer() {
                     {category.subcategories.slice(0, 5).map((subcategory) => (
                       <li key={subcategory.categoryId}>
                         <Link
-                          href={`/all-courses?category=${subcategory.categoryId}`}
+                          href={`/all-courses?categories=${subcategory.categoryId}`}
                           className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
                         >
                           {subcategory.name}
@@ -136,7 +198,7 @@ export default function Footer() {
                     {category.subcategories.length > 5 && (
                       <li>
                         <Link
-                          href={`/all-courses?category=${category.categoryId}`}
+                          href={`/all-courses?categories=${category.categoryId}`}
                           className="text-primary-300 text-sm hover:text-primary-200 transition-colors inline-block font-medium"
                         >
                           View all →

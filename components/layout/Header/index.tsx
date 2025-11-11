@@ -38,20 +38,31 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCategoryStore } from "@/store/useCategoryStore";
 
-// Category Dropdown Component
-function CategoryDropdown({
-  categoriesTriggerRef,
+// Explore with Categories Dropdown Component
+function ExploreDropdown({
+  exploreTriggerRef,
 }: {
-  categoriesTriggerRef: React.RefObject<HTMLButtonElement | null>;
+  exploreTriggerRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   const { categories, loading } = useCategoryStore();
+  const router = useRouter();
 
   return (
     <NavigationMenuItem>
-      <NavigationMenuTrigger ref={categoriesTriggerRef}>
-        Categories
+      <NavigationMenuTrigger 
+        ref={exploreTriggerRef}
+        onClick={(e) => {
+          // On direct click, navigate to all courses
+          e.preventDefault();
+          router.push("/all-courses");
+        }}
+      >
+        Explore
       </NavigationMenuTrigger>
-      <NavMenuContentModified triggerRef={categoriesTriggerRef}>
+      <NavMenuContentModified 
+        triggerRef={exploreTriggerRef}
+        className="left-0"
+      >
         <ul className="grid w-[25rem] gap-2 p-4 md:w-[31.25rem] md:grid-cols-2 lg:w-[37.5rem]">
           {loading ? (
             // Skeleton
@@ -64,11 +75,11 @@ function CategoryDropdown({
               ))}
             </>
           ) : (
-            categories.slice(0, 6).map((category) => (
+            categories.slice(0, 8).map((category) => (
               <li key={category.categoryId}>
                 <NavigationMenuLink asChild>
                   <Link
-                    href={`/all-courses?category=${category.categoryId}`}
+                    href={`/all-courses?categories=${category.categoryId}`}
                     className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-hidden transition-colors hover:bg-primary-100 hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                   >
                     <div className="text-sm font-semibold leading-none line-clamp-1">
@@ -102,7 +113,7 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const blogTriggerRef = React.useRef<HTMLButtonElement>(null);
-  const categoriesTriggerRef = React.useRef<HTMLButtonElement>(null);
+  const exploreTriggerRef = React.useRef<HTMLButtonElement>(null);
   const avatarTriggerRef = React.useRef<HTMLButtonElement>(null);
   const [showSearch, setShowSearch] = React.useState(false);
 
@@ -157,14 +168,7 @@ export default function Header() {
                   className="min-w-[6.25rem] min-h-[2rem]"
                 />
               </Link>
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  asChild
-                  className={navigationMenuTriggerStyle()}
-                >
-                  <Link href="/all-courses">Explore</Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
+              <ExploreDropdown exploreTriggerRef={exploreTriggerRef} />
               <SearchComponent />
             </div>
 
@@ -175,7 +179,23 @@ export default function Header() {
                   asChild
                   className={navigationMenuTriggerStyle()}
                 >
-                  <Link href="/all-courses">Courses</Link>
+                  <Link href="/about">About Us</Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <NavigationMenuLink
+                  asChild
+                  className={navigationMenuTriggerStyle()}
+                >
+                  <Link href="/contact">Contact Us</Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <NavigationMenuLink
+                  asChild
+                  className={navigationMenuTriggerStyle()}
+                >
+                  <Link href="/faqs">FAQs</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
@@ -219,7 +239,6 @@ export default function Header() {
                   </ul>
                 </NavMenuContentModified>
               </NavigationMenuItem>
-              <CategoryDropdown categoriesTriggerRef={categoriesTriggerRef} />
               <NavigationMenuItem>
                 {loggedIn ? (
                   <>

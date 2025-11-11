@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { CoursesSearchBar } from "./CoursesSearchBar";
 import { CoursesFilters, type SkillLevel } from "./CoursesFilters";
@@ -9,137 +11,407 @@ import {
   searchCourses,
   type SearchCoursesParams,
 } from "@/app/api/course/searchCourses";
-import type { PublicCourse } from "@/types/course";
+import { useCategoryStore } from "@/store/useCategoryStore";
 
 interface AllCoursesPageProps {
   className?: string;
 }
 
 export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
-  // State
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [sortBy, setSortBy] = React.useState<SortOption>("created_at-desc");
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { categories, fetchCategories } = useCategoryStore();
 
-  // Filters
-  const [selectedLevels, setSelectedLevels] = React.useState<SkillLevel[]>([]);
-  const [selectedDomains, setSelectedDomains] = React.useState<string[]>([]);
+  // Fetch categories on mount
+  React.useEffect(() => {
+    if (categories.length === 0) {
+      fetchCategories();
+    }
+  }, [categories.length, fetchCategories]);
+
+  // Initialize state from URL parameters
+  const [searchQuery, setSearchQuery] = React.useState(
+    searchParams.get("query") || ""
+  );
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState(
+    searchParams.get("query") || ""
+  );
+  const [sortBy, setSortBy] = React.useState<SortOption>(
+    (searchParams.get("sort") as SortOption) || "created_at-desc"
+  );
+  const [currentPage, setCurrentPage] = React.useState(
+    Number(searchParams.get("page")) || 1
+  );
+
+  // Filters from URL
+  const [selectedLevels, setSelectedLevels] = React.useState<SkillLevel[]>(
+    (searchParams.get("levels")?.split(",").filter(Boolean) as SkillLevel[]) ||
+      []
+  );
+  const [selectedCategories, setSelectedCategories] = React.useState<string[]>(
+    searchParams.get("categories")?.split(",").filter(Boolean) || []
+  );
   const [selectedDurations, setSelectedDurations] = React.useState<string[]>(
+    searchParams.get("durations")?.split(",").filter(Boolean) || []
+  );
+  const [minRating, setMinRating] = React.useState<number>(
+    Number(searchParams.get("rating")) || 0
+  );
+
+  const itemsPerPage = 9;
+
+  // Helper function to convert duration ranges to min/max hours
+  const getDurationRange = (
+    durations: string[]
+  ): { min?: number; max?: number } => {
+    if (durations.length === 0) return {};
+
+    let min = Infinity;
+    let max = 0;
+
+    durations.forEach((duration) => {
+      switch (duration) {
+        case "0-5":
+          min = Math.min(min, 0);
+          max = Math.max(max, 5);
+          break;
+        case "6-10":
+          min = Math.min(min, 6);
+          max = Math.max(max, 10);
+          break;
+        case "11-15":
+          min = Math.min(min, 11);
+          max = Math.max(max, 15);
+          break;
+        case "16+":
+          min = Math.min(min, 16);
+          max = Math.max(max, 1000); // Large number to represent "any duration above 16"
+          break;
+      }
+    });
+
+    return {
+      min: min === Infinity ? undefined : min,
+      max: max === 0 ? undefined : max,
+    };
+  };
+
+  /**
+   * Optimizes category selection for API
+   * - Categories with no subcategories: pass parent ID directly
+   * - If all subcategories of a parent are selected: return only parent ID
+   * - Otherwise: return only the selected subcategory IDs
+   */
+  const getOptimizedCategoryIds = React.useCallback(
+    (
+      selectedIds: string[],
+      categories: Array<{
+        categoryId: string;
+        subcategories: Array<{ categoryId: string }>;
+      }>
+    ): string[] => {
+      if (selectedIds.length === 0) return [];
+
+      const optimized = new Set<string>();
+      const processedParents = new Set<string>();
+
+      categories.forEach((parent) => {
+        const hasSubcategories = parent.subcategories.length > 0;
+
+        // If no subcategories, check if parent itself is selected
+        if (!hasSubcategories) {
+          if (selectedIds.includes(parent.categoryId)) {
+            optimized.add(parent.categoryId);
+            processedParents.add(parent.categoryId);
+          }
+          return;
+        }
+
+        // Check if parent itself is selected (shouldn't happen with subcategories, but handle it)
+        if (selectedIds.includes(parent.categoryId)) {
+          optimized.add(parent.categoryId);
+          processedParents.add(parent.categoryId);
+          return;
+        }
+
+        // Get selected subcategories for this parent
+        const selectedSubs = parent.subcategories.filter((sub) =>
+          selectedIds.includes(sub.categoryId)
+        );
+
+        // If all subcategories are selected, use parent ID instead
+        if (
+          selectedSubs.length > 0 &&
+          selectedSubs.length === parent.subcategories.length
+        ) {
+          optimized.add(parent.categoryId);
+          processedParents.add(parent.categoryId);
+        } else {
+          // Otherwise, use individual subcategory IDs
+          selectedSubs.forEach((sub) => optimized.add(sub.categoryId));
+        }
+      });
+
+      return Array.from(optimized);
+    },
     []
   );
-  const [minRating, setMinRating] = React.useState<number>(0);
 
-  // API Data
-  const [courses, setCourses] = React.useState<PublicCourse[]>([]);
-  const [meta, setMeta] = React.useState({
+  // Debounce search query - wait 500ms after user stops typing
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Update URL when filters change
+  const updateURL = React.useCallback(
+    (updates: Record<string, string | number | string[] | null>) => {
+      const params = new URLSearchParams();
+
+      // Build params object with all current values
+      const allParams = {
+        query: debouncedSearchQuery,
+        levels: selectedLevels,
+        categories: selectedCategories,
+        durations: selectedDurations,
+        rating: minRating,
+        sort: sortBy,
+        page: currentPage,
+        ...updates,
+      };
+
+      // Add params to URL
+      if (allParams.query) params.set("query", allParams.query as string);
+      if (Array.isArray(allParams.levels) && allParams.levels.length > 0) {
+        params.set("levels", allParams.levels.join(","));
+      }
+      if (
+        Array.isArray(allParams.categories) &&
+        allParams.categories.length > 0
+      ) {
+        params.set("categories", allParams.categories.join(","));
+      }
+      if (
+        Array.isArray(allParams.durations) &&
+        allParams.durations.length > 0
+      ) {
+        params.set("durations", allParams.durations.join(","));
+      }
+      if (allParams.rating && allParams.rating > 0) {
+        params.set("rating", String(allParams.rating));
+      }
+      if (allParams.sort) params.set("sort", allParams.sort as string);
+      if (allParams.page && allParams.page > 1) {
+        params.set("page", String(allParams.page));
+      }
+
+      const queryString = params.toString();
+      router.push(queryString ? `/all-courses?${queryString}` : "/all-courses");
+    },
+    [
+      debouncedSearchQuery,
+      selectedLevels,
+      selectedCategories,
+      selectedDurations,
+      minRating,
+      sortBy,
+      currentPage,
+      router,
+    ]
+  );
+
+  // Build search params for API using debounced search query
+  const apiParams = React.useMemo((): SearchCoursesParams => {
+    const [sortField, order] = sortBy.split("-") as [
+      "created_at" | "title" | "published_at",
+      "asc" | "desc",
+    ];
+
+    // Optimize category selection - send parent ID if all subcategories are selected
+    const optimizedCategoryIds = getOptimizedCategoryIds(
+      selectedCategories,
+      categories
+    );
+
+    return {
+      query: debouncedSearchQuery || undefined,
+      categoryId:
+        optimizedCategoryIds.length > 0
+          ? optimizedCategoryIds.join(",")
+          : undefined,
+      learningLevel:
+        selectedLevels.length > 0 ? selectedLevels.join(",") : undefined,
+      minRating: minRating > 0 ? minRating : undefined,
+      sortBy: sortField,
+      order,
+      page: currentPage,
+      pageSize: itemsPerPage,
+      // Duration filtering (will be handled by backend)
+      minDuration:
+        selectedDurations.length > 0
+          ? getDurationRange(selectedDurations).min
+          : undefined,
+      maxDuration:
+        selectedDurations.length > 0
+          ? getDurationRange(selectedDurations).max
+          : undefined,
+    };
+  }, [
+    debouncedSearchQuery,
+    selectedLevels,
+    selectedCategories,
+    selectedDurations,
+    minRating,
+    sortBy,
+    currentPage,
+    categories,
+    getOptimizedCategoryIds,
+  ]);
+
+  // Use TanStack Query for data fetching
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["courses", apiParams],
+    queryFn: () => searchCourses(apiParams),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const courses = data?.data || [];
+  const meta = data?.meta || {
     totalItems: 0,
     totalPages: 0,
     currentPage: 1,
     pageSize: 9,
     hasNext: false,
     hasPrevious: false,
-  });
+  };
 
-  const itemsPerPage = 9;
-
-  // Fetch courses from API
-  const fetchCourses = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Parse sort option
-      const [sortField, order] = sortBy.split("-") as [
-        "created_at" | "title" | "published_at",
-        "asc" | "desc",
-      ];
-
-      // Build API params
-      const params: SearchCoursesParams = {
-        query: searchQuery || undefined,
-        categoryId:
-          selectedDomains.length === 1 ? selectedDomains[0] : undefined,
-        learningLevel:
-          selectedLevels.length === 1 ? selectedLevels[0] : undefined,
-        minRating: minRating > 0 ? minRating : undefined,
-        sortBy: sortField,
-        order,
-        page: currentPage,
-        pageSize: itemsPerPage,
-      };
-
-      const response = await searchCourses(params);
-
-      setCourses(response.data);
-      setMeta(response.meta);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch courses");
-      setCourses([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    searchQuery,
-    selectedLevels,
-    selectedDomains,
-    minRating,
-    sortBy,
-    currentPage,
-    itemsPerPage,
-  ]);
-
-  // Fetch courses on mount and when dependencies change
+  // Update URL when debounced search query changes
   React.useEffect(() => {
-    fetchCourses();
-  }, [fetchCourses]);
-
-  // Debounce search query
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
+    if (debouncedSearchQuery !== searchParams.get("query")) {
       setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Reset to page 1 when filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedLevels, selectedDomains, selectedDurations, minRating, sortBy]);
+      updateURL({ query: debouncedSearchQuery, page: 1 });
+    }
+  }, [debouncedSearchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter handlers
   const handleLevelToggle = (level: SkillLevel) => {
-    setSelectedLevels((prev) =>
-      prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]
-    );
+    const newLevels = selectedLevels.includes(level)
+      ? selectedLevels.filter((l) => l !== level)
+      : [...selectedLevels, level];
+    setSelectedLevels(newLevels);
+    setCurrentPage(1);
+    updateURL({ levels: newLevels, page: 1 });
   };
 
-  const handleDomainToggle = (domainId: string) => {
-    setSelectedDomains((prev) =>
-      prev.includes(domainId)
-        ? prev.filter((d) => d !== domainId)
-        : [...prev, domainId]
-    );
-  };
+  /**
+   * Handles hierarchical category selection
+   * - Categories with subcategories: check/uncheck all subcategories
+   * - Categories without subcategories: toggle parent directly
+   * - Subcategories: toggle individually, update parent state
+   */
+  const handleCategoryToggle = React.useCallback(
+    (categoryId: string, isParent: boolean) => {
+      let newCategories: string[] = [];
+
+      if (isParent) {
+        // Parent category toggled
+        const parent = categories.find((c) => c.categoryId === categoryId);
+        if (!parent) return;
+
+        const allSubcategoryIds = parent.subcategories.map(
+          (sub) => sub.categoryId
+        );
+        const hasSubcategories = allSubcategoryIds.length > 0;
+
+        if (hasSubcategories) {
+          // Parent has subcategories - manage them
+          if (selectedCategories.includes(categoryId)) {
+            // Uncheck parent: remove parent and all its subcategories
+            newCategories = selectedCategories.filter(
+              (id) => id !== categoryId && !allSubcategoryIds.includes(id)
+            );
+          } else {
+            // Check parent: add all subcategories (not parent itself)
+            const otherSelections = selectedCategories.filter(
+              (id) => !allSubcategoryIds.includes(id) && id !== categoryId
+            );
+            newCategories = [...otherSelections, ...allSubcategoryIds];
+          }
+        } else {
+          // Parent has NO subcategories - toggle parent itself
+          if (selectedCategories.includes(categoryId)) {
+            // Uncheck parent
+            newCategories = selectedCategories.filter(
+              (id) => id !== categoryId
+            );
+          } else {
+            // Check parent
+            newCategories = [...selectedCategories, categoryId];
+          }
+        }
+      } else {
+        // Subcategory toggled
+        if (selectedCategories.includes(categoryId)) {
+          // Uncheck subcategory
+          newCategories = selectedCategories.filter((id) => id !== categoryId);
+
+          // Also remove parent if it was included
+          const parentCategory = categories.find((c) =>
+            c.subcategories.some((sub) => sub.categoryId === categoryId)
+          );
+          if (parentCategory) {
+            newCategories = newCategories.filter(
+              (id) => id !== parentCategory.categoryId
+            );
+          }
+        } else {
+          // Check subcategory
+          newCategories = [...selectedCategories, categoryId];
+
+          // Remove parent if it exists (we'll let optimization handle this)
+          const parentCategory = categories.find((c) =>
+            c.subcategories.some((sub) => sub.categoryId === categoryId)
+          );
+          if (parentCategory) {
+            newCategories = newCategories.filter(
+              (id) => id !== parentCategory.categoryId
+            );
+          }
+        }
+      }
+
+      setSelectedCategories(newCategories);
+      setCurrentPage(1);
+      updateURL({ categories: newCategories, page: 1 });
+    },
+    [selectedCategories, categories, updateURL]
+  );
 
   const handleDurationToggle = (duration: string) => {
-    setSelectedDurations((prev) =>
-      prev.includes(duration)
-        ? prev.filter((d) => d !== duration)
-        : [...prev, duration]
-    );
+    const newDurations = selectedDurations.includes(duration)
+      ? selectedDurations.filter((d) => d !== duration)
+      : [...selectedDurations, duration];
+    setSelectedDurations(newDurations);
+    setCurrentPage(1);
+    updateURL({ durations: newDurations, page: 1 });
   };
 
   const handleRatingChange = (rating: number) => {
     setMinRating(rating);
+    setCurrentPage(1);
+    updateURL({ rating, page: 1 });
   };
 
   const handleClearFilters = () => {
     setSelectedLevels([]);
-    setSelectedDomains([]);
+    setSelectedCategories([]);
     setSelectedDurations([]);
     setMinRating(0);
+    setCurrentPage(1);
+    router.push("/all-courses");
   };
 
   const handleSearchChange = (value: string) => {
@@ -148,10 +420,13 @@ export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
 
   const handleSortChange = (sort: SortOption) => {
     setSortBy(sort);
+    setCurrentPage(1);
+    updateURL({ sort, page: 1 });
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+    updateURL({ page });
   };
 
   return (
@@ -173,7 +448,7 @@ export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
         {/* Error Display */}
         {error && (
           <div className="mb-6 bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-lg text-sm">
-            {error}
+            {error instanceof Error ? error.message : "Failed to fetch courses"}
           </div>
         )}
 
@@ -181,11 +456,11 @@ export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
         <div className="flex flex-col lg:flex-row gap-8">
           <CoursesFilters
             selectedLevels={selectedLevels}
-            selectedDomains={selectedDomains}
+            selectedCategories={selectedCategories}
             selectedDurations={selectedDurations}
             minRating={minRating}
             onLevelToggle={handleLevelToggle}
-            onDomainToggle={handleDomainToggle}
+            onCategoryToggle={handleCategoryToggle}
             onDurationToggle={handleDurationToggle}
             onRatingChange={handleRatingChange}
             onClearAll={handleClearFilters}
@@ -193,7 +468,7 @@ export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
 
           <CoursesGrid
             courses={courses}
-            loading={loading}
+            loading={isLoading}
             totalResults={meta.totalItems}
             currentPage={meta.currentPage}
             totalPages={meta.totalPages}

@@ -28,17 +28,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 type FilterStatus = "all" | "completed" | "in_progress";
 
 export function CoursesTab() {
-  const { 
-    enrolledCourses, 
-    loading, 
-    fetchEnrolledCourses 
-  } = useLearnerStore();
+  const { enrolledCourses, loading, fetchEnrolledCourses } = useLearnerStore();
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState<FilterStatus>("all");
   const [currentPage, setCurrentPage] = React.useState(1);
   const [ratingDialogOpen, setRatingDialogOpen] = React.useState(false);
-  const [selectedCourse, setSelectedCourse] = React.useState<typeof enrolledCourses[0] | null>(null);
+  const [selectedCourse, setSelectedCourse] = React.useState<
+    (typeof enrolledCourses)[0] | null
+  >(null);
 
   const itemsPerPage = 6;
 
@@ -55,8 +53,12 @@ export function CoursesTab() {
     if (searchQuery) {
       courses = courses.filter(
         (course) =>
-          course.courseTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          course.instructorName.toLowerCase().includes(searchQuery.toLowerCase())
+          course.courseTitle
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          course.instructorName
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
       );
     }
 
@@ -89,12 +91,9 @@ export function CoursesTab() {
     setRatingDialogOpen(true);
   };
 
-  const handleSubmitRating = async (rating: number, review: string) => {
-    // TODO: Integrate with API
-    // eslint-disable-next-line no-console
-    console.log("Submitting rating:", { courseId: selectedCourse?.courseId, rating, review });
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  const handleRatingSuccess = () => {
+    // Refetch enrolled courses to update the UI
+    fetchEnrolledCourses();
   };
 
   // Reset page when filters change
@@ -148,7 +147,10 @@ export function CoursesTab() {
       {loading.fetchEnrolledCourses ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white rounded-lg border border-default-200 overflow-hidden">
+            <div
+              key={i}
+              className="bg-white rounded-lg border border-default-200 overflow-hidden"
+            >
               <Skeleton className="w-full h-48" />
               <div className="p-4 space-y-3">
                 <Skeleton className="h-6 w-3/4" />
@@ -201,7 +203,9 @@ export function CoursesTab() {
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  onClick={() => currentPage > 1 && setCurrentPage((p) => p - 1)}
+                  onClick={() =>
+                    currentPage > 1 && setCurrentPage((p) => p - 1)
+                  }
                   className={cn(
                     "cursor-pointer",
                     currentPage === 1 && "pointer-events-none opacity-50"
@@ -250,7 +254,8 @@ export function CoursesTab() {
                   }
                   className={cn(
                     "cursor-pointer",
-                    currentPage === totalPages && "pointer-events-none opacity-50"
+                    currentPage === totalPages &&
+                      "pointer-events-none opacity-50"
                   )}
                 />
               </PaginationItem>
@@ -264,11 +269,12 @@ export function CoursesTab() {
         <RatingDialog
           open={ratingDialogOpen}
           onOpenChange={setRatingDialogOpen}
+          courseId={selectedCourse.courseId}
           courseTitle={selectedCourse.courseTitle}
-          onSubmit={handleSubmitRating}
+          enrollmentId={selectedCourse.enrollmentId}
+          onSuccess={handleRatingSuccess}
         />
       )}
     </div>
   );
 }
-

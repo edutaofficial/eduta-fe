@@ -16,11 +16,11 @@ export type SkillLevel = "beginner" | "intermediate" | "advanced";
 
 export interface CoursesFiltersProps {
   selectedLevels: SkillLevel[];
-  selectedDomains: string[];
+  selectedCategories: string[];
   selectedDurations: string[];
   minRating: number;
   onLevelToggle: (level: SkillLevel) => void;
-  onDomainToggle: (domainId: string) => void;
+  onCategoryToggle: (categoryId: string, isParent: boolean) => void;
   onDurationToggle: (duration: string) => void;
   onRatingChange: (rating: number) => void;
   onClearAll: () => void;
@@ -28,11 +28,11 @@ export interface CoursesFiltersProps {
 
 export function CoursesFilters({
   selectedLevels,
-  selectedDomains,
+  selectedCategories,
   selectedDurations,
   minRating,
   onLevelToggle,
-  onDomainToggle,
+  onCategoryToggle,
   onDurationToggle,
   onRatingChange,
   onClearAll,
@@ -46,9 +46,31 @@ export function CoursesFilters({
     }
   }, [categories.length, fetchCategories]);
 
+  // Helper to check if parent category should be checked
+  const isParentChecked = (parentId: string, subcategories: Array<{ categoryId: string }>) => {
+    // If no subcategories, check if parent itself is selected
+    if (subcategories.length === 0) {
+      return selectedCategories.includes(parentId);
+    }
+    // Parent is checked if all its subcategories are selected
+    return subcategories.every((sub) => selectedCategories.includes(sub.categoryId));
+  };
+
+  // Helper to check if parent category should be indeterminate
+  const isParentIndeterminate = (parentId: string, subcategories: Array<{ categoryId: string }>) => {
+    // If no subcategories, never indeterminate (it's either checked or unchecked)
+    if (subcategories.length === 0) {
+      return false;
+    }
+    const selectedCount = subcategories.filter((sub) =>
+      selectedCategories.includes(sub.categoryId)
+    ).length;
+    return selectedCount > 0 && selectedCount < subcategories.length;
+  };
+
   const hasActiveFilters =
     selectedLevels.length > 0 ||
-    selectedDomains.length > 0 ||
+    selectedCategories.length > 0 ||
     selectedDurations.length > 0 ||
     minRating > 0;
 
@@ -99,35 +121,56 @@ export function CoursesFilters({
                   ))}
                 </div>
               ) : (
-                categories.map((category) => (
-                  <div key={category.categoryId} className="space-y-2">
-                    {/* Category as heading */}
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      {category.name}
-                    </p>
-                    {/* Subcategories as checkboxes */}
-                    <div className="space-y-2 pl-2">
-                      {category.subcategories.map((subcategory) => (
-                        <div
-                          key={subcategory.categoryId}
-                          className="flex items-center space-x-2"
+                categories.map((category) => {
+                  const hasSubcategories = category.subcategories.length > 0;
+                  return (
+                    <div key={category.categoryId} className="space-y-2">
+                      {/* Parent Category Checkbox */}
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`parent-${category.categoryId}`}
+                          checked={isParentChecked(category.categoryId, category.subcategories)}
+                          data-indeterminate={isParentIndeterminate(category.categoryId, category.subcategories)}
+                          onCheckedChange={() => onCategoryToggle(category.categoryId, true)}
+                          className="data-[indeterminate=true]:bg-primary-400 data-[indeterminate=true]:border-primary-400"
+                        />
+                        <Label
+                          htmlFor={`parent-${category.categoryId}`}
+                          className={`text-sm cursor-pointer ${
+                            hasSubcategories
+                              ? "font-semibold text-default-900"
+                              : "font-normal text-default-900"
+                          }`}
                         >
-                          <Checkbox
-                            id={`domain-${subcategory.categoryId}`}
-                            checked={selectedDomains.includes(subcategory.categoryId)}
-                            onCheckedChange={() => onDomainToggle(subcategory.categoryId)}
-                          />
-                          <Label
-                            htmlFor={`domain-${subcategory.categoryId}`}
-                            className="text-sm font-normal cursor-pointer"
-                          >
-                            {subcategory.name}
-                          </Label>
+                          {category.name}
+                        </Label>
+                      </div>
+                      {/* Subcategories as checkboxes - only show if they exist */}
+                      {hasSubcategories && (
+                        <div className="space-y-2 pl-6">
+                          {category.subcategories.map((subcategory) => (
+                            <div
+                              key={subcategory.categoryId}
+                              className="flex items-center space-x-2"
+                            >
+                              <Checkbox
+                                id={`category-${subcategory.categoryId}`}
+                                checked={selectedCategories.includes(subcategory.categoryId)}
+                                onCheckedChange={() => onCategoryToggle(subcategory.categoryId, false)}
+                              />
+                              <Label
+                                htmlFor={`category-${subcategory.categoryId}`}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {subcategory.name}
+                              </Label>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </CollapsibleContent>
           </Collapsible>

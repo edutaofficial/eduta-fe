@@ -4,30 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { CourseCard } from "@/components/Common/CourseCard";
 import { CourseCardSkeleton } from "@/components/skeleton/CourseCardSkeleton";
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getFeaturedCourses } from "@/app/api/course/getFeaturedCourses";
-import type { PublicCourse } from "@/app/api/course/searchCourses";
 
 export default function FeaturedCourses() {
-  const [courses, setCourses] = useState<PublicCourse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["featuredCourses"],
+    queryFn: () => getFeaturedCourses({ limit: 10 }),
+    staleTime: 1000 * 60 * 10, // 10 minutes - featured courses don't change often
+  });
 
-  useEffect(() => {
-    const loadFeaturedCourses = async () => {
-      try {
-        const response = await getFeaturedCourses({ limit: 10 });
-        setCourses(response.data);
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error("Error fetching featured courses:", error);
-        setCourses([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadFeaturedCourses();
-  }, []);
+  const courses = data?.data || [];
 
   // Don't render the section if there are no featured courses
   if (!loading && courses.length === 0) {

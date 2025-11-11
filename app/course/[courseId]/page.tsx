@@ -10,8 +10,10 @@ import {
   removeFromWishlist,
   getWishlist,
 } from "@/app/api/learner/wishlist";
+import { getCourseReviews } from "@/app/api/learner/reviews";
 import { CourseDetailSkeleton } from "@/components/skeleton/CourseDetailSkeleton";
 import { CourseDetail } from "@/components/Common/CourseDetail";
+import { RatingDialog } from "@/components/Student/RatingDialog";
 import { useAuth } from "@/lib/context/AuthContext";
 import {
   Dialog,
@@ -46,6 +48,7 @@ export default function CourseDetailPage() {
   const [showErrorDialog, setShowErrorDialog] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
   const [welcomeMessage, setWelcomeMessage] = React.useState("");
+  const [showRatingDialog, setShowRatingDialog] = React.useState(false);
 
   // Fetch course detail
   const { data: course, isLoading } = useQuery({
@@ -67,11 +70,19 @@ export default function CourseDetailPage() {
     );
   }, [wishlistData, courseId]);
 
+  // Fetch course reviews
+  const { data: reviewsData } = useQuery({
+    queryKey: ["courseReviews", courseId],
+    queryFn: () => getCourseReviews(courseId, { page: 1, page_size: 10 }),
+    enabled: !!courseId,
+  });
+
   // Enroll mutation
   const enrollMutation = useMutation({
     mutationFn: enrollCourse,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enrolledCourses"] });
+      // Refresh course detail to get updated enrollment status
+      queryClient.invalidateQueries({ queryKey: ["courseDetail", courseId] });
       // Show welcome message from API response
       if (course?.welcomeMessage) {
         setWelcomeMessage(course.welcomeMessage);
@@ -136,6 +147,30 @@ export default function CourseDetailPage() {
     router.push(`/learn/${courseId}/lectures`);
   };
 
+  const handleOpenRatingDialog = () => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (user.role === "instructor") {
+      setShowInstructorDialog(true);
+      return;
+    }
+    if (!course?.isEnrolled) {
+      setErrorMessage(
+        "You need to enroll in this course before you can write a review."
+      );
+      setShowErrorDialog(true);
+      return;
+    }
+    setShowRatingDialog(true);
+  };
+
+  const handleRatingSuccess = () => {
+    // Refresh reviews after submitting a rating
+    queryClient.invalidateQueries({ queryKey: ["courseReviews", courseId] });
+  };
+
   if (isLoading) {
     return <CourseDetailSkeleton />;
   }
@@ -164,6 +199,10 @@ export default function CourseDetailPage() {
         wishlistLoading={
           addWishlistMutation.isPending || removeWishlistMutation.isPending
         }
+        reviews={reviewsData?.reviews || []}
+        averageRating={reviewsData?.averageRating}
+        totalReviews={reviewsData?.totalReviews}
+        onWriteReview={handleOpenRatingDialog}
       />
 
       {/* Instructor Dialog */}
@@ -241,7 +280,11 @@ export default function CourseDetailPage() {
       <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Enrollment Failed</AlertDialogTitle>
+            <AlertDialogTitle>
+              {errorMessage.toLowerCase().includes("enroll")
+                ? "Not Enrolled"
+                : "Enrollment Failed"}
+            </AlertDialogTitle>
             <AlertDialogDescription>{errorMessage}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -251,6 +294,18 @@ export default function CourseDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Rating Dialog */}
+      {course?.isEnrolled && course?.enrollmentId && (
+        <RatingDialog
+          open={showRatingDialog}
+          onOpenChange={setShowRatingDialog}
+          courseId={courseId}
+          courseTitle={course.title}
+          enrollmentId={course.enrollmentId}
+          onSuccess={handleRatingSuccess}
+        />
+      )}
     </>
   );
 }

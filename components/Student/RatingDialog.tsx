@@ -13,39 +13,61 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { createReview } from "@/app/api/learner/reviews";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 interface RatingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  courseId: string;
   courseTitle: string;
-  onSubmit: (rating: number, review: string) => void;
+  enrollmentId: string;
+  onSuccess?: () => void;
 }
 
 export function RatingDialog({
   open,
   onOpenChange,
+  courseId,
   courseTitle,
-  onSubmit,
+  enrollmentId,
+  onSuccess,
 }: RatingDialogProps) {
   const [rating, setRating] = React.useState(0);
   const [hoverRating, setHoverRating] = React.useState(0);
   const [review, setReview] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (rating === 0) return;
 
     setIsSubmitting(true);
+    setError(null);
+
     try {
-      await onSubmit(rating, review);
+      await createReview({
+        course_id: courseId,
+        enrollment_id: enrollmentId,
+        rating,
+        review_text: review,
+        is_published: true,
+      });
+
       // Reset form
       setRating(0);
       setReview("");
       onOpenChange(false);
-    } catch (error) {
-      // Handle error
+
+      // Call success callback
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (err: unknown) {
+      const errorMessage = extractErrorMessage(err);
+      setError(errorMessage);
       // eslint-disable-next-line no-console
-      console.error("Failed to submit rating:", error);
+      console.error("Failed to submit rating:", errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,17 +130,29 @@ export function RatingDialog({
               value={review}
               onChange={(e) => setReview(e.target.value)}
               rows={5}
-              className="resize-none"
+              className="resize-none max-w-[34rem]"
+              maxLength={500}
             />
             <p className="text-xs text-muted-foreground">
               {review.length}/500 characters
             </p>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
         </div>
 
         {/* Actions */}
         <div className="flex gap-3 justify-end">
-          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
           <Button
@@ -133,4 +167,3 @@ export function RatingDialog({
     </Dialog>
   );
 }
-

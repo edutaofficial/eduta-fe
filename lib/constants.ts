@@ -411,8 +411,8 @@ export const CONSTANTS = {
 
   // TEMPORARY DATA - Contact information
   CONTACT_INFO: {
-    email: "support@eduta.org",
-    phone: "+1 (555) 123-4567",
+    email: "info@eduta.org",
+    phone: "051-000-000-00",
   },
 
   // TEMPORARY DATA - Social media links
