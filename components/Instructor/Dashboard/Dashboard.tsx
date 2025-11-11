@@ -1,12 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  PlusIcon,
-  EditIcon,
-  SearchIcon,
-  CheckCircle2Icon,
-} from "lucide-react";
+import { PlusIcon, EditIcon, SearchIcon, CheckCircle2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,176 +15,150 @@ import {
 } from "@/components/ui/pagination";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { InstructorCourseCard } from "../InstructorCourseCard";
 import { DraftCourseCard } from "./DraftCourseCard";
 import { DraftCourseCardSkeleton } from "@/components/skeleton/DraftCourseCardSkeleton";
 import { InstructorCourseCardSkeleton } from "@/components/skeleton/InstructorCourseCardSkeleton";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/context/AuthContext";
-import {
-  getInstructorCourses,
-  type InstructorCoursesParams,
-  type InstructorCourse,
-} from "@/app/api/course/getInstructorCourses";
+import { getInstructorCourses } from "@/app/api/course/getInstructorCourses";
 import { deleteCourse } from "@/app/api/course/deleteCourse";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export function InstructorDashboard() {
   const { user } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
+
   const [searchQuery, setSearchQuery] = React.useState("");
-
-  // Draft courses state
-  const [draftCourses, setDraftCourses] = React.useState<InstructorCourse[]>(
-    []
-  );
   const [draftPage, setDraftPage] = React.useState(1);
-  const [draftMeta, setDraftMeta] = React.useState({
-    totalPages: 1,
-    hasNext: false,
-    hasPrev: false,
-    totalItems: 0,
-  });
-  const [loadingDrafts, setLoadingDrafts] = React.useState(false);
-
-  // Published courses state
-  const [publishedCourses, setPublishedCourses] = React.useState<
-    InstructorCourse[]
-  >([]);
   const [publishedPage, setPublishedPage] = React.useState(1);
-  const [publishedMeta, setPublishedMeta] = React.useState({
-    totalPages: 1,
-    hasNext: false,
-    hasPrev: false,
-    totalItems: 0,
-  });
-  const [loadingPublished, setLoadingPublished] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
 
-  // Get instructorId from user token
+  // Debounce search query to avoid too many API calls
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
   const instructorId = user?.instructorId;
 
-  // Fetch draft courses
-  const fetchDraftCourses = React.useCallback(async () => {
-    if (!instructorId) return;
-
-    setLoadingDrafts(true);
-    setError(null);
-
-    try {
-      const params: InstructorCoursesParams = {
+  // ============================================================================
+  // DRAFT COURSES QUERY (TanStack Query with caching)
+  // ============================================================================
+  const {
+    data: draftCoursesData,
+    isLoading: loadingDrafts,
+    error: draftError,
+  } = useQuery({
+    queryKey: ["instructorCourses", "draft", instructorId, draftPage],
+    queryFn: () => {
+      if (!instructorId) throw new Error("Instructor ID not found");
+      return getInstructorCourses({
         instructorId,
         status: "draft",
         page: draftPage,
-        pageSize: 3, // 3 drafts per page
+        pageSize: 3,
         sortBy: "created_at",
         order: "desc",
-      };
-
-      const response = await getInstructorCourses(params);
-      setDraftCourses(response.data);
-      setDraftMeta({
-        totalPages: response.meta.totalPages,
-        hasNext: response.meta.hasNext,
-        hasPrev: response.meta.hasPrev,
-        totalItems: response.meta.totalItems,
       });
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch draft courses"
-      );
-    } finally {
-      setLoadingDrafts(false);
-    }
-  }, [instructorId, draftPage]);
+    },
+    enabled: !!instructorId,
+    staleTime: 1000 * 60 * 2, // 2 minutes - drafts change frequently
+    gcTime: 1000 * 60 * 10, // 10 minutes cache
+  });
 
-  // Fetch published courses (only published, not drafts or archived)
-  const fetchPublishedCourses = React.useCallback(async () => {
-    if (!instructorId) return;
-
-    setLoadingPublished(true);
-    setError(null);
-
-    try {
-      const params: InstructorCoursesParams = {
+  // ============================================================================
+  // PUBLISHED COURSES QUERY (TanStack Query with caching)
+  // ============================================================================
+  const {
+    data: publishedCoursesData,
+    isLoading: loadingPublished,
+    error: publishedError,
+  } = useQuery({
+    queryKey: [
+      "instructorCourses",
+      "published",
+      instructorId,
+      publishedPage,
+      debouncedSearchQuery,
+    ],
+    queryFn: () => {
+      if (!instructorId) throw new Error("Instructor ID not found");
+      return getInstructorCourses({
         instructorId,
-        status: "published", // Always fetch only published courses
-        query: searchQuery || undefined,
+        status: "published",
+        query: debouncedSearchQuery || undefined,
         page: publishedPage,
-        pageSize: 9, // 9 courses per page (3x3 grid)
+        pageSize: 9,
         sortBy: "created_at",
         order: "desc",
-      };
-
-      const response = await getInstructorCourses(params);
-      setPublishedCourses(response.data);
-      setPublishedMeta({
-        totalPages: response.meta.totalPages,
-        hasNext: response.meta.hasNext,
-        hasPrev: response.meta.hasPrev,
-        totalItems: response.meta.totalItems,
       });
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch published courses"
-      );
-    } finally {
-      setLoadingPublished(false);
-    }
-  }, [instructorId, publishedPage, searchQuery]);
+    },
+    enabled: !!instructorId,
+    staleTime: 1000 * 60 * 5, // 5 minutes - published courses don't change as often
+    gcTime: 1000 * 60 * 15, // 15 minutes cache
+  });
 
-  // Fetch data on mount and when dependencies change
+  // ============================================================================
+  // DELETE COURSE MUTATION
+  // ============================================================================
+  const deleteMutation = useMutation({
+    mutationFn: deleteCourse,
+    onSuccess: () => {
+      // Invalidate and refetch published courses
+      queryClient.invalidateQueries({
+        queryKey: ["instructorCourses", "published"],
+      });
+    },
+  });
+
+  // Reset to page 1 when search query changes
   React.useEffect(() => {
-    fetchDraftCourses();
-  }, [fetchDraftCourses]);
+    setPublishedPage(1);
+  }, [debouncedSearchQuery]);
 
-  React.useEffect(() => {
-    fetchPublishedCourses();
-  }, [fetchPublishedCourses]);
+  // Extract data from queries
+  const draftCourses = draftCoursesData?.data || [];
+  const draftMeta = draftCoursesData?.meta || {
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+    totalItems: 0,
+  };
 
-  // Debounce search query
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setPublishedPage(1); // Reset to page 1 on search
-      fetchPublishedCourses();
-    }, 500);
+  const publishedCourses = publishedCoursesData?.data || [];
+  const publishedMeta = publishedCoursesData?.meta || {
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+    totalItems: 0,
+  };
 
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  // Combine errors
+  const error = draftError || publishedError || deleteMutation.error;
+  const errorMessage = error instanceof Error ? error.message : null;
 
+  // ============================================================================
+  // HANDLERS
+  // ============================================================================
   const handleEditDraft = (courseId: string) => {
-    // Navigate to draft-complete route
     router.push(`/instructor/courses/${courseId}/draft-complete`);
   };
 
   const handleEditCourse = (courseId: string) => {
-    // Navigate to edit route
     router.push(`/instructor/courses/${courseId}/edit`);
   };
 
-  const handlePublishSuccess = async () => {
-    // Refresh both drafts and published courses after publishing
-    await Promise.all([fetchDraftCourses(), fetchPublishedCourses()]);
+  const handlePublishSuccess = () => {
+    // Invalidate both queries to refetch fresh data
+    queryClient.invalidateQueries({
+      queryKey: ["instructorCourses", "draft"],
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["instructorCourses", "published"],
+    });
   };
 
   const handleDeleteCourse = async (courseId: string) => {
-    try {
-      setError(null);
-      await deleteCourse(courseId);
-
-      // Refresh the published courses list
-      await fetchPublishedCourses();
-
-      // Show success message (optional - you could use toast notification)
-      // eslint-disable-next-line no-console
-      console.log("Course deleted successfully");
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to delete course. Please try again."
-      );
-    }
+    deleteMutation.mutate(courseId);
   };
 
   return (
@@ -205,9 +174,9 @@ export function InstructorDashboard() {
       </div>
 
       {/* Error Display */}
-      {error && (
+      {errorMessage && (
         <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-lg text-sm">
-          {error}
+          {errorMessage}
         </div>
       )}
 
@@ -266,8 +235,8 @@ export function InstructorDashboard() {
           </div>
         )}
 
-        {/* Draft Pagination - always visible to prevent layout shifts */}
-        {draftMeta.totalItems > 0 && (
+        {/* Draft Pagination */}
+        {draftMeta.totalPages > 1 && (
           <div className="flex justify-center mt-6">
             <Pagination>
               <PaginationContent>
@@ -280,17 +249,14 @@ export function InstructorDashboard() {
                     }
                     className={cn(
                       "cursor-pointer",
-                      (loadingDrafts ||
-                        !draftMeta.hasPrev ||
-                        draftMeta.totalPages <= 1) &&
+                      (loadingDrafts || !draftMeta.hasPrev) &&
                         "pointer-events-none opacity-50"
                     )}
                   />
                 </PaginationItem>
 
-                {[...Array(Math.max(1, draftMeta.totalPages))].map((_, i) => {
+                {[...Array(draftMeta.totalPages)].map((_, i) => {
                   const pageNum = i + 1;
-                  // Show first, last, current, and adjacent pages
                   const showPage =
                     pageNum === 1 ||
                     pageNum === draftMeta.totalPages ||
@@ -317,9 +283,8 @@ export function InstructorDashboard() {
                         onClick={() => !loadingDrafts && setDraftPage(pageNum)}
                         isActive={draftPage === pageNum}
                         className={cn(
-                          loadingDrafts || draftMeta.totalPages <= 1
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
+                          !loadingDrafts && "cursor-pointer",
+                          loadingDrafts && "pointer-events-none opacity-50"
                         )}
                       >
                         {pageNum}
@@ -337,9 +302,7 @@ export function InstructorDashboard() {
                     }
                     className={cn(
                       "cursor-pointer",
-                      (loadingDrafts ||
-                        !draftMeta.hasNext ||
-                        draftMeta.totalPages <= 1) &&
+                      (loadingDrafts || !draftMeta.hasNext) &&
                         "pointer-events-none opacity-50"
                     )}
                   />
@@ -364,7 +327,6 @@ export function InstructorDashboard() {
           </div>
           <Button
             onClick={() => {
-              // Clear any existing course creation data
               if (typeof window !== "undefined") {
                 localStorage.removeItem("course_creation_courseId");
               }
@@ -393,7 +355,7 @@ export function InstructorDashboard() {
           </div>
 
           {/* Results Count */}
-          {searchQuery && (
+          {debouncedSearchQuery && !loadingPublished && (
             <div className="mt-3 pt-3 border-t border-default-200">
               <p className="text-sm text-muted-foreground">
                 Found{" "}
@@ -403,7 +365,7 @@ export function InstructorDashboard() {
                 course{publishedMeta.totalItems !== 1 ? "s" : ""} matching
                 &quot;
                 <span className="font-medium text-default-900">
-                  {searchQuery}
+                  {debouncedSearchQuery}
                 </span>
                 &quot;
               </p>
@@ -431,7 +393,7 @@ export function InstructorDashboard() {
                   rating: course.avgRating || 0,
                   ratingCount: course.totalReviews || 0,
                   enrollments: course.totalStudents || 0,
-                  impressions: 0, // Not available in API response
+                  impressions: 0,
                   status: course.status,
                   price: course.price || 0,
                 }}
@@ -448,15 +410,17 @@ export function InstructorDashboard() {
               </div>
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold text-default-900">
-                  {searchQuery ? "No courses found" : "No published courses yet"}
+                  {debouncedSearchQuery
+                    ? "No courses found"
+                    : "No published courses yet"}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {searchQuery
+                  {debouncedSearchQuery
                     ? "Try adjusting your search criteria"
                     : "Complete your draft courses to publish them"}
                 </p>
               </div>
-              {!searchQuery && (
+              {!debouncedSearchQuery && (
                 <Button asChild className="gap-2 mt-4" size="lg">
                   <Link href="/instructor/courses/create">
                     <PlusIcon className="size-5" />
@@ -468,8 +432,8 @@ export function InstructorDashboard() {
           </div>
         )}
 
-        {/* Published Pagination - always visible to prevent layout shifts */}
-        {publishedMeta.totalItems > 0 && (
+        {/* Published Pagination */}
+        {publishedMeta.totalPages > 1 && (
           <div className="flex justify-center mt-6">
             <Pagination>
               <PaginationContent>
@@ -482,56 +446,51 @@ export function InstructorDashboard() {
                     }
                     className={cn(
                       "cursor-pointer",
-                      (loadingPublished ||
-                        !publishedMeta.hasPrev ||
-                        publishedMeta.totalPages <= 1) &&
+                      (loadingPublished || !publishedMeta.hasPrev) &&
                         "pointer-events-none opacity-50"
                     )}
                   />
                 </PaginationItem>
 
-                {[...Array(Math.max(1, publishedMeta.totalPages))].map(
-                  (_, i) => {
-                    const pageNum = i + 1;
-                    const showPage =
-                      pageNum === 1 ||
-                      pageNum === publishedMeta.totalPages ||
-                      Math.abs(pageNum - publishedPage) <= 1;
+                {[...Array(publishedMeta.totalPages)].map((_, i) => {
+                  const pageNum = i + 1;
+                  const showPage =
+                    pageNum === 1 ||
+                    pageNum === publishedMeta.totalPages ||
+                    Math.abs(pageNum - publishedPage) <= 1;
 
-                    const showEllipsis =
-                      (pageNum === 2 && publishedPage > 3) ||
-                      (pageNum === publishedMeta.totalPages - 1 &&
-                        publishedPage < publishedMeta.totalPages - 2);
+                  const showEllipsis =
+                    (pageNum === 2 && publishedPage > 3) ||
+                    (pageNum === publishedMeta.totalPages - 1 &&
+                      publishedPage < publishedMeta.totalPages - 2);
 
-                    if (showEllipsis) {
-                      return (
-                        <PaginationItem key={`ellipsis-${pageNum}`}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      );
-                    }
-
-                    if (!showPage) return null;
-
+                  if (showEllipsis) {
                     return (
-                      <PaginationItem key={pageNum}>
-                        <PaginationLink
-                          onClick={() =>
-                            !loadingPublished && setPublishedPage(pageNum)
-                          }
-                          isActive={publishedPage === pageNum}
-                          className={cn(
-                            loadingPublished || publishedMeta.totalPages <= 1
-                              ? "pointer-events-none opacity-50"
-                              : "cursor-pointer"
-                          )}
-                        >
-                          {pageNum}
-                        </PaginationLink>
+                      <PaginationItem key={`ellipsis-${pageNum}`}>
+                        <PaginationEllipsis />
                       </PaginationItem>
                     );
                   }
-                )}
+
+                  if (!showPage) return null;
+
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink
+                        onClick={() =>
+                          !loadingPublished && setPublishedPage(pageNum)
+                        }
+                        isActive={publishedPage === pageNum}
+                        className={cn(
+                          !loadingPublished && "cursor-pointer",
+                          loadingPublished && "pointer-events-none opacity-50"
+                        )}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
 
                 <PaginationItem>
                   <PaginationNext
@@ -544,9 +503,7 @@ export function InstructorDashboard() {
                     }
                     className={cn(
                       "cursor-pointer",
-                      (loadingPublished ||
-                        !publishedMeta.hasNext ||
-                        publishedMeta.totalPages <= 1) &&
+                      (loadingPublished || !publishedMeta.hasNext) &&
                         "pointer-events-none opacity-50"
                     )}
                   />

@@ -2,9 +2,12 @@ import axios, { type AxiosError, type AxiosInstance, type AxiosResponse, type In
 import { getSession, signOut } from "next-auth/react";
 import { getBaseUrl } from "@/lib/config/api";
 
-// Token verification and refresh state management
+// Token refresh state management
 let isRefreshing = false;
-let refreshSubscribers: Array<(token: string) => void> = [];
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: Error) => void;
+}> = [];
 
 interface SessionWithTokens {
   accessToken?: string;
@@ -15,14 +18,18 @@ interface SessionWithTokens {
 async function getTokens(): Promise<{ accessToken: string | null; refreshToken: string | null }> {
   if (typeof window === "undefined") return { accessToken: null, refreshToken: null };
   try {
-    // Check for temporary tokens first (used during refresh)
-    const tempAccessToken = sessionStorage.getItem("_temp_access_token");
-    const tempRefreshToken = sessionStorage.getItem("_temp_refresh_token");
+    // Check for refreshed tokens first (used immediately after token refresh)
+    const refreshedAccessToken = sessionStorage.getItem("_refresh_access_token");
+    const refreshedRefreshToken = sessionStorage.getItem("_refresh_refresh_token");
     
-    if (tempAccessToken && tempRefreshToken) {
-      return { accessToken: tempAccessToken, refreshToken: tempRefreshToken };
+    if (refreshedAccessToken && refreshedRefreshToken) {
+      return { 
+        accessToken: refreshedAccessToken, 
+        refreshToken: refreshedRefreshToken 
+      };
     }
     
+    // Fall back to session tokens
     const session = await getSession();
     const accessToken = (session as unknown as SessionWithTokens)?.accessToken || null;
     const refreshToken = (session as unknown as SessionWithTokens)?.refreshToken || null;
@@ -32,35 +39,12 @@ async function getTokens(): Promise<{ accessToken: string | null; refreshToken: 
   }
 }
 
-// Verify token with backend
-async function verifyToken(token: string): Promise<boolean> {
-  try {
-    const response = await axios.post(
-      `${getBaseUrl()}/api/v1/auth/verify`,
-      { token },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      }
-    );
-    
-    return response.data?.is_verified === true || response.data?.status === "success";
-  } catch {
-    return false;
-  }
-}
-
 // Refresh access token using refresh token
-async function refreshAccessToken(token: string, refreshToken: string): Promise<{ token: string; refresh_token: string } | null> {
+async function refreshAccessToken(refreshToken: string): Promise<{ token: string; refresh_token: string } | null> {
   try {
     const response = await axios.post(
       `${getBaseUrl()}/api/v1/auth/refresh`,
-      { 
-        token,
-        refresh_token: refreshToken 
-      },
+      { refresh_token: refreshToken },
       {
         headers: {
           "Content-Type": "application/json",
@@ -83,46 +67,61 @@ async function refreshAccessToken(token: string, refreshToken: string): Promise<
   }
 }
 
-// Update session with new tokens
-async function updateSessionTokens(newAccessToken: string, newRefreshToken: string): Promise<boolean> {
-  if (typeof window === "undefined") return false;
+// Update NextAuth session with new tokens
+async function updateSession(newAccessToken: string, newRefreshToken: string): Promise<void> {
+  if (typeof window === "undefined") return;
   
   try {
-    // Store tokens in sessionStorage as a temporary cache
-    // This allows immediate use of new tokens while session is being updated
-    sessionStorage.setItem("_temp_access_token", newAccessToken);
-    sessionStorage.setItem("_temp_refresh_token", newRefreshToken);
-    
-    // Trigger a session update by calling getSession with force refresh
-    await getSession();
-    
-    // Clear temporary tokens after a short delay to ensure they're used
+    // Update the session by making a PATCH request to NextAuth's session endpoint
+    // This triggers the jwt callback with trigger: "update"
+    const response = await fetch("/api/auth/session", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (response.ok) {
+      // Now update the session with new tokens
+      const event = new CustomEvent("session", {
+        detail: {
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+        },
+      });
+      window.dispatchEvent(event);
+    }
+
+    // Store tokens temporarily in sessionStorage for immediate use
+    // This ensures the next request uses the new token while session updates in background
+    sessionStorage.setItem("_refresh_access_token", newAccessToken);
+    sessionStorage.setItem("_refresh_refresh_token", newRefreshToken);
+
+    // Clear temporary tokens after session has time to update
     setTimeout(() => {
-      sessionStorage.removeItem("_temp_access_token");
-      sessionStorage.removeItem("_temp_refresh_token");
-    }, 2000);
-    
-    return true;
+      sessionStorage.removeItem("_refresh_access_token");
+      sessionStorage.removeItem("_refresh_refresh_token");
+    }, 5000);
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error("Failed to update session:", error);
-    return false;
   }
 }
 
-// Notify all subscribers when refresh is complete
-function onRefreshed(token: string) {
-  refreshSubscribers.forEach((callback) => callback(token));
-  refreshSubscribers = [];
-}
-
-// Add subscriber to be notified when refresh completes
-function addRefreshSubscriber(callback: (token: string) => void) {
-  refreshSubscribers.push(callback);
+// Process queued requests after token refresh
+function processQueue(error: Error | null, token: string | null = null) {
+  failedQueue.forEach((promise) => {
+    if (error) {
+      promise.reject(error);
+    } else if (token) {
+      promise.resolve(token);
+    }
+  });
+  failedQueue = [];
 }
 
 // Legacy function for backward compatibility
-async function getToken(): Promise<string | null> {
+async function _getToken(): Promise<string | null> {
   const { accessToken } = await getTokens();
   return accessToken;
 }
@@ -146,7 +145,7 @@ export const axiosUploadInstance: AxiosInstance = axios.create({
   timeout: 0, // No timeout for uploads - allow large files and slow connections
 });
 
-// Shared request interceptor function with token verification and refresh
+// Simple request interceptor - just add token if available
 const requestInterceptor = async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
   config.headers = config.headers ?? {};
   
@@ -155,89 +154,15 @@ const requestInterceptor = async (config: InternalAxiosRequestConfig): Promise<I
     config.headers["ngrok-skip-browser-warning"] = "true";
   }
 
-  // Skip token verification for auth endpoints
-  const isAuthEndpoint = config.url?.includes("/api/v1/auth/") || 
-                         config.url?.includes("/api/v1/user/login") || 
-                         config.url?.includes("/api/v1/user");
-  
-  if (isAuthEndpoint) {
-    try {
-      const token = await getToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to get token:", error);
-    }
-    return config;
-  }
-
-  // Get tokens from session
+  // Get current access token and add to request
   try {
-    let accessToken: string | null;
-    const { accessToken: token, refreshToken } = await getTokens();
-    accessToken = token;
-    
-    if (!accessToken) {
-      // No token available, proceed without auth
-      return config;
-    }
-
-    // Verify token validity
-    const isValid = await verifyToken(accessToken);
-    
-    if (!isValid && refreshToken) {
-      // Token is invalid/expired, attempt to refresh
-      
-      if (isRefreshing) {
-        // If already refreshing, wait for the refresh to complete
-        return new Promise<InternalAxiosRequestConfig>((resolve) => {
-          addRefreshSubscriber((newToken: string) => {
-            config.headers.Authorization = `Bearer ${newToken}`;
-            resolve(config);
-          });
-        });
-      }
-
-      isRefreshing = true;
-
-      try {
-        const refreshedTokens = await refreshAccessToken(accessToken, refreshToken);
-        
-        if (refreshedTokens) {
-          // Update session with new tokens
-          await updateSessionTokens(refreshedTokens.token, refreshedTokens.refresh_token);
-          
-          // Update current request with new token
-          accessToken = refreshedTokens.token;
-          
-          // Notify all waiting requests
-          onRefreshed(refreshedTokens.token);
-        } else {
-          // Refresh failed, sign out user
-          // eslint-disable-next-line no-console
-          console.error("Token refresh failed. Signing out...");
-          await signOut({ redirect: true, callbackUrl: "/login" });
-          return config;
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error("Error during token refresh:", error);
-        await signOut({ redirect: true, callbackUrl: "/login" });
-        return config;
-      } finally {
-        isRefreshing = false;
-      }
-    }
-
-    // Add the (verified or refreshed) token to the request
+    const { accessToken } = await getTokens();
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error("Failed to process auth token:", error);
+    console.error("Failed to get token:", error);
   }
 
   return config;
@@ -267,8 +192,97 @@ const responseSuccessInterceptor = (response: AxiosResponse): AxiosResponse => {
 };
 
 const responseErrorInterceptor = async (error: AxiosError) => {
+  const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
   const status = error.response?.status;
   const responseData = error.response?.data as Record<string, unknown> | undefined;
+
+  // Helper function to extract error message from backend response
+  const getBackendErrorMessage = (): string | null => {
+    if (responseData?.error) return responseData.error as string;
+    if (responseData?.message) return responseData.message as string;
+    if (responseData?.detail) return responseData.detail as string;
+    return null;
+  };
+
+  // ============================================================================
+  // HANDLE 401 UNAUTHORIZED - TOKEN REFRESH LOGIC
+  // ============================================================================
+  if (status === 401 && originalRequest && !originalRequest._retry) {
+    // Skip token refresh for auth endpoints (login, signup, etc.)
+    const isAuthEndpoint = originalRequest.url?.includes("/api/v1/auth/login") || 
+                           originalRequest.url?.includes("/api/v1/auth/signup") ||
+                           originalRequest.url?.includes("/api/v1/auth/verify");
+    
+    if (isAuthEndpoint) {
+      error.message = getBackendErrorMessage() || "Authentication failed. Please check your credentials.";
+      return Promise.reject(error);
+    }
+
+    // Mark this request as retried to prevent infinite loops
+    originalRequest._retry = true;
+
+    if (isRefreshing) {
+      // If already refreshing, queue this request
+      return new Promise((resolve, reject) => {
+        failedQueue.push({
+          resolve: (token: string) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(axios(originalRequest));
+          },
+          reject: (err: Error) => {
+            reject(err);
+          },
+        });
+      });
+    }
+
+    isRefreshing = true;
+
+    try {
+      const { refreshToken } = await getTokens();
+      
+      if (!refreshToken) {
+        // No refresh token available, sign out
+        processQueue(new Error("No refresh token available"), null);
+        await signOut({ redirect: true, callbackUrl: "/login" });
+        return Promise.reject(error);
+      }
+
+      // Attempt to refresh the token
+      const refreshedTokens = await refreshAccessToken(refreshToken);
+      
+      if (refreshedTokens) {
+        // Update session with new tokens
+        await updateSession(refreshedTokens.token, refreshedTokens.refresh_token);
+        
+        // Update the failed request with new token
+        originalRequest.headers.Authorization = `Bearer ${refreshedTokens.token}`;
+        
+        // Process all queued requests with new token
+        processQueue(null, refreshedTokens.token);
+        
+        // Retry the original request with new token
+        return axios(originalRequest);
+      } else {
+        // Refresh failed, sign out
+        processQueue(new Error("Token refresh failed"), null);
+        await signOut({ redirect: true, callbackUrl: "/login" });
+        return Promise.reject(error);
+      }
+    } catch (refreshError) {
+      // eslint-disable-next-line no-console
+      console.error("Error during token refresh:", refreshError);
+      processQueue(refreshError as Error, null);
+      await signOut({ redirect: true, callbackUrl: "/login" });
+      return Promise.reject(error);
+    } finally {
+      isRefreshing = false;
+    }
+  }
+
+  // ============================================================================
+  // HANDLE OTHER HTTP ERRORS
+  // ============================================================================
 
   // Log error in development (but not timeout errors for uploads)
   if (process.env.NODE_ENV === "development") {
@@ -284,51 +298,8 @@ const responseErrorInterceptor = async (error: AxiosError) => {
     }
   }
 
-  // Helper function to extract error message from backend response
-  const getBackendErrorMessage = (): string | null => {
-    if (responseData?.error) return responseData.error as string;
-    if (responseData?.message) return responseData.message as string;
-    if (responseData?.detail) return responseData.detail as string;
-    return null;
-  };
-
-  // Handle 401 Unauthorized - token might be expired
-  if (status === 401 && error.config) {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-    
-    // Prevent infinite retry loops
-    if (!originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        const { accessToken, refreshToken } = await getTokens();
-        
-        if (accessToken && refreshToken) {
-          const refreshedTokens = await refreshAccessToken(accessToken, refreshToken);
-          
-          if (refreshedTokens) {
-            // Update session with new tokens
-            await updateSessionTokens(refreshedTokens.token, refreshedTokens.refresh_token);
-            
-            // Retry the original request with new token
-            originalRequest.headers.Authorization = `Bearer ${refreshedTokens.token}`;
-            return axios(originalRequest);
-          }
-        }
-      } catch (refreshError) {
-        // eslint-disable-next-line no-console
-        console.error("Failed to refresh token on 401:", refreshError);
-        // Sign out if refresh fails
-        await signOut({ redirect: true, callbackUrl: "/login" });
-        return Promise.reject(error);
-      }
-    }
-    
-    // Use backend error message if available, otherwise use default
-    error.message = getBackendErrorMessage() || "You are not authorized. Please log in again.";
-  }
   // Parse validation errors (422 - Unprocessable Entity)
-  else if (status === 422 && responseData?.detail) {
+  if (status === 422 && responseData?.detail) {
     const validationErrors: Record<string, string> = {};
     
     // Handle Pydantic validation errors (FastAPI format)

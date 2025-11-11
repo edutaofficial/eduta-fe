@@ -66,7 +66,7 @@ export function InstructorSidebar({
       <div className="flex flex-col h-full p-4">
         {/* Logo Section */}
         <div className="mb-8 flex items-center justify-center">
-          <Link href="/instructor/courses" className="block">
+          <Link href="/" className="block">
             <Image
               src={isHovered ? "/logo-main.webp" : "/logo-collaped.webp"}
               alt="Eduta Logo"

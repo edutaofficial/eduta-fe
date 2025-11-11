@@ -94,8 +94,8 @@ export default function SearchComponent({
   };
 
   const handleInstructorClick = (instructorId: number) => {
-    // Navigate to instructor profile or courses by instructor
-    router.push(`/all-courses?instructor=${instructorId}`);
+    // Navigate to instructor profile page
+    router.push(`/profile/instructor/${instructorId}`);
     setShowResults(false);
     setSearch("");
   };

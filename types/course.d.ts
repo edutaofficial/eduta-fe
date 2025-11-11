@@ -10,6 +10,7 @@ export interface Asset {
   file_name: string;
   file_type: string;
   file_extension: string;
+  presigned_url?: string; // S3 presigned URL for secure access
 }
 
 // UI structure (for form)

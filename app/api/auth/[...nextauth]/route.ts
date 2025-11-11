@@ -91,12 +91,25 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Initial sign in - store tokens from user object
       if (user) {
         (token as unknown as Record<string, unknown>).role = (user as unknown as { role?: string }).role;
         (token as unknown as Record<string, unknown>).accessToken = (user as unknown as { token?: string }).token;
         (token as unknown as Record<string, unknown>).refreshToken = (user as unknown as { refreshToken?: string }).refreshToken;
       }
+      
+      // Handle token refresh - update tokens when explicitly triggered
+      if (trigger === "update" && session) {
+        const sessionData = session as { accessToken?: string; refreshToken?: string };
+        if (sessionData.accessToken) {
+          (token as unknown as Record<string, unknown>).accessToken = sessionData.accessToken;
+        }
+        if (sessionData.refreshToken) {
+          (token as unknown as Record<string, unknown>).refreshToken = sessionData.refreshToken;
+        }
+      }
+      
       return token;
     },
     async session({ session, token }) {

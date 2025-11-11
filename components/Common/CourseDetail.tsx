@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -28,14 +29,23 @@ import {
   HeartIcon,
   UserIcon,
   ChevronDownIcon,
+  ArrowRightIcon,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useCourseStore } from "@/store/useCourseStore";
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/app/api/axiosInstance";
 import type { Asset } from "@/types/course";
 import FAQComponent from "../Home/FAQ";
 import { useAuth } from "@/lib/context/AuthContext";
+import { VideoPlayer } from "../Learn/VideoPlayer";
+import { useUpload } from "@/hooks/useUpload";
 
 import type { CourseDetail as CourseDetailAPI } from "@/app/api/course/getCourseDetail";
 import type { CourseReview } from "@/app/api/learner/reviews";
@@ -81,6 +91,7 @@ interface CourseData {
   }>;
   promoVideo?: string | number | null;
   instructor?: {
+    id?: number;
     name: string;
     title: string;
     bio: string;
@@ -157,6 +168,7 @@ export function CourseDetail({
   const [isWishlisted, setIsWishlisted] = React.useState(isWishlistedProp);
   const [showAllSections, setShowAllSections] = React.useState(false);
   const [showFullDescription, setShowFullDescription] = React.useState(false);
+  const [showPromoVideo, setShowPromoVideo] = React.useState(false);
 
   // Update wishlist state when prop changes
   React.useEffect(() => {
@@ -165,6 +177,12 @@ export function CourseDetail({
 
   // Get asset URLs
   const promoVideoUrl = useAssetUrl(basicInfo?.promoVideoId);
+
+  // Get promo video asset for the video player
+  const { useGetAssetById } = useUpload();
+  const promoVideoAssetId =
+    apiCourseData?.courseBannerId || basicInfo?.promoVideoId;
+  const { data: promoVideoAsset } = useGetAssetById(promoVideoAssetId || 0);
 
   // Calculate total duration from curriculum
   const totalDuration = React.useMemo(() => {
@@ -215,6 +233,7 @@ export function CourseDetail({
             : [],
         promoVideo: apiCourseData.courseBannerUrl,
         instructor: {
+          id: apiCourseData.instructor.instructorId,
           name: apiCourseData.instructor.name,
           title: apiCourseData.instructor.professionalTitle,
           bio: apiCourseData.instructor.bio,
@@ -707,13 +726,29 @@ export function CourseDetail({
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-2">
-                      <div>
-                        <h3 className="text-xl font-semibold text-default-900">
-                          {courseData.instructor.name}
-                        </h3>
-                        <p className="text-default-600">
-                          {courseData.instructor.title}
-                        </p>
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-xl font-semibold text-default-900">
+                            {courseData.instructor.name}
+                          </h3>
+                          <p className="text-default-600">
+                            {courseData.instructor.title}
+                          </p>
+                        </div>
+                        {courseData.instructor.id && (
+                          <Link
+                            href={`/profile/instructor/${courseData.instructor.id}`}
+                          >
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2"
+                            >
+                              View Profile
+                              <ArrowRightIcon className="size-4" />
+                            </Button>
+                          </Link>
+                        )}
                       </div>
                       {courseData.instructor.rating !== undefined && (
                         <div className="flex items-center gap-4 text-sm text-default-600">
@@ -747,7 +782,13 @@ export function CourseDetail({
               <div className="lg:sticky lg:top-24">
                 <div className="bg-white border border-default-200 rounded-lg shadow-lg overflow-hidden">
                   {/* Promo Video */}
-                  <div className="relative aspect-video bg-default-100 group cursor-pointer">
+                  <button
+                    type="button"
+                    className="relative aspect-video bg-default-100 group cursor-pointer w-full"
+                    onClick={() => promoVideoAssetId && setShowPromoVideo(true)}
+                    disabled={!promoVideoAssetId}
+                    aria-label="Play course preview video"
+                  >
                     <Image
                       src={promoVideoSrc}
                       alt="Course promo video"
@@ -760,7 +801,7 @@ export function CourseDetail({
                         <PlayIcon className="size-8 text-primary-600" />
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Card Content */}
                   <div className="p-6 space-y-4">
@@ -844,6 +885,45 @@ export function CourseDetail({
           {!isPreview && <FAQComponent />}
         </div>
       </div>
+
+      {/* Promo Video Dialog */}
+      <Dialog open={showPromoVideo} onOpenChange={setShowPromoVideo}>
+        <DialogContent className="max-w-5xl p-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle>Course Preview</DialogTitle>
+          </DialogHeader>
+          <div className="aspect-video bg-black relative">
+            {promoVideoAsset ? (
+              promoVideoAsset.file_type?.startsWith("video/") &&
+              promoVideoAsset.presigned_url ? (
+                <VideoPlayer
+                  videoUrl={promoVideoAsset.presigned_url}
+                  startPosition={0}
+                  onProgressUpdate={() => {}}
+                  onVideoEnd={() => {}}
+                />
+              ) : promoVideoAsset.presigned_url ? (
+                <div className="w-full h-full flex items-center justify-center bg-default-100">
+                  <Image
+                    src={promoVideoAsset.presigned_url}
+                    alt="Course preview"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white">
+                  <p>Asset URL not available</p>
+                </div>
+              )
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white">
+                <p>Loading preview...</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

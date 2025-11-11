@@ -34,7 +34,7 @@ export interface CourseCardProps {
   image: string | null;
   title: string;
   company: string;
-  rating: number; // e.g., 4.5
+  rating: number | null; // e.g., 4.5 (can be null if no ratings yet)
   ratingCount: number; // e.g., 1233
   enrollments: number; // e.g., 120
   impressions: number; // e.g., 340
@@ -111,14 +111,14 @@ export function CourseCard({
                 key={i}
                 className={cn(
                   "size-4",
-                  i < 5
+                  i < Math.floor(rating || 0)
                     ? "fill-warning-300 text-warning-300"
                     : "text-muted-foreground"
                 )}
               />
             ))}
             <span className="text-sm font-medium text-foreground ml-1">
-              {rating.toFixed(1)}
+              {rating ? rating.toFixed(1) : "0.0"}
             </span>
             <span className="text-xs text-muted-foreground">
               ({ratingCount.toLocaleString()})

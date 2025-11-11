@@ -10,13 +10,16 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isInstructorRoute = pathname?.startsWith("/instructor");
+  // Instructor dashboard: /instructor or /instructor/* (NOT /instructors/*)
+  const isInstructorDashboardRoute = pathname === "/instructor" || pathname?.startsWith("/instructor/");
   const isCertificateVerifyRoute = pathname?.startsWith("/certificate/verify");
+  const isLearnRoute = pathname?.startsWith("/learn");
 
-  // Routes without header/footer
-  if (isInstructorRoute || isCertificateVerifyRoute) {
+  // Routes without header/footer (instructor dashboard, certificate verify, and learn pages)
+  // Note: /instructors/[id] (public profile) is different from /instructor (dashboard)
+  if (isInstructorDashboardRoute || isCertificateVerifyRoute || isLearnRoute) {
     return (
-      <div className="min-h-screen min-w-screen h-full w-full bg-[url('/certificate-verification.webp')] bg-cover bg-center">
+      <div className="min-h-screen min-w-screen h-full w-full bg-default-900">
         {children}
       </div>
     );
