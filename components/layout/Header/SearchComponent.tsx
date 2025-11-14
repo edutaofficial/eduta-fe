@@ -87,8 +87,10 @@ export default function SearchComponent({
     return () => clearTimeout(timer);
   }, [search]);
 
-  const handleCourseClick = (courseId: string) => {
-    router.push(`/course/${courseId}`);
+  const handleCourseClick = (course: UnifiedSearchCourse) => {
+    // Prefer slug over courseId for routing
+    const routeParam = course.slug || course.courseId;
+    router.push(`/course/${routeParam}`);
     setShowResults(false);
     setSearch("");
   };
@@ -176,7 +178,7 @@ export default function SearchComponent({
                 <CommandItem
                   key={course.courseId}
                   value={course.courseId}
-                  onSelect={() => handleCourseClick(course.courseId)}
+                  onSelect={() => handleCourseClick(course)}
                   className="cursor-pointer py-2"
                 >
                   <div className="flex items-center gap-3 w-full">

@@ -89,7 +89,7 @@ export function CoursesGrid({
           {courses.map((course) => (
             <CourseCard
               key={course.courseId}
-              id={course.courseId}
+              slug={course.slug}
               image={course.courseBannerUrl}
               title={course.title}
               company={`${course.instructor.firstName} ${course.instructor.lastName}`}

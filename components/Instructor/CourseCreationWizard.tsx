@@ -60,22 +60,13 @@ export function CourseCreationWizard() {
     (currentStep === 1 && (uploading.promoVideo || uploading.coverBanner)) ||
     (currentStep === 2 && uploading.curriculum);
 
-  // Reset store when creating a NEW course (only on initial mount)
+  // ALWAYS reset store when creating a NEW course (only on initial mount)
   React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedCourseId = localStorage.getItem("course_creation_courseId");
-
-      // If there's no saved courseId in localStorage, this is a fresh start
-      // Reset the store to clear any old data from previous edits
-      if (!savedCourseId) {
-        // eslint-disable-next-line no-console
-        console.log("Resetting store for new course creation");
-        resetStore();
-      } else {
-        // Restore the courseId if it exists
-        useCourseStore.setState({ courseId: savedCourseId });
-      }
-    }
+    // This is the CourseCreationWizard - always start with a clean slate
+    // Any previous course data should be cleared to avoid confusion
+    // eslint-disable-next-line no-console
+    console.log("Resetting store for new course creation");
+    resetStore();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps = only run once on mount
 
@@ -210,13 +201,13 @@ export function CourseCreationWizard() {
               <button
                 onClick={() => {
                   // Don't allow navigation in preview mode
-                  if (showPreview) return;
-                  // Clear errors when navigating to a different step
-                  useCourseStore.setState({
-                    error: null,
-                    validationErrors: null,
-                  });
-                  setStep(step.id as 1 | 2 | 3 | 4);
+                  // if (showPreview) return;
+                  // // Clear errors when navigating to a different step
+                  // useCourseStore.setState({
+                  //   error: null,
+                  //   validationErrors: null,
+                  // });
+                  // setStep(step.id as 1 | 2 | 3 | 4);
                 }}
                 className={`flex flex-col items-center gap-2 ${
                   currentStep >= step.id

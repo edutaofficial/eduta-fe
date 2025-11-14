@@ -244,7 +244,7 @@ export default function ExploreCourses() {
                   {courses.map((course) => (
                     <CourseCard
                       key={course.courseId}
-                      id={course.courseId}
+                      slug={course.slug}
                       image={
                         course.courseBannerUrl || "/placeholder-course.png"
                       }

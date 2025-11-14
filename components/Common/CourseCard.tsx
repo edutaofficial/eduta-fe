@@ -30,7 +30,7 @@ function getPlaceholderColor(title?: string): string {
 }
 
 export interface CourseCardProps {
-  id: string; // Course ID for routing - MANDATORY
+  slug: string; // Course slug for routing - MANDATORY
   image: string | null;
   title: string;
   company: string;
@@ -44,7 +44,7 @@ export interface CourseCardProps {
 }
 
 export function CourseCard({
-  id,
+  slug,
   image,
   title,
   company,
@@ -60,7 +60,7 @@ export function CourseCard({
 
   return (
     <Link
-      href={`/course/${id}`}
+      href={`/course/${slug}`}
       className={cn(
         "block rounded-md bg-white shadow-sm overflow-hidden transition-transform hover:scale-[1.02]",
         className

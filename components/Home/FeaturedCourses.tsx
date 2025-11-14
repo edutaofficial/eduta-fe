@@ -83,7 +83,7 @@ export default function FeaturedCourses() {
             {courses.map((course) => (
               <CourseCard
                 key={course.courseId}
-                id={course.courseId}
+                slug={course.slug}
                 image={course.courseBannerUrl || "/placeholder-course.png"}
                 title={course.title}
                 company={`${course.instructor.firstName} ${course.instructor.lastName}`}

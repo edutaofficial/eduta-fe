@@ -173,7 +173,7 @@ export function WishlistTab() {
               </div>
 
               <CourseCard
-                id={item.courseId}
+                slug={item.courseSlug}
                 image={item.courseBannerUrl || ""} // Use banner URL if available, otherwise placeholder
                 title={item.courseTitle}
                 company={item.instructorName}

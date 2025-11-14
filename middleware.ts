@@ -33,15 +33,21 @@ interface User {
  * Public routes - Accessible by everyone (authenticated or not)
  * These routes bypass all authentication and authorization checks
  */
-const PUBLIC_ROUTES = [
+const PUBLIC_EXACT_ROUTES = [
   "/",
   "/about",
   "/contact",
   "/faqs",
   "/terms",
   "/privacy",
-  "/blog",
   "/all-courses",
+] as const;
+
+/**
+ * Public route prefixes - Routes where all sub-paths are also public
+ */
+const PUBLIC_PREFIX_ROUTES = [
+  "/blog",
   "/course/",
   "/profile/instructor/",
 ] as const;
@@ -54,7 +60,7 @@ const AUTH_ONLY_ROUTES = [
   "/login",
   "/signup",
   "/forgot-password",
-] as const;
+];
 
 /**
  * Student-accessible protected routes
@@ -63,7 +69,7 @@ const AUTH_ONLY_ROUTES = [
 const STUDENT_PROTECTED_ROUTES = [
   "/student",
   "/learn",
-] as const;
+];
 
 /**
  * Instructor-accessible protected routes
@@ -71,7 +77,7 @@ const STUDENT_PROTECTED_ROUTES = [
  */
 const INSTRUCTOR_PROTECTED_ROUTES = [
   "/instructor",
-] as const;
+];
 
 /**
  * Role-to-dashboard mapping
@@ -98,7 +104,13 @@ function matchesRoute(pathname: string, routes: readonly string[]): boolean {
  * Check if the current path is a public route
  */
 function isPublicRoute(pathname: string): boolean {
-  return matchesRoute(pathname, PUBLIC_ROUTES);
+  // Check exact matches first
+  if (PUBLIC_EXACT_ROUTES.includes(pathname as typeof PUBLIC_EXACT_ROUTES[number])) {
+    return true;
+  }
+  
+  // Check prefix matches
+  return matchesRoute(pathname, PUBLIC_PREFIX_ROUTES);
 }
 
 /**
@@ -267,10 +279,10 @@ export const config = {
  * | Instructor Protected      | ❌        | ❌      | ✅         | ✅    |
  * 
  * PUBLIC ROUTES (No authentication required):
- * - / (Home)
- * - /about, /contact, /faqs, /terms, /privacy
- * - /blog, /blog/*
- * - /all-courses
+ * - / (Home - exact match only)
+ * - /about, /contact, /faqs, /terms, /privacy (exact matches)
+ * - /all-courses (exact match)
+ * - /blog/* (all blog routes)
  * - /course/* (Course detail pages)
  * - /profile/instructor/* (Instructor public profiles)
  * 

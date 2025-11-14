@@ -23,7 +23,7 @@ export interface LearnerProfile {
   last_name: string;
   phone_number: string | null;
   date_of_birth: string | null;
-  profile_picture: number | null;
+  profile_picture: number | null; // Backend uses profile_picture (not profile_picture_id)
   created_at: string;
   updated_at: string;
 }
@@ -33,7 +33,7 @@ export interface UpdateLearnerProfileRequest {
   last_name: string;
   phone_number?: string | null;
   date_of_birth?: string | null;
-  profile_picture?: number | null;
+  profile_picture?: number | null; // Backend expects profile_picture (not profile_picture_id)
 }
 
 interface LearnerState {
@@ -165,13 +165,23 @@ export const useLearnerStore = create<LearnerStore>((set) => ({
     }));
 
     try {
+      // Ensure profile_picture is always sent, convert to number if it exists
+      const profilePictureValue = data.profile_picture !== null && data.profile_picture !== undefined
+        ? Number(data.profile_picture)
+        : null;
+
       const requestData = {
         first_name: data.first_name,
         last_name: data.last_name,
-        phone_number: data.phone_number,
-        date_of_birth: data.date_of_birth,
-        profile_picture: data.profile_picture,
+        phone_number: data.phone_number || null,
+        date_of_birth: data.date_of_birth || null,
+        profile_picture: profilePictureValue, // Backend expects profile_picture (not profile_picture_id)
       };
+
+      // eslint-disable-next-line no-console
+      console.log("📤 Sending learner profile update:", requestData);
+      // eslint-disable-next-line no-console
+      console.log("📤 profile_picture value:", profilePictureValue, typeof profilePictureValue);
 
       const response = await axiosInstance.post<{
         first_name: string;

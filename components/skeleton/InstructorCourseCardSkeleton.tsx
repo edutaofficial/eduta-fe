@@ -1,15 +1,17 @@
+import { Skeleton } from "@/components/ui/skeleton";
+
 export function InstructorCourseCardSkeleton() {
   return (
-    <div className="relative rounded-md bg-white shadow-sm overflow-hidden animate-pulse">
+    <div className="relative rounded-md bg-white shadow-sm overflow-hidden">
       {/* Image Skeleton */}
-      <div className="relative aspect-3/2 w-full bg-default-200" />
+      <Skeleton className="relative aspect-3/2 w-full" />
 
       {/* Content Skeleton */}
       <div className="p-4 space-y-3">
         {/* Title and Subtitle */}
         <div className="space-y-2">
-          <div className="h-5 bg-default-200 rounded w-3/4" />
-          <div className="h-4 bg-default-200 rounded w-full" />
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-4 w-full" />
         </div>
 
         {/* Rating and Users */}
@@ -17,24 +19,24 @@ export function InstructorCourseCardSkeleton() {
           <div className="flex items-center gap-2">
             <div className="flex gap-1">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="size-4 bg-default-200 rounded" />
+                <Skeleton key={i} className="size-4" />
               ))}
             </div>
-            <div className="h-4 bg-default-200 rounded w-8" />
-            <div className="h-4 bg-default-200 rounded w-12" />
+            <Skeleton className="h-4 w-8" />
+            <Skeleton className="h-4 w-12" />
           </div>
           <div className="flex items-center gap-1">
-            <div className="size-4 bg-default-200 rounded" />
-            <div className="h-4 bg-default-200 rounded w-8" />
+            <Skeleton className="size-4" />
+            <Skeleton className="h-4 w-8" />
           </div>
         </div>
 
         {/* Price and Impressions */}
         <div className="flex items-center justify-between">
-          <div className="h-5 bg-default-200 rounded w-16" />
+          <Skeleton className="h-5 w-16" />
           <div className="flex items-center gap-1">
-            <div className="size-4 bg-default-200 rounded" />
-            <div className="h-4 bg-default-200 rounded w-8" />
+            <Skeleton className="size-4" />
+            <Skeleton className="h-4 w-8" />
           </div>
         </div>
       </div>

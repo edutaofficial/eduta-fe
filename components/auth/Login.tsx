@@ -107,7 +107,7 @@ export default function Login() {
           redirect ||
           (role === "instructor"
             ? "/instructor/courses"
-            : "/student/dashboard");
+            : "/student/courses");
         router.replace(dest);
       }
     },

@@ -3,6 +3,7 @@ import { extractErrorMessage } from "@/lib/errorUtils";
 
 export interface UnifiedSearchCourse {
   courseId: string;
+  slug?: string; // Course slug for routing (preferred over courseId)
   title: string;
   shortDescription: string;
   imageUrl: string;

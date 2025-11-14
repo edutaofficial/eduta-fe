@@ -130,7 +130,7 @@ export default function Signup() {
           redirect ||
           (role === "instructor"
             ? "/instructor/courses"
-            : "/student/dashboard");
+            : "/student/courses");
         router.replace(dest);
 
         return { success: true };
@@ -177,7 +177,7 @@ export default function Signup() {
           redirect ||
           (role === "instructor"
             ? "/instructor/courses"
-            : "/student/dashboard");
+            : "/student/courses");
         router.replace(dest);
 
         return { success: true };

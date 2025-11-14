@@ -539,13 +539,13 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
               <button
                 onClick={() => {
                   // Don't allow navigation in preview mode
-                  if (showPreview) return;
+                  // if (showPreview) return;
                   // Clear errors when navigating to a different step
-                  useCourseStore.setState({
-                    error: null,
-                    validationErrors: null,
-                  });
-                  setStep(step.id as 1 | 2 | 3 | 4);
+                  // useCourseStore.setState({
+                  //   error: null,
+                  //   validationErrors: null,
+                  // });
+                  // setStep(step.id as 1 | 2 | 3 | 4);
                 }}
                 className={`flex flex-col items-center gap-2 ${
                   currentStep >= step.id

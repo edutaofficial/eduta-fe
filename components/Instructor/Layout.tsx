@@ -16,7 +16,7 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
   const handleMouseLeave = React.useCallback(() => setIsHovered(false), []);
 
   return (
-    <div className="flex h-screen bg-default-50">
+    <div className="flex h-screen bg-default-50 overflow-x-hidden">
       {/* Sidebar */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div

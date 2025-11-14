@@ -19,7 +19,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +26,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { UploadFile } from "@/components/Common";
+import { ProfilePictureUpload } from "@/components/Common";
 import {
   InputOTP,
   InputOTPGroup,
@@ -40,13 +39,14 @@ import {
   FileTextIcon,
   AlertCircleIcon,
   CheckCircleIcon,
-  PhoneIcon,
   ClockIcon,
   InfoIcon,
   LockIcon,
   EyeIcon,
   EyeOffIcon,
 } from "lucide-react";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 // Name validation: only letters and spaces
 const nameRegex = /^[a-zA-Z\s]+$/;
@@ -60,13 +60,7 @@ const accountSettingsSchema = z.object({
     .string()
     .min(1, "Last name is required")
     .regex(nameRegex, "Name must contain only letters and spaces"),
-  phoneNumber: z
-    .string()
-    .optional()
-    .refine(
-      (val) => !val || /^\+?[1-9]\d{1,14}$/.test(val),
-      "Please enter a valid phone number"
-    ),
+  phoneNumber: z.string().optional(),
   specialization: z.string().optional(),
   bio: z.string().optional(),
 });
@@ -94,17 +88,32 @@ export function InstructorSettings() {
   const { data: profilePictureAsset, isLoading: isLoadingAsset } =
     useGetAssetById(profilePictureId || 0);
 
+  // Get the image URL (prefer presigned_url for S3, fallback to file_url)
+  const profilePictureUrl = React.useMemo(() => {
+    if (!profilePictureAsset) return null;
+    return (
+      profilePictureAsset.presigned_url || profilePictureAsset.file_url || null
+    );
+  }, [profilePictureAsset]);
+
   // Debug logging
   React.useEffect(() => {
     if (profilePictureId) {
       // eslint-disable-next-line no-console
-      console.log("Profile Picture ID changed to:", profilePictureId);
+      console.log("🖼️ Profile Picture ID changed to:", profilePictureId);
       // eslint-disable-next-line no-console
-      console.log("Asset data:", profilePictureAsset);
+      console.log("🖼️ Asset data:", profilePictureAsset);
       // eslint-disable-next-line no-console
-      console.log("Is loading asset:", isLoadingAsset);
+      console.log("🖼️ Image URL:", profilePictureUrl);
+      // eslint-disable-next-line no-console
+      console.log("🖼️ Is loading asset:", isLoadingAsset);
     }
-  }, [profilePictureId, profilePictureAsset, isLoadingAsset]);
+  }, [
+    profilePictureId,
+    profilePictureAsset,
+    profilePictureUrl,
+    isLoadingAsset,
+  ]);
   const [accountSuccess, setAccountSuccess] = useState("");
   const [accountError, setAccountError] = useState("");
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -133,9 +142,12 @@ export function InstructorSettings() {
   useEffect(() => {
     if (profile) {
       // eslint-disable-next-line no-console
-      console.log("Profile loaded in Settings:", profile);
+      console.log("✅ Profile loaded in Settings:", profile);
       // eslint-disable-next-line no-console
-      console.log("Setting profilePictureId to:", profile.profile_picture_id);
+      console.log(
+        "✅ Setting profilePictureId state to:",
+        profile.profile_picture_id
+      );
 
       accountFormik.setValues({
         firstName: profile.first_name || "",
@@ -145,6 +157,9 @@ export function InstructorSettings() {
         bio: profile.bio || "",
       });
       setProfilePictureId(profile.profile_picture_id);
+
+      // eslint-disable-next-line no-console
+      console.log("✅ profilePictureId state updated");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
@@ -186,14 +201,21 @@ export function InstructorSettings() {
       clearError();
 
       try {
-        await updateProfile({
+        const payload = {
           first_name: values.firstName,
           last_name: values.lastName,
           phone_number: values.phoneNumber || null,
           specialization: values.specialization || "",
           bio: values.bio || "",
           profile_picture_id: profilePictureId,
-        });
+        };
+
+        // eslint-disable-next-line no-console
+        console.log("Submitting profile update with payload:", payload);
+        // eslint-disable-next-line no-console
+        console.log("profilePictureId state value:", profilePictureId);
+
+        await updateProfile(payload);
 
         setAccountSuccess("Profile updated successfully!");
 
@@ -450,40 +472,25 @@ export function InstructorSettings() {
                 {/* Profile Picture */}
                 <div className="space-y-4">
                   <Label className="text-default-700">Profile Picture</Label>
-                  <div className="flex items-start gap-6">
-                    <div className="relative">
-                      <Avatar className="size-24 border-2 border-primary-200">
-                        {profilePictureId && profilePictureAsset?.file_url ? (
-                          <AvatarImage
-                            src={profilePictureAsset.file_url}
-                            alt="Profile"
-                          />
-                        ) : 
-                        <AvatarFallback className="bg-primary-100 text-primary-700 text-2xl font-semibold">
-                          {getInitials()}
-                        </AvatarFallback>}
-                      </Avatar>
-                      {isLoadingAsset && profilePictureId && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full">
-                          <div className="size-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1">
-                      <UploadFile
-                        label=""
-                        accept="image/*"
-                        value={profilePictureId}
-                        onChange={(assetId) => {
-                          // eslint-disable-next-line no-console
-                          console.log("Upload changed, new asset ID:", assetId);
-                          setProfilePictureId(assetId);
-                        }}
-                        hint="JPG, PNG or WEBP. Max size 2MB"
-                      />
-                    </div>
-                  </div>
+                  <ProfilePictureUpload
+                    currentImageUrl={profilePictureUrl}
+                    currentAssetId={profilePictureId}
+                    fallbackText={getInitials()}
+                    onAssetIdChange={(assetId) => {
+                      // eslint-disable-next-line no-console
+                      console.log(
+                        "📸 Settings: onAssetIdChange called with ID:",
+                        assetId
+                      );
+                      setProfilePictureId(assetId);
+                      // eslint-disable-next-line no-console
+                      console.log(
+                        "📸 Settings: profilePictureId state updated to:",
+                        assetId
+                      );
+                    }}
+                    size="lg"
+                  />
                 </div>
 
                 {/* Name Row */}
@@ -582,25 +589,22 @@ export function InstructorSettings() {
                   <Label htmlFor="phoneNumber" className="text-default-700">
                     Phone Number (Optional)
                   </Label>
-                  <div className="relative">
-                    <PhoneIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-default-400" />
-                    <Input
-                      id="phoneNumber"
-                      name="phoneNumber"
-                      type="tel"
-                      value={accountFormik.values.phoneNumber}
-                      onChange={accountFormik.handleChange}
-                      onBlur={accountFormik.handleBlur}
-                      className={`pl-10 ${
-                        accountFormik.touched.phoneNumber &&
-                        accountFormik.errors.phoneNumber
-                          ? "border-error-500"
-                          : ""
-                      }`}
-                      placeholder="+1234567890"
-                      disabled={loading.updateProfile}
-                    />
-                  </div>
+                  <PhoneInput
+                    international
+                    defaultCountry="US"
+                    value={accountFormik.values.phoneNumber}
+                    onChange={(value) => {
+                      accountFormik.setFieldValue("phoneNumber", value || "");
+                    }}
+                    onBlur={() => accountFormik.setFieldTouched("phoneNumber")}
+                    disabled={loading.updateProfile}
+                    className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm ${
+                      accountFormik.touched.phoneNumber &&
+                      accountFormik.errors.phoneNumber
+                        ? "border-error-500"
+                        : ""
+                    }`}
+                  />
                   {accountFormik.touched.phoneNumber &&
                     accountFormik.errors.phoneNumber && (
                       <p className="text-sm text-error-600 flex items-center gap-1">

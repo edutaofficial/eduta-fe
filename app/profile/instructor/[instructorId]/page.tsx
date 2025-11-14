@@ -213,7 +213,7 @@ export default function InstructorProfilePage() {
               {coursesData.courses.map((course) => (
                 <CourseCard
                   key={course.courseId}
-                  id={course.courseId}
+                  slug={course.slug}
                   image={course.courseBannerUrl}
                   title={course.title}
                   company={instructorProfile?.fullName || "Instructor"}

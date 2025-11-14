@@ -23,6 +23,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "eduta-assets.s3.us-east-1.amazonaws.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "i.pravatar.cc",
         port: "",
         pathname: "/**",

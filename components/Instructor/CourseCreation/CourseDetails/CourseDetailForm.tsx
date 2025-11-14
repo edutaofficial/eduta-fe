@@ -197,11 +197,25 @@ const CourseDetailFormInner = (
 
         const hasErrors = Object.keys(errs).length > 0;
         if (hasErrors) {
+          // Scroll to and focus the first error field
           setTimeout(() => {
-            const el = document.querySelector(
+            const errorElement = document.querySelector(
               '[aria-invalid="true"]'
             ) as HTMLElement | null;
-            el?.scrollIntoView({ behavior: "smooth", block: "center" });
+            
+            if (errorElement) {
+              // Scroll to the error field with some padding for better visibility
+              errorElement.scrollIntoView({ 
+                behavior: "smooth", 
+                block: "center",
+                inline: "nearest"
+              });
+              
+              // Focus the field after scrolling for better UX
+              setTimeout(() => {
+                errorElement.focus();
+              }, 300);
+            }
           }, 100);
           return false;
         }

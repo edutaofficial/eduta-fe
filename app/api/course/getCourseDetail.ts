@@ -31,8 +31,7 @@ export interface CourseDetailStats {
   totalLectures: number;
   totalSections: number;
   totalDuration: number;
-  totalExercises: number;
-  totalProjects: number;
+  viewsCount: number;
 }
 
 export interface CourseLearningPoint {
@@ -106,15 +105,15 @@ export interface CourseDetailResponse {
 }
 
 /**
- * Get course detail by ID
+ * Get course detail by slug
  * Public endpoint - no authentication required
  */
 export async function getCourseDetail(
-  courseId: string
+  courseSlug: string
 ): Promise<CourseDetail> {
   try {
     const { data } = await axiosInstance.get<CourseDetailResponse>(
-      `/api/instructor/courses/${courseId}/detail`
+      `/api/instructor/courses/${courseSlug}/detail`
     );
 
     return data.data;

@@ -125,8 +125,8 @@ body {
  --secondary-foreground:var(--color-secondary-900);
  --muted:var(--color-primary-100);
  --muted-foreground:var(--color-primary-600);
- --accent:var(--color-secondary-100);
- --accent-foreground:var(--color-secondary-900);
+ --accent:var(--color-primary-100);
+ --accent-foreground:var(--color-primary-900);
  --destructive:var(--color-error-600);
  --border:var(--color-primary-200);
  --input:var(--color-primary-200);
@@ -159,8 +159,8 @@ body {
  --secondary-foreground:var(--color-secondary-50);
  --muted:var(--color-primary-800);
  --muted-foreground:var(--color-primary-300);
- --accent:var(--color-secondary-800);
- --accent-foreground:var(--color-secondary-50);
+ --accent:var(--color-primary-700);
+ --accent-foreground:var(--color-primary-50);
  --destructive:var(--color-error-500);
  --border:var(--color-primary-700);
  --input:var(--color-primary-700);
@@ -430,4 +430,33 @@ html {
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* React Phone Number Input Styles */
+.PhoneInput {
+  outline: none !important;
+}
+
+.PhoneInput input {
+  outline: none !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.PhoneInput input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.PhoneInputCountry {
+  outline: none !important;
+}
+
+.PhoneInputCountrySelect {
+  outline: none !important;
+}
+
+.PhoneInputCountrySelect:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }

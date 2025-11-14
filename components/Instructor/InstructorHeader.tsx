@@ -9,8 +9,6 @@ import {
   CreditCardIcon,
   SettingsIcon,
   LogOutIcon,
-  BellIcon,
-  MessageSquareIcon,
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -21,12 +19,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useInstructorStore } from "@/store/useInstructorStore";
 import { useUpload } from "@/hooks/useUpload";
 
@@ -102,40 +94,6 @@ export function InstructorHeader() {
 
         {/* Right side icons */}
         <div className="flex items-center gap-3">
-          <TooltipProvider delayDuration={300}>
-            {/* Notifications - Coming Soon */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="relative"
-                  disabled
-                >
-                  <BellIcon className="size-5" />
-                  <span className="absolute -top-1 -right-1 size-4 bg-primary-400 rounded-full flex items-center justify-center text-[10px] text-white font-bold">
-                    0
-                  </span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Notifications (Coming Soon)</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Messages - Coming Soon */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" disabled>
-                  <MessageSquareIcon className="size-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Messages (Coming Soon)</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
           {/* Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

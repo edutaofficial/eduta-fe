@@ -11,6 +11,7 @@ import {
   getWishlist,
 } from "@/app/api/learner/wishlist";
 import { getCourseReviews } from "@/app/api/learner/reviews";
+import { incrementCourseView } from "@/app/api/courses/incrementView";
 import { CourseDetailSkeleton } from "@/components/skeleton/CourseDetailSkeleton";
 import { CourseDetail } from "@/components/Common/CourseDetail";
 import { RatingDialog } from "@/components/Student/RatingDialog";
@@ -39,7 +40,7 @@ export default function CourseDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const courseId = params.courseId as string;
+  const courseSlug = params.courseSlug as string;
 
   const [showInstructorDialog, setShowInstructorDialog] = React.useState(false);
   const [showWelcomeDialog, setShowWelcomeDialog] = React.useState(false);
@@ -52,9 +53,9 @@ export default function CourseDetailPage() {
 
   // Fetch course detail
   const { data: course, isLoading } = useQuery({
-    queryKey: ["courseDetail", courseId],
-    queryFn: () => getCourseDetail(courseId),
-    enabled: !!courseId,
+    queryKey: ["courseDetail", courseSlug],
+    queryFn: () => getCourseDetail(courseSlug),
+    enabled: !!courseSlug,
   });
 
   // Fetch wishlist to check if course is wishlisted
@@ -66,30 +67,52 @@ export default function CourseDetailPage() {
 
   const isWishlisted = React.useMemo(() => {
     return (
-      wishlistData?.items.some((item) => item.courseId === courseId) || false
+      wishlistData?.items.some((item) => item.courseId === course?.courseId) || false
     );
-  }, [wishlistData, courseId]);
+  }, [wishlistData, course?.courseId]);
 
   // Fetch course reviews
   const { data: reviewsData } = useQuery({
-    queryKey: ["courseReviews", courseId],
-    queryFn: () => getCourseReviews(courseId, { page: 1, page_size: 10 }),
-    enabled: !!courseId,
+    queryKey: ["courseReviews", course?.courseId],
+    queryFn: () => getCourseReviews(course?.courseId || "", { page: 1, page_size: 10 }),
+    enabled: !!course?.courseId,
   });
+
+  // Increment view count mutation
+  const incrementViewMutation = useMutation({
+    mutationFn: incrementCourseView,
+    onSuccess: (data) => {
+      // eslint-disable-next-line no-console
+      console.log(`Course view incremented. Total views: ${data.viewsCount}`);
+    },
+    onError: (error: Error) => {
+      // Silently fail - view tracking is not critical
+      // eslint-disable-next-line no-console
+      console.warn("Failed to increment view count:", error.message);
+    },
+  });
+
+  // Increment view count when landing on the page
+  React.useEffect(() => {
+    if (course?.courseId) {
+      incrementViewMutation.mutate(course.courseId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course?.courseId]);
 
   // Enroll mutation
   const enrollMutation = useMutation({
     mutationFn: enrollCourse,
     onSuccess: () => {
       // Refresh course detail to get updated enrollment status
-      queryClient.invalidateQueries({ queryKey: ["courseDetail", courseId] });
+      queryClient.invalidateQueries({ queryKey: ["courseDetail", courseSlug] });
       // Show welcome message from API response
       if (course?.welcomeMessage) {
         setWelcomeMessage(course.welcomeMessage);
         setShowWelcomeDialog(true);
       } else {
         // If no welcome message, just redirect
-        router.push(`/learn/${courseId}/lectures`);
+        router.push(`/learn/${course?.courseId}/lectures`);
       }
     },
     onError: (error: Error) => {
@@ -126,25 +149,29 @@ export default function CourseDetailPage() {
       setShowInstructorDialog(true);
       return;
     }
-    enrollMutation.mutate(courseId);
+    if (course?.courseId) {
+      enrollMutation.mutate(course.courseId);
+    }
   };
 
   const handleWishlistToggle = () => {
-    if (isWishlisted) {
-      removeWishlistMutation.mutate(courseId);
-    } else {
-      addWishlistMutation.mutate(courseId);
+    if (course?.courseId) {
+      if (isWishlisted) {
+        removeWishlistMutation.mutate(course.courseId);
+      } else {
+        addWishlistMutation.mutate(course.courseId);
+      }
     }
   };
 
   const handleWelcomeDialogClose = () => {
     setShowWelcomeDialog(false);
-    router.push(`/learn/${courseId}/lectures`);
+    router.push(`/learn/${course?.courseId}/lectures`);
   };
 
   const handleGoToLectures = () => {
     setShowAlreadyEnrolledDialog(false);
-    router.push(`/learn/${courseId}/lectures`);
+    router.push(`/learn/${course?.courseId}/lectures`);
   };
 
   const handleOpenRatingDialog = () => {
@@ -168,7 +195,7 @@ export default function CourseDetailPage() {
 
   const handleRatingSuccess = () => {
     // Refresh reviews after submitting a rating
-    queryClient.invalidateQueries({ queryKey: ["courseReviews", courseId] });
+    queryClient.invalidateQueries({ queryKey: ["courseReviews", course?.courseId] });
   };
 
   if (isLoading) {
@@ -300,7 +327,7 @@ export default function CourseDetailPage() {
         <RatingDialog
           open={showRatingDialog}
           onOpenChange={setShowRatingDialog}
-          courseId={courseId}
+          courseId={course.courseId}
           courseTitle={course.title}
           enrollmentId={course.enrollmentId}
           onSuccess={handleRatingSuccess}
