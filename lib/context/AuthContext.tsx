@@ -43,7 +43,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Base URL
 // const API_BASE_URL = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-const API_BASE_URL = "http://54.183.140.154:3005";
+const API_BASE_URL = "http://13.56.12.137:3005";
 
 // Decode JWT to extract instructor_id and learner_id
 function decodeJwt(token: string): {

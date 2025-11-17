@@ -5,7 +5,7 @@
 
 export const API_CONFIG = {
   // Primary base URL - endpoints specify their own paths including version
-  BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://54.183.140.154:3005",
+  BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://13.56.12.137:3005",
   
   // Timeout configurations
   DEFAULT_TIMEOUT: 30000, // 30 seconds

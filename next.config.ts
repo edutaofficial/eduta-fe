@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "http",
-        hostname: "54.183.140.154",
+        hostname: "13.56.12.137",
         port: "3005",
         pathname: "/api/assets/**",
       },

@@ -242,7 +242,7 @@ export function InstructorSettings() {
     try {
       const response = await fetch(
         // `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/forgot-password`,
-        "http://54.183.140.154:3005/api/v1/user/forgot-password",
+        "http://13.56.12.137:3005/api/v1/user/forgot-password",
         {
           method: "POST",
           headers: {
@@ -284,7 +284,7 @@ export function InstructorSettings() {
     try {
       const response = await fetch(
         // `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/forgot-password`,
-        "http://54.183.140.154:3005/api/v1/user/forgot-password",
+        "http://13.56.12.137:3005/api/v1/user/forgot-password",
         {
           method: "POST",
           headers: {
@@ -319,7 +319,7 @@ export function InstructorSettings() {
     try {
       const response = await fetch(
         // `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/verify-otp`,
-        "http://54.183.140.154:3005/api/v1/user/verify-otp",
+        "http://13.56.12.137:3005/api/v1/user/verify-otp",
         {
           method: "POST",
           headers: {
@@ -376,7 +376,7 @@ export function InstructorSettings() {
     try {
       const response = await fetch(
         // `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/reset-password`,
-        "http://54.183.140.154:3005/api/v1/user/reset-password",
+        "http://13.56.12.137:3005/api/v1/user/reset-password",
         {
           method: "POST",
           headers: {
