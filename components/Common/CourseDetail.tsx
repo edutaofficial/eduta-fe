@@ -33,12 +33,7 @@ import {
   ArrowRightIcon,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useCourseStore } from "@/store/useCourseStore";
 import FAQComponent from "../Home/FAQ";
 import { useAuth } from "@/lib/context/AuthContext";

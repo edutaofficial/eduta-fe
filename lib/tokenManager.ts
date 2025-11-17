@@ -5,8 +5,7 @@
  * Works silently in the background without user intervention
  */
 
-import { getSession, signIn, signOut } from "next-auth/react";
-import axiosInstance from "@/app/api/axiosInstance";
+import { getSession,  signOut } from "next-auth/react";
 
 // Track if a refresh is already in progress to avoid multiple simultaneous refreshes
 let isRefreshing = false;

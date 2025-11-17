@@ -81,7 +81,7 @@ export async function customAPICallExample() {
     const response = await fetch("https://some-external-api.com/data", {
       method: "GET",
       headers: {
-        "Authorization": `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     });
