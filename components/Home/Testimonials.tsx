@@ -102,7 +102,7 @@ function TestimonialsCards({
       </div>
 
       {/* Right side - Video thumbnail */}
-      <div className="relative min-h-64 w-full lg:w-1/2 h-full lg:min-h-96 rounded-xl overflow-hidden group cursor-pointer">
+      <div className="hidden relative min-h-64 w-full lg:w-1/2 h-full lg:min-h-96 rounded-xl overflow-hidden group cursor-pointer">
         <Image
           src={thumbnailLink}
           alt="Video thumbnail"

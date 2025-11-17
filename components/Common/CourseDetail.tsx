@@ -671,12 +671,12 @@ export function CourseDetail({
                               />
                             ))}
                           </div>
-                          <span className="text-sm font-semibold text-default-900 break-words">
+                          <span className="text-sm font-semibold text-default-900 wrap-break-word">
                             {review.userName || `User ${review.userId}`}
                           </span>
                         </div>
                         {review.reviewText && (
-                          <p className="text-default-700 leading-relaxed break-words">
+                          <p className="text-default-700 leading-relaxed wrap-break-word">
                             {review.reviewText}
                           </p>
                         )}

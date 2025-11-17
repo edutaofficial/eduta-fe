@@ -84,11 +84,11 @@ export default function InstructorProfilePage() {
   return (
     <div className="min-h-screen bg-default-50 mt-16">
       {/* Instructor Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-400 py-16">
+      <div className="bg-linear-to-r from-primary-600 to-primary-400 py-16">
         <div className="max-w-7xl mx-auto px-6">
           {profileLoading ? (
             <div className="flex flex-col md:flex-row items-start gap-8">
-              <Skeleton className="size-32 rounded-full flex-shrink-0" />
+              <Skeleton className="size-32 rounded-full shrink-0" />
               <div className="flex-1 space-y-4">
                 <Skeleton className="h-10 w-64" />
                 <Skeleton className="h-6 w-48" />
@@ -103,7 +103,7 @@ export default function InstructorProfilePage() {
           ) : instructorProfile ? (
             <div className="flex flex-col md:flex-row items-start gap-8">
               {/* Avatar */}
-              <Avatar className="size-32 flex-shrink-0 border-4 border-white shadow-lg">
+              <Avatar className="size-32 shrink-0 border-4 border-white shadow-lg">
                 {instructorProfile.profilePictureUrl ? (
                   <AvatarImage
                     src={instructorProfile.profilePictureUrl}
@@ -198,7 +198,7 @@ export default function InstructorProfilePage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(pageSize)].map((_, i) => (
               <div key={i} className="space-y-4">
-                <Skeleton className="aspect-[3/2] w-full rounded-lg" />
+                <Skeleton className="aspect-3/2 w-full rounded-lg" />
                 <Skeleton className="h-6 w-3/4" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-1/2" />

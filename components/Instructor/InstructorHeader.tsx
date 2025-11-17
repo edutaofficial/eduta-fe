@@ -114,7 +114,7 @@ export function InstructorHeader() {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-[18.75rem]" align="end">
+            <DropdownMenuContent className="w-75" align="end">
               {/* User Info Section */}
               <div className="flex items-center gap-3 p-4">
                 <Avatar className="size-14">

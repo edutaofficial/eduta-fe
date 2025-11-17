@@ -40,20 +40,33 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    other: [
+      {
+        rel: "android-chrome-192x192",
+        url: "/android-chrome-192x192.png",
+      },
+      {
+        rel: "android-chrome-512x512",
+        url: "/android-chrome-512x512.png",
+      },
+    ],
+  },
+  manifest: "/site.webmanifest",
   openGraph: {
     title: "Eduta - Learn, Grow, Succeed",
     description:
       "Discover world-class online courses and expert instructors. Transform your skills with Eduta's comprehensive e-learning platform.",
     url: "https://eduta.org", // Replace with your actual domain
     siteName: "Eduta",
-    images: [
-      {
-        url: "/og-image.png", // Add your OG image
-        width: 1200,
-        height: 630,
-        alt: "Eduta - Online Learning Platform",
-      },
-    ],
     locale: "en_US",
     type: "website",
   },
@@ -62,7 +75,6 @@ export const metadata: Metadata = {
     title: "Eduta - Learn, Grow, Succeed",
     description:
       "Discover world-class online courses and expert instructors. Transform your skills with Eduta.",
-    images: ["/twitter-image.png"], // Add your Twitter card image
     creator: "@eduta", // Replace with your Twitter handle
   },
   robots: {
@@ -81,6 +93,11 @@ export const metadata: Metadata = {
     // yandex: "your-yandex-verification-code",
     // bing: "your-bing-verification-code",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Eduta",
+  },
 };
 
 export default function RootLayout({
@@ -91,9 +108,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#ffffff" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <QueryProvider>

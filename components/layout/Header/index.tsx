@@ -21,6 +21,7 @@ import SearchComponent from "./SearchComponent";
 import MobileMenu from "./MobileMenu";
 import MobileUserDrawer from "./MobileUserDrawer";
 import MobileSearchModal, { MobileSearchTrigger } from "./MobileSearchModal";
+import { BlogDropdown } from "./BlogDropdown";
 import { CONSTANTS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -85,8 +86,8 @@ function ExploreDropdown({
                     <div className="text-sm font-semibold leading-none line-clamp-1">
                       {category.name}
                     </div>
-                    <p className="text-sm leading-snug text-muted-foreground line-clamp-2">
-                      {category.subcategories.length} subcategories
+                    <p className="text-sm leading-snug text-muted-foreground line-clamp-2 break-words">
+                      {category.description || "Explore courses in this category"}
                     </p>
                   </Link>
                 </NavigationMenuLink>
@@ -198,47 +199,7 @@ export default function Header() {
                   <Link href="/faqs">FAQs</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger ref={blogTriggerRef}>
-                  Blog
-                </NavigationMenuTrigger>
-                <NavMenuContentModified triggerRef={blogTriggerRef}>
-                  <ul className="grid gap-2 md:w-[25rem] lg:w-[31.25rem] lg:grid-cols-[.75fr_1fr]">
-                    <li className="row-span-3 p-4">
-                      <NavigationMenuLink asChild>
-                        <Link
-                          className="flex h-full w-full flex-col justify-end rounded-md bg-cover bg-center p-6 no-underline outline-hidden select-none focus:shadow-md"
-                          style={{
-                            backgroundImage: `url(${
-                              CONSTANTS.BLOG_POSTS[0]?.imageUrl ||
-                              CONSTANTS.PLACEHOLDER_IMAGE(215, 215)
-                            })`,
-                          }}
-                          href={CONSTANTS.BLOG_POSTS[0]?.href || "/"}
-                        >
-                          <div className="mt-4 mb-2 text-lg font-medium line-clamp-2">
-                            {CONSTANTS.BLOG_POSTS[0]?.title ||
-                              "Featured Blog Post"}
-                          </div>
-                          <p className="text-muted-foreground text-sm leading-tight line-clamp-3">
-                            {CONSTANTS.BLOG_POSTS[0]?.description ||
-                              "Discover insights and tutorials"}
-                          </p>
-                        </Link>
-                      </NavigationMenuLink>
-                    </li>
-                    {CONSTANTS.BLOG_POSTS.slice(1).map((post) => (
-                      <ListItem
-                        key={post.id}
-                        href={post.href}
-                        title={post.title}
-                      >
-                        {post.description}
-                      </ListItem>
-                    ))}
-                  </ul>
-                </NavMenuContentModified>
-              </NavigationMenuItem>
+              <BlogDropdown blogTriggerRef={blogTriggerRef} />
               <NavigationMenuItem>
                 {loggedIn ? (
                   <>
@@ -430,30 +391,5 @@ export default function Header() {
       {/* Mobile Search Modal */}
       <MobileSearchModal open={showSearch} onOpenChange={setShowSearch} />
     </header>
-  );
-}
-
-function ListItem({
-  title,
-  children,
-  href,
-  ...props
-}: React.ComponentPropsWithoutRef<"li"> & { href: string }) {
-  return (
-    <li {...props}>
-      <NavigationMenuLink asChild>
-        <Link
-          href={href}
-          className="block select-none space-y-1 rounded-md p-4 leading-none no-underline outline-hidden transition-colors hover:bg-primary-100 hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-        >
-          <div className="text-sm leading-none font-medium line-clamp-1">
-            {title}
-          </div>
-          <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
-            {children}
-          </p>
-        </Link>
-      </NavigationMenuLink>
-    </li>
   );
 }

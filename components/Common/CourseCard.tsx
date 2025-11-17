@@ -66,7 +66,7 @@ export function CourseCard({
         className
       )}
     >
-      <div className="relative aspect-[3/2] w-full bg-default-100">
+      <div className="relative aspect-3/2 w-full bg-default-100">
         {image && !imageError ? (
           <Image
             src={image}

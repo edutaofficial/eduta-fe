@@ -11,6 +11,7 @@ import type { Section, Lecture } from "@/app/api/learner/getCourseContent";
 interface LectureSidebarProps {
   sections: Section[];
   currentLectureId: string;
+  currentVideoPosition: number;
   onLectureClick: (lectureId: string) => void;
   overallProgress: number;
   completedLectures: number;
@@ -18,9 +19,25 @@ interface LectureSidebarProps {
   loading?: boolean;
 }
 
+// Helper to format duration (duration is already in minutes from API)
+function formatDuration(minutes: number): string {
+  if (!minutes || minutes < 0) return "0m";
+  
+  // If 60 minutes or more, show in "XhYm" format (no space)
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}h${remainingMinutes}m` : `${hours}h`;
+  }
+  
+  // Otherwise show in "Xm" format
+  return `${minutes}m`;
+}
+
 export function LectureSidebar({
   sections,
   currentLectureId,
+  currentVideoPosition,
   onLectureClick,
   overallProgress,
   completedLectures,
@@ -30,7 +47,7 @@ export function LectureSidebar({
   if (loading) {
     return (
       <aside className="w-96 bg-white border-l border-default-200 flex flex-col h-full">
-        <div className="p-6 border-b border-default-200 flex-shrink-0">
+        <div className="p-6 border-b border-default-200 shrink-0">
           <Skeleton className="h-6 w-32 mb-4" />
           <Skeleton className="h-2 w-full mb-2" />
           <Skeleton className="h-4 w-24" />
@@ -52,7 +69,7 @@ export function LectureSidebar({
   return (
     <aside className="w-96 bg-white border-l border-default-200 flex flex-col h-full">
       {/* Progress Header - Fixed */}
-      <div className="p-6 border-b border-default-200 flex-shrink-0">
+      <div className="p-6 border-b border-default-200 shrink-0">
         <h2 className="text-lg font-semibold text-default-900 mb-4">
           Course Progress
         </h2>
@@ -86,6 +103,7 @@ export function LectureSidebar({
                     lecture={lecture}
                     lectureNumber={lectureIndex + 1}
                     isActive={lecture.lectureId === currentLectureId}
+                    currentVideoPosition={currentVideoPosition}
                     onClick={() => onLectureClick(lecture.lectureId)}
                   />
                 ))}
@@ -102,10 +120,16 @@ interface LectureItemProps {
   lecture: Lecture;
   lectureNumber: number;
   isActive: boolean;
+  currentVideoPosition: number;
   onClick: () => void;
 }
 
-function LectureItem({ lecture, lectureNumber, isActive, onClick }: LectureItemProps) {
+function LectureItem({ lecture, lectureNumber, isActive, currentVideoPosition, onClick }: LectureItemProps) {
+  // Use real-time position if this is the active lecture, otherwise use saved watchTime
+  const displayWatchTime = isActive ? Math.floor(currentVideoPosition) : lecture.watchTime;
+  
+  // Convert duration from minutes to seconds for progress calculation
+  const durationInSeconds = lecture.duration * 60;
   return (
     <button
       onClick={onClick}
@@ -117,7 +141,7 @@ function LectureItem({ lecture, lectureNumber, isActive, onClick }: LectureItemP
       )}
     >
       {/* Status Icon */}
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         {lecture.isCompleted ? (
           <CheckCircle2Icon
             className={cn(
@@ -155,13 +179,13 @@ function LectureItem({ lecture, lectureNumber, isActive, onClick }: LectureItemP
             isActive ? "text-primary-100" : "text-default-600"
           )}
         >
-          {lecture.durationFormatted}
+          {formatDuration(lecture.duration)}
         </p>
       </div>
 
-      {/* Progress Indicator */}
-      {!lecture.isCompleted && lecture.watchTime > 0 && (
-        <div className="flex-shrink-0">
+      {/* Progress Indicator - Show for all lectures with progress < 100% */}
+      {displayWatchTime > 0 && displayWatchTime < durationInSeconds && (
+        <div className="shrink-0">
           <div
             className={cn(
               "w-12 h-1.5 rounded-full overflow-hidden",
@@ -175,7 +199,7 @@ function LectureItem({ lecture, lectureNumber, isActive, onClick }: LectureItemP
               )}
               style={{
                 width: `${Math.min(
-                  (lecture.watchTime / lecture.duration) * 100,
+                  (displayWatchTime / durationInSeconds) * 100,
                   100
                 )}%`,
               }}

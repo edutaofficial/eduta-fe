@@ -14,10 +14,11 @@ import {
 } from "@/app/api/learner/updateProgress";
 import { LectureHeader } from "@/components/Learn/LectureHeader";
 import { LectureSidebar } from "@/components/Learn/LectureSidebar";
-import { VideoPlayer } from "@/components/Learn/VideoPlayer";
+import { VideoJSHlsPlayer } from "@/components/Learn/VideoJSHlsPlayer";
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -72,6 +73,21 @@ function findFirstIncompleteLecture(sections: Section[]): Lecture | null {
   return sections[0]?.lectures[0] || null;
 }
 
+// Helper to format duration (duration is already in minutes from API)
+function _formatDuration(minutes: number): string {
+  if (!minutes || minutes < 0) return "0m";
+
+  // If 60 minutes or more, show in "XhYm" format (no space)
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}h${remainingMinutes}m` : `${hours}h`;
+  }
+
+  // Otherwise show in "Xm" format
+  return `${minutes}m`;
+}
+
 export default function LecturePlayerPage() {
   const params = useParams();
   const router = useRouter();
@@ -83,16 +99,37 @@ export default function LecturePlayerPage() {
 
   const [showCongratulations, setShowCongratulations] = React.useState(false);
   const [certificateGenerated, setCertificateGenerated] = React.useState(false);
+
+  // Track if we've already shown congratulations for this course in this session
+  const congratsShownKeyRef = React.useRef(`congrats-shown-${courseId}`);
+  const hasShownCongratsRef = React.useRef(false);
   const [error, setError] = React.useState<string | null>(null);
   const [progressToast, setProgressToast] = React.useState<string | null>(null);
-  
+  const [currentVideoPosition, setCurrentVideoPosition] =
+    React.useState<number>(0);
+
   // Track if component is mounted to prevent updates after unmount
   const isMountedRef = React.useRef(true);
-  
+
+  // Check on mount if we've already shown congratulations for this course
+  React.useEffect(() => {
+    const shownKey = congratsShownKeyRef.current;
+    try {
+      const alreadyShown = localStorage.getItem(shownKey) === "true";
+      hasShownCongratsRef.current = alreadyShown;
+    } catch (e) {
+      // If localStorage is not available, just continue
+      console.warn("localStorage not available:", e);
+    }
+  }, []);
+
   // Track progress errors separately
   const progressErrorCountRef = React.useRef(0);
   const progressErrorTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Track current video position for complete action (ref for immediate access)
+  const currentVideoPositionRef = React.useRef<number>(0);
 
   // Fetch course content
   const {
@@ -107,13 +144,19 @@ export default function LecturePlayerPage() {
 
   // Redirect to first incomplete lecture if lectureId is "0" or "lectures"
   React.useEffect(() => {
-    if (courseContent && (lectureIdParam === "0" || lectureIdParam === "lectures")) {
+    if (
+      courseContent &&
+      (lectureIdParam === "0" || lectureIdParam === "lectures")
+    ) {
       const firstIncompleteLecture = findFirstIncompleteLecture(
         courseContent.sections
       );
       if (firstIncompleteLecture) {
         // eslint-disable-next-line no-console
-        console.log("🎯 Redirecting to first incomplete lecture:", firstIncompleteLecture.lectureId);
+        console.log(
+          "🎯 Redirecting to first incomplete lecture:",
+          firstIncompleteLecture.lectureId
+        );
         router.replace(
           `/learn/${courseId}/${firstIncompleteLecture.lectureId}`
         );
@@ -123,7 +166,12 @@ export default function LecturePlayerPage() {
 
   // Get current lecture
   const currentLectureData = React.useMemo(() => {
-    if (!courseContent || lectureIdParam === "0" || lectureIdParam === "lectures") return null;
+    if (
+      !courseContent ||
+      lectureIdParam === "0" ||
+      lectureIdParam === "lectures"
+    )
+      return null;
     return findLectureById(courseContent.sections, lectureIdParam);
   }, [courseContent, lectureIdParam]);
 
@@ -148,21 +196,84 @@ export default function LecturePlayerPage() {
     );
   }, [courseContent, currentLecture]);
 
+  // Separate mutation for completing lectures (manual complete button)
+  const completeLectureMutation = useMutation({
+    mutationFn: updateProgress,
+    onSuccess: (data) => {
+      // eslint-disable-next-line no-console
+      console.log("✅ Lecture marked as complete - API Response:", data);
+      // eslint-disable-next-line no-console
+      console.log("✅ Lecture isCompleted from API:", data.isCompleted);
+
+      // Show congratulations if course is completed (only if not shown before)
+      if (
+        data.courseCompleted &&
+        !showCongratulations &&
+        !hasShownCongratsRef.current
+      ) {
+        setShowCongratulations(true);
+        setCertificateGenerated(data.certificateGenerated);
+        // Mark as shown in local storage so it won't show again
+        try {
+          localStorage.setItem(congratsShownKeyRef.current, "true");
+        } catch (e) {
+          console.warn("Failed to save to localStorage:", e);
+        }
+        hasShownCongratsRef.current = true;
+      }
+
+      // Invalidate queries to refresh sidebar
+      queryClient.invalidateQueries({
+        queryKey: ["courseContent", courseId],
+        refetchType: "none",
+      });
+
+      // Auto-navigate to next lecture after a short delay
+      if (nextLecture) {
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            router.push(`/learn/${courseId}/${nextLecture.lectureId}`);
+          }
+        }, 500);
+      }
+    },
+    onError: (err: unknown) => {
+      const errorMessage = extractErrorMessage(err);
+      // eslint-disable-next-line no-console
+      console.error("❌ Failed to mark lecture as complete:", errorMessage);
+      // eslint-disable-next-line no-console
+      console.error("❌ Full error:", err);
+      // Could show a toast here if needed
+    },
+  });
+
   // Progress update mutation - COMPLETELY ISOLATED from video playback
   const progressMutation = useMutation({
     mutationFn: updateProgress,
     onSuccess: (data) => {
       // Reset error count on successful update
       progressErrorCountRef.current = 0;
-      
+
       // IMPORTANT: Don't invalidate queries during playback - only update on completion
       // This prevents re-renders that could affect video playback
-      
-      // Show congratulations if course is completed
-      if (data.courseCompleted && !showCongratulations) {
+
+      // Show congratulations if course is completed (only from video end, not manual complete)
+      // Only show if not already shown before
+      if (
+        data.courseCompleted &&
+        !showCongratulations &&
+        !hasShownCongratsRef.current
+      ) {
         setShowCongratulations(true);
         setCertificateGenerated(data.certificateGenerated);
-        
+        // Mark as shown in local storage so it won't show again
+        try {
+          localStorage.setItem(congratsShownKeyRef.current, "true");
+        } catch (e) {
+          console.warn("Failed to save to localStorage:", e);
+        }
+        hasShownCongratsRef.current = true;
+
         // Only invalidate when course is completed
         queryClient.invalidateQueries({
           queryKey: ["courseContent", courseId],
@@ -172,28 +283,35 @@ export default function LecturePlayerPage() {
     },
     onError: (err: unknown) => {
       const errorMessage = extractErrorMessage(err);
-      
+
       // Increment error count
       progressErrorCountRef.current += 1;
-      
+
       // Log to console for debugging
       // eslint-disable-next-line no-console
-      console.warn(`⚠️ Progress tracking failed (${progressErrorCountRef.current}x):`, errorMessage);
-      
+      console.warn(
+        `⚠️ Progress tracking failed (${progressErrorCountRef.current}x):`,
+        errorMessage
+      );
+
       // After 3 consecutive failures, show toast notification
       if (progressErrorCountRef.current >= 3) {
         // eslint-disable-next-line no-console
-        console.error("❌ Progress tracking unavailable. Showing user notification.");
-        
+        console.error(
+          "❌ Progress tracking unavailable. Showing user notification."
+        );
+
         // Only show toast if component is still mounted
         if (isMountedRef.current) {
-          setProgressToast("Your progress cannot be saved at the moment. The lecture will continue, but your progress may not sync. Please check your connection.");
-          
+          setProgressToast(
+            "Your progress cannot be saved at the moment. The lecture will continue, but your progress may not sync. Please check your connection."
+          );
+
           // Clear any existing toast timeout
           if (toastTimeoutRef.current) {
             clearTimeout(toastTimeoutRef.current);
           }
-          
+
           // Auto-dismiss after 10 seconds
           toastTimeoutRef.current = setTimeout(() => {
             if (isMountedRef.current) {
@@ -201,7 +319,7 @@ export default function LecturePlayerPage() {
             }
           }, 10000);
         }
-        
+
         // Reset counter to avoid spam (will show again after 3 more failures)
         progressErrorCountRef.current = 0;
       }
@@ -244,10 +362,14 @@ export default function LecturePlayerPage() {
   // Handle video progress update - STABLE REFERENCE
   const handleProgressUpdate = React.useCallback(
     (currentTime: number, _duration: number) => {
+      // Update both ref and state for current video position
+      currentVideoPositionRef.current = currentTime;
+      setCurrentVideoPosition(currentTime); // For sidebar real-time updates
+
       // Use refs to avoid re-creating this callback
       const { enrollmentId } = courseContent || {};
       const { lectureId, isCompleted } = currentLecture || {};
-      
+
       if (!courseContent || !currentLecture || !enrollmentId || !lectureId) {
         return;
       }
@@ -270,7 +392,7 @@ export default function LecturePlayerPage() {
 
   // Handle video end - STABLE REFERENCE
   const handleVideoEndRef = React.useRef<(() => void) | null>(null);
-  
+
   React.useEffect(() => {
     handleVideoEndRef.current = () => {
       if (!courseContent || !currentLecture) {
@@ -301,7 +423,14 @@ export default function LecturePlayerPage() {
         }, 1500);
       }
     };
-  }, [courseContent, currentLecture, nextLecture, courseId, router, progressMutation]);
+  }, [
+    courseContent,
+    currentLecture,
+    nextLecture,
+    courseId,
+    router,
+    progressMutation,
+  ]);
 
   const handleVideoEnd = React.useCallback(() => {
     handleVideoEndRef.current?.();
@@ -311,36 +440,52 @@ export default function LecturePlayerPage() {
   const handleComplete = React.useCallback(() => {
     if (!courseContent || !currentLecture) {
       // eslint-disable-next-line no-console
-      console.warn("Cannot complete: Missing courseContent or currentLecture");
+      console.warn(
+        "❌ Cannot complete: Missing courseContent or currentLecture"
+      );
       return;
     }
 
-    if (progressMutation.isPending) {
+    if (completeLectureMutation.isPending) {
       // eslint-disable-next-line no-console
-      console.warn("Progress update already in progress");
+      console.warn("⏳ Completion already in progress");
       return;
     }
 
-    // eslint-disable-next-line no-console
-    console.log("✅ Manually marking lecture as complete");
-    
-    progressMutation.mutate({
+    // Get the current video position from the ref
+    const currentPosition = Math.floor(currentVideoPositionRef.current);
+
+    const payload = {
       enrollment_id: courseContent.enrollmentId,
       lecture_id: currentLecture.lectureId,
-      is_completed: true,
-      watch_time: currentLecture.watchTime || 0,
-      last_position: currentLecture.lastPosition || 0,
-    });
-  }, [courseContent, currentLecture, progressMutation]);
+      is_completed: true, // Always mark as completed
+      watch_time: Math.max(currentPosition, currentLecture.watchTime || 0), // Use whichever is higher
+      last_position: currentPosition, // Send current position for resume capability
+    };
+
+    // eslint-disable-next-line no-console
+    console.log("🔵 Complete Button Clicked - Sending Payload:", payload);
+    // eslint-disable-next-line no-console
+    console.log("🔵 is_completed value:", payload.is_completed);
+    // eslint-disable-next-line no-console
+    console.log("🔵 Current video position:", currentPosition);
+
+    // Mark as completed and send current video position
+    completeLectureMutation.mutate(payload);
+  }, [courseContent, currentLecture, completeLectureMutation]);
 
   // Navigation handlers
+  const handleBack = () => {
+    router.push("/student/courses");
+  };
+
   const handlePrevious = () => {
     if (previousLecture) {
       router.push(`/learn/${courseId}/${previousLecture.lectureId}`);
     }
   };
 
-  const handleNext = () => {
+  const _handleNext = () => {
     if (nextLecture) {
       router.push(`/learn/${courseId}/${nextLecture.lectureId}`);
     }
@@ -353,12 +498,12 @@ export default function LecturePlayerPage() {
   // Cleanup on unmount
   React.useEffect(() => {
     isMountedRef.current = true;
-    
+
     return () => {
       // eslint-disable-next-line no-console
       console.log("🔄 Lecture player unmounting, cleaning up...");
       isMountedRef.current = false;
-      
+
       if (progressTimerRef.current) {
         clearTimeout(progressTimerRef.current);
         progressTimerRef.current = null;
@@ -423,7 +568,11 @@ export default function LecturePlayerPage() {
     );
   }
 
-  const loading = isLoading || lectureIdParam === "0" || lectureIdParam === "lectures" || videoAssetLoading;
+  const loading =
+    isLoading ||
+    lectureIdParam === "0" ||
+    lectureIdParam === "lectures" ||
+    videoAssetLoading;
 
   return (
     <div className="h-screen flex flex-col overflow-hidden relative">
@@ -431,7 +580,7 @@ export default function LecturePlayerPage() {
       {progressToast && (
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="bg-default-900/95 backdrop-blur-sm text-white px-6 py-4 rounded-lg shadow-2xl flex items-start gap-3 max-w-md border border-warning-500/30">
-            <div className="flex-shrink-0 mt-0.5">
+            <div className="shrink-0 mt-0.5">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-5 w-5 text-warning-400"
@@ -446,7 +595,9 @@ export default function LecturePlayerPage() {
               </svg>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium leading-relaxed">{progressToast}</p>
+              <p className="text-sm font-medium leading-relaxed">
+                {progressToast}
+              </p>
             </div>
             <button
               onClick={() => {
@@ -455,7 +606,7 @@ export default function LecturePlayerPage() {
                   clearTimeout(toastTimeoutRef.current);
                 }
               }}
-              className="flex-shrink-0 text-default-400 hover:text-white transition-colors"
+              className="shrink-0 text-default-400 hover:text-white transition-colors"
               aria-label="Dismiss"
             >
               <svg
@@ -480,11 +631,11 @@ export default function LecturePlayerPage() {
         lectureName={currentLecture?.title || ""}
         onComplete={handleComplete}
         onPrevious={handlePrevious}
-        onNext={handleNext}
+        onBack={handleBack}
         canGoPrevious={!!previousLecture}
-        canGoNext={!!nextLecture}
+        hasNextLecture={!!nextLecture}
         isCompleted={currentLecture?.isCompleted || false}
-        isCompletingLecture={progressMutation.isPending}
+        isCompletingLecture={completeLectureMutation.isPending}
         loading={loading}
       />
 
@@ -500,7 +651,7 @@ export default function LecturePlayerPage() {
               </div>
             </div>
           ) : currentLecture && videoUrl ? (
-            <VideoPlayer
+            <VideoJSHlsPlayer
               videoUrl={videoUrl}
               startPosition={currentLecture.lastPosition}
               onProgressUpdate={handleProgressUpdate}
@@ -523,6 +674,7 @@ export default function LecturePlayerPage() {
           <LectureSidebar
             sections={courseContent.sections}
             currentLectureId={lectureIdParam}
+            currentVideoPosition={currentVideoPosition}
             onLectureClick={handleLectureClick}
             overallProgress={courseContent.overallProgress}
             completedLectures={courseContent.completedLectures}
@@ -556,6 +708,9 @@ export default function LecturePlayerPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowCongratulations(false)}>
+              Close
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setShowCongratulations(false);

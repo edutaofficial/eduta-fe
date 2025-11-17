@@ -29,7 +29,7 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
       </div>
 
       {/* Main Content - Padding for collapsed sidebar */}
-      <main className="flex-1 pl-[5rem] relative">
+      <main className="flex-1 pl-20 relative">
         <InstructorHeader />
         <div className="pt-24 p-14">{children}</div>
       </main>

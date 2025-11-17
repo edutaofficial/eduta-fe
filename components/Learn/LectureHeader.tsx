@@ -2,16 +2,16 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeftIcon, ChevronRightIcon, CheckIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, CheckIcon, ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface LectureHeaderProps {
   lectureName: string;
   onComplete: () => void;
   onPrevious: () => void;
-  onNext: () => void;
+  onBack: () => void;
   canGoPrevious: boolean;
-  canGoNext: boolean;
+  hasNextLecture: boolean;
   isCompleted: boolean;
   isCompletingLecture?: boolean;
   loading?: boolean;
@@ -21,9 +21,9 @@ export function LectureHeader({
   lectureName,
   onComplete,
   onPrevious,
-  onNext,
+  onBack,
   canGoPrevious,
-  canGoNext,
+  hasNextLecture,
   isCompleted,
   isCompletingLecture = false,
   loading = false,
@@ -32,11 +32,13 @@ export function LectureHeader({
     return (
       <header className="bg-white border-b border-default-200 px-6 py-4 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center justify-between max-w-[100rem] mx-auto">
-          <Skeleton className="h-6 w-64" />
+          <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
+            <Skeleton className="h-10 w-10 rounded-md flex-shrink-0" />
+            <Skeleton className="h-6 w-64" />
+          </div>
           <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-28" />
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
           </div>
         </div>
       </header>
@@ -46,8 +48,20 @@ export function LectureHeader({
   return (
     <header className="bg-white border-b border-default-200 px-6 py-4 sticky top-0 z-40 shadow-sm">
       <div className="flex items-center justify-between max-w-[100rem] mx-auto">
-        {/* Left: Lecture Name */}
-        <div className="flex-1 min-w-0 mr-4">
+        {/* Left: Back Button + Lecture Name */}
+        <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
+          {/* Back Button */}
+          <Button
+            onClick={onBack}
+            variant="ghost"
+            size="icon"
+            className="flex-shrink-0"
+            title="Back to courses"
+          >
+            <ArrowLeft className="size-5" />
+          </Button>
+
+          {/* Lecture Name */}
           <h1 className="text-xl font-semibold text-default-900 truncate">
             {lectureName}
           </h1>
@@ -55,38 +69,40 @@ export function LectureHeader({
 
         {/* Right: Action Buttons */}
         <div className="flex items-center gap-3">
+          {/* Previous Button */}
+          <Button
+            onClick={onPrevious}
+            disabled={!canGoPrevious}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <ChevronLeftIcon className="size-4" />
+            Previous
+          </Button>
+
+          {/* Complete Button - Shows chevron only if there's a next lecture */}
           <Button
             onClick={onComplete}
             disabled={isCompleted || isCompletingLecture}
             variant={isCompleted ? "outline" : "default"}
             className="flex items-center gap-2"
           >
-            <CheckIcon className="size-4" />
-            {isCompletingLecture
-              ? "Completing..."
-              : isCompleted
-                ? "Completed"
-                : "Complete"}
-          </Button>
-
-          <Button
-            onClick={onPrevious}
-            disabled={!canGoPrevious}
-            variant="outline"
-            size="icon"
-            title="Previous Lecture"
-          >
-            <ChevronLeftIcon className="size-5" />
-          </Button>
-
-          <Button
-            onClick={onNext}
-            disabled={!canGoNext}
-            variant="outline"
-            size="icon"
-            title="Next Lecture"
-          >
-            <ChevronRightIcon className="size-5" />
+            {isCompletingLecture ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                Completing...
+              </>
+            ) : isCompleted ? (
+              <>
+                <CheckIcon className="size-4" />
+                Completed
+              </>
+            ) : (
+              <>
+                Complete
+                {hasNextLecture && <ChevronRightIcon className="size-4" />}
+              </>
+            )}
           </Button>
         </div>
       </div>
