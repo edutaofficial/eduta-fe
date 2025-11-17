@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getSession } from "next-auth/react";
 import { getCourseDetail } from "@/app/api/course/getCourseDetail";
 import { enrollCourse } from "@/app/api/learner/enroll";
 import {
@@ -15,6 +16,7 @@ import { incrementCourseView } from "@/app/api/courses/incrementView";
 import { CourseDetailSkeleton } from "@/components/skeleton/CourseDetailSkeleton";
 import { CourseDetail } from "@/components/Common/CourseDetail";
 import { RatingDialog } from "@/components/Student/RatingDialog";
+import { LoginDialog } from "@/components/auth/LoginDialog";
 import { useAuth } from "@/lib/context/AuthContext";
 import {
   Dialog,
@@ -50,6 +52,16 @@ export default function CourseDetailPage() {
   const [errorMessage, setErrorMessage] = React.useState("");
   const [welcomeMessage, setWelcomeMessage] = React.useState("");
   const [showRatingDialog, setShowRatingDialog] = React.useState(false);
+  const [showLoginDialog, setShowLoginDialog] = React.useState(false);
+  const [loginDialogConfig, setLoginDialogConfig] = React.useState<{
+    title: string;
+    description: string;
+    action: "enroll" | "wishlist" | null;
+  }>({
+    title: "",
+    description: "",
+    action: null,
+  });
 
   // Fetch course detail
   const { data: course, isLoading } = useQuery({
@@ -145,16 +157,39 @@ export default function CourseDetailPage() {
   });
 
   const handleEnroll = () => {
-    if (user?.role === "instructor") {
+    // Check if user is logged in
+    if (!user) {
+      setLoginDialogConfig({
+        title: "Sign in to enroll",
+        description: "Please sign in to enroll in this course",
+        action: "enroll",
+      });
+      setShowLoginDialog(true);
+      return;
+    }
+
+    if (user.role === "instructor") {
       setShowInstructorDialog(true);
       return;
     }
+
     if (course?.courseId) {
       enrollMutation.mutate(course.courseId);
     }
   };
 
   const handleWishlistToggle = () => {
+    // Check if user is logged in
+    if (!user) {
+      setLoginDialogConfig({
+        title: "Sign in to add to wishlist",
+        description: "Please sign in to add courses to your wishlist",
+        action: "wishlist",
+      });
+      setShowLoginDialog(true);
+      return;
+    }
+
     if (course?.courseId) {
       if (isWishlisted) {
         removeWishlistMutation.mutate(course.courseId);
@@ -163,6 +198,54 @@ export default function CourseDetailPage() {
       }
     }
   };
+
+  // Handle actions after successful login
+  const handleLoginSuccess = React.useCallback(async () => {
+    // Wait a bit for session to update
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Get the updated session to check user role
+    const session = await getSession();
+    const userRole = (session as unknown as { role?: string })?.role;
+
+    // Refresh course data to check enrollment status
+    await queryClient.invalidateQueries({ queryKey: ["courseDetail", courseSlug] });
+    await queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+
+    // Get updated course data
+    const updatedCourse = queryClient.getQueryData<typeof course>([
+      "courseDetail",
+      courseSlug,
+    ]);
+
+    if (loginDialogConfig.action === "enroll") {
+      // CRITICAL: Check if logged-in user is an instructor
+      if (userRole === "instructor") {
+        setShowInstructorDialog(true);
+      } else if (updatedCourse?.isEnrolled) {
+        // Check if already enrolled
+        setShowAlreadyEnrolledDialog(true);
+      } else if (course?.courseId) {
+        // Not enrolled, trigger enrollment
+        enrollMutation.mutate(course.courseId);
+      }
+    } else if (loginDialogConfig.action === "wishlist") {
+      // Add to wishlist (instructors can also wishlist)
+      if (course?.courseId) {
+        addWishlistMutation.mutate(course.courseId);
+      }
+    }
+
+    // Reset action
+    setLoginDialogConfig({ title: "", description: "", action: null });
+  }, [
+    loginDialogConfig.action,
+    course?.courseId,
+    courseSlug,
+    queryClient,
+    enrollMutation,
+    addWishlistMutation,
+  ]);
 
   const handleWelcomeDialogClose = () => {
     setShowWelcomeDialog(false);
@@ -333,6 +416,15 @@ export default function CourseDetailPage() {
           onSuccess={handleRatingSuccess}
         />
       )}
+
+      {/* Login Dialog */}
+      <LoginDialog
+        open={showLoginDialog}
+        onOpenChange={setShowLoginDialog}
+        title={loginDialogConfig.title}
+        description={loginDialogConfig.description}
+        onSuccess={handleLoginSuccess}
+      />
     </>
   );
 }

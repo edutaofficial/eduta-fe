@@ -388,7 +388,7 @@ export function InstructorDashboard() {
                 course={{
                   id: course.courseId,
                   title: course.title,
-                  subtitle: course.instructorName || "Anonymous Instructor",
+                  subtitle: null,
                   image: course.courseBannerUrl,
                   rating: course.avgRating || 0,
                   ratingCount: course.totalReviews || 0,
@@ -396,6 +396,7 @@ export function InstructorDashboard() {
                   impressions: 0,
                   status: course.status,
                   price: course.price || 0,
+                  slug: course.slug,
                 }}
                 onEdit={handleEditCourse}
                 onDelete={handleDeleteCourse}

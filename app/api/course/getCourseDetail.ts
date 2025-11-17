@@ -7,6 +7,7 @@ export interface CourseDetailInstructor {
   bio: string;
   professionalTitle: string;
   profilePictureId: number;
+  profilePictureUrl: string | null;
 }
 
 export interface CourseDetailCategory {
@@ -63,6 +64,7 @@ export interface CoursePreviewLecture {
   duration: number;
   durationFormatted: string;
   videoId: number;
+  videoUrl: string | null;
   isPreview: boolean;
 }
 
@@ -76,6 +78,7 @@ export interface CourseDetail {
   language: string;
   status: string;
   promoVideoId: number;
+  promoVideoUrl: string | null;
   courseBannerId: number;
   courseBannerUrl: string;
   courseLogoId: number;

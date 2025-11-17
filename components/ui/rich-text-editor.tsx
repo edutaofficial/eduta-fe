@@ -24,7 +24,7 @@ interface RichTextEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
-  maxLength?: number; // Maximum character count (plain text)
+  maxLength?: number; // Maximum character count (HTML markup included)
   error?: boolean; // Show error state with red border
 }
 
@@ -60,17 +60,16 @@ export function RichTextEditor({
     },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
-      const text = editor.getText();
-      const currentLength = text.length;
-      
+      const currentLength = html.length;
+
       setCharCount(currentLength);
-      
+
       // Prevent exceeding max length
       if (maxLength && currentLength > maxLength) {
         // Don't allow the change
         return false;
       }
-      
+
       onChange(html);
     },
   });
@@ -78,9 +77,9 @@ export function RichTextEditor({
   React.useEffect(() => {
     if (editor && value !== editor.getHTML()) {
       editor.commands.setContent(value);
-      // Update character count
-      const text = editor.getText();
-      setCharCount(text.length);
+      // Update character count based on HTML length
+      const html = editor.getHTML();
+      setCharCount(html.length);
     }
   }, [value, editor]);
 
@@ -262,7 +261,7 @@ export function RichTextEditor({
         placeholder={placeholder}
         className="min-h-[200px] max-h-[400px] overflow-y-auto"
       />
-      
+
       {/* Character Counter */}
       {maxLength && (
         <div className="border-t bg-muted/30 px-4 py-2 flex justify-end">

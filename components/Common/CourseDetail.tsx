@@ -40,13 +40,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useCourseStore } from "@/store/useCourseStore";
-import { useQuery } from "@tanstack/react-query";
-import axiosInstance from "@/app/api/axiosInstance";
-import type { Asset } from "@/types/course";
 import FAQComponent from "../Home/FAQ";
 import { useAuth } from "@/lib/context/AuthContext";
 import { VideoPlayer } from "../Learn/VideoPlayer";
-import { useUpload } from "@/hooks/useUpload";
 
 import type { CourseDetail as CourseDetailAPI } from "@/app/api/course/getCourseDetail";
 import type { CourseReview } from "@/app/api/learner/reviews";
@@ -108,21 +104,6 @@ interface CourseData {
   }>;
 }
 
-// Helper to get asset URL from asset ID
-function useAssetUrl(assetId: number | string | null | undefined) {
-  const id = typeof assetId === "string" ? parseInt(assetId, 10) : assetId;
-  const { data: asset } = useQuery<Asset | null>({
-    queryKey: ["asset", id],
-    queryFn: async () => {
-      if (!id) return null;
-      const { data } = await axiosInstance.get<Asset>(`/api/v1/assets/${id}`);
-      return data;
-    },
-    enabled: !!id && typeof id === "number",
-  });
-  return asset?.file_url || null;
-}
-
 // Helper to format duration from minutes to "X hours" or "Xm"
 function formatDuration(totalMinutes?: number): string {
   if (!totalMinutes) return "0 hours";
@@ -176,22 +157,15 @@ export function CourseDetail({
     setIsWishlisted(isWishlistedProp);
   }, [isWishlistedProp]);
 
-  // Get asset URLs
-  const promoVideoUrl = useAssetUrl(basicInfo?.promoVideoId);
+  // Get promo video URL directly from API response (no asset API call needed)
+  const promoVideoDirectUrl = React.useMemo(() => {
+    return apiCourseData?.promoVideoUrl || null;
+  }, [apiCourseData?.promoVideoUrl]);
 
-  // Get promo video asset for the video player
-  const { useGetAssetById } = useUpload();
-
-  // Get promo video ID from API data or store
-  // Priority: API promoVideoId > store promoVideoId > courseBannerId (fallback)
-  const promoVideoAssetId = React.useMemo(() => {
-    if (apiCourseData?.promoVideoId) return apiCourseData.promoVideoId;
-    if (basicInfo?.promoVideoId) return basicInfo.promoVideoId;
-    if (apiCourseData?.courseBannerId) return apiCourseData.courseBannerId;
-    return null;
-  }, [apiCourseData, basicInfo]);
-
-  const { data: promoVideoAsset } = useGetAssetById(promoVideoAssetId || 0);
+  // Check if promo video exists
+  const hasPromoVideo = React.useMemo(() => {
+    return Boolean(promoVideoDirectUrl || apiCourseData?.promoVideoId);
+  }, [promoVideoDirectUrl, apiCourseData?.promoVideoId]);
 
   // Calculate total duration from curriculum
   const totalDuration = React.useMemo(() => {
@@ -245,7 +219,7 @@ export function CourseDetail({
           name: apiCourseData.instructor.name,
           title: apiCourseData.instructor.professionalTitle,
           bio: apiCourseData.instructor.bio,
-          avatar: apiCourseData.instructor.profilePictureId,
+          avatar: apiCourseData.instructor.profilePictureUrl,
           rating: undefined,
           studentCount: undefined,
           courseCount: undefined,
@@ -282,7 +256,7 @@ export function CourseDetail({
               duration: lecture.duration || 15,
             })),
           })) || [],
-        promoVideo: promoVideoUrl || basicInfo?.promoVideoId,
+        promoVideo: basicInfo?.promoVideoId,
         instructor: {
           name: "Instructor",
           title: "Course Instructor",
@@ -305,7 +279,6 @@ export function CourseDetail({
     basicInfo,
     curriculum,
     totalDuration,
-    promoVideoUrl,
   ]);
 
   // Get course banner URL for thumbnail (separate from promo video)
@@ -313,30 +286,18 @@ export function CourseDetail({
 
   // Use course banner as thumbnail for the video player button
   const promoVideoSrc = React.useMemo(() => {
-    // Priority: courseBannerUrl from API > courseBannerUrl string > placeholder
+    // Priority: courseBannerUrl from API > placeholder
     if (courseBannerUrl) {
       return courseBannerUrl;
     }
 
-    // If API has banner URL as string
-    if (apiCourseData?.courseBannerUrl) {
-      return apiCourseData.courseBannerUrl;
-    }
-
     // Default placeholder
     return "https://placehold.co/1280x720/2977A9/FFFFFF/png?text=Course+Preview";
-  }, [courseBannerUrl, apiCourseData?.courseBannerUrl]);
+  }, [courseBannerUrl]);
 
-  // Get instructor avatar URL from asset ID
-  const instructorAvatarUrl = useAssetUrl(courseData.instructor?.avatar);
-
+  // Get instructor avatar URL directly from API (no asset API call needed)
   const instructorAvatarSrc = React.useMemo(() => {
-    // If we have a fetched URL from the asset API, use it
-    if (instructorAvatarUrl) {
-      return instructorAvatarUrl;
-    }
-
-    // If avatar is already a string URL, use it
+    // Use the URL directly from API response
     if (
       typeof courseData.instructor?.avatar === "string" &&
       courseData.instructor.avatar
@@ -346,7 +307,7 @@ export function CourseDetail({
 
     // Return null to show initials fallback
     return null;
-  }, [courseData.instructor?.avatar, instructorAvatarUrl]);
+  }, [courseData.instructor?.avatar]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -819,15 +780,15 @@ export function CourseDetail({
                     )}
 
                     {/* Play Button Overlay - Only show if promo video exists */}
-                    {promoVideoAssetId && (
+                    {hasPromoVideo && (
                       <button
                         type="button"
                         onClick={() => setShowPromoVideo(true)}
                         className="absolute inset-0 bg-black/20 hover:bg-black/30 transition-colors flex items-center justify-center group cursor-pointer"
                         aria-label="Play course preview video"
                       >
-                        <div className="bg-white/90 backdrop-blur-sm rounded-full p-4 group-hover:scale-110 transition-transform">
-                          <PlayIcon className="size-8 text-primary-600" />
+                        <div className="bg-white/90 backdrop-blur-sm rounded-full p-4 group-hover:scale-110 transition-transform shadow-lg">
+                          <PlayIcon className="size-8 text-primary-600 fill-primary-600" />
                         </div>
                       </button>
                     )}
@@ -940,45 +901,82 @@ export function CourseDetail({
 
       {/* Promo Video Dialog */}
       <Dialog open={showPromoVideo} onOpenChange={setShowPromoVideo}>
-        <DialogContent className="max-w-6xl w-[95vw] p-0">
-          <DialogHeader className="p-6 pb-4">
-            <DialogTitle>Course Preview</DialogTitle>
-          </DialogHeader>
-          <div className="relative w-full" style={{ maxHeight: "80vh" }}>
-            <div className="relative w-full aspect-video bg-black flex items-center justify-center overflow-hidden">
-              {promoVideoAsset ? (
-                promoVideoAsset.file_type?.startsWith("video/") &&
-                promoVideoAsset.presigned_url ? (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <VideoPlayer
-                      videoUrl={promoVideoAsset.presigned_url}
-                      startPosition={0}
-                      onProgressUpdate={() => {}}
-                      onVideoEnd={() => {}}
-                    />
-                  </div>
-                ) : promoVideoAsset.presigned_url ? (
-                  <div className="w-full h-full flex items-center justify-center bg-default-100">
-                    <Image
-                      src={promoVideoAsset.presigned_url}
-                      alt="Course preview"
-                      fill
-                      className="object-contain"
-                      unoptimized={promoVideoAsset.presigned_url.includes(
-                        "amazonaws.com"
-                      )}
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white">
-                    <p className="text-sm">Asset URL not available</p>
-                  </div>
-                )
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white">
-                  <p className="text-sm">Loading preview...</p>
-                </div>
-              )}
+        <DialogContent className="max-w-7xl w-[95vw] p-0 gap-0 bg-black border-none">
+          {/* Close Button - Always visible */}
+          <button
+            onClick={() => setShowPromoVideo(false)}
+            className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full p-2.5 transition-all group"
+            aria-label="Close video"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="size-6 text-white group-hover:scale-110 transition-transform"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+
+          {/* Header with course info */}
+          <div className="bg-gradient-to-b from-black/90 to-transparent px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary-600 rounded-full p-2">
+                <PlayIcon className="size-4 text-white fill-white" />
+              </div>
+              <div>
+                <h3 className="text-white font-semibold line-clamp-1">
+                  {courseData.title}
+                </h3>
+                <p className="text-white/70 text-xs">Course Preview</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Video Container - No overlays blocking controls */}
+          <div className="relative w-full aspect-video bg-black">
+            {promoVideoDirectUrl ? (
+              <div className="w-full h-full">
+                <VideoPlayer
+                  videoUrl={promoVideoDirectUrl}
+                  startPosition={0}
+                  onProgressUpdate={() => {}}
+                  onVideoEnd={() => {}}
+                />
+              </div>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-white gap-4">
+                <VideoIcon className="size-16 text-white/40" />
+                <p className="text-lg font-medium">Loading video preview...</p>
+                <p className="text-sm text-white/60">Please wait a moment</p>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom info bar - Doesn't overlay video controls */}
+          <div className="bg-gradient-to-t from-black/90 to-transparent px-6 py-3">
+            <div className="flex items-center justify-between text-white/80 text-sm">
+              <div className="flex items-center gap-4">
+                {courseData.duration && (
+                  <span className="flex items-center gap-2">
+                    <VideoIcon className="size-4" />
+                    {courseData.duration}
+                  </span>
+                )}
+                {courseData.rating !== undefined && (
+                  <span className="flex items-center gap-2">
+                    <StarIcon className="size-4 fill-warning-400 text-warning-400" />
+                    {courseData.rating} ({courseData.ratingCount || 0})
+                  </span>
+                )}
+              </div>
+              <span className="text-white/50 text-xs">Press ESC to close</span>
             </div>
           </div>
         </DialogContent>

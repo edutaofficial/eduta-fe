@@ -694,18 +694,18 @@ export default function LecturePlayerPage() {
             <AlertDialogTitle className="text-2xl">
               🎉 Congratulations!
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
+            <div className="space-y-2">
+              <AlertDialogDescription>
                 You have successfully completed the course:{" "}
                 <strong>{courseContent?.title}</strong>
-              </p>
+              </AlertDialogDescription>
               {certificateGenerated && (
-                <p className="text-success-600 font-medium">
+                <p className="text-success-600 font-medium text-sm">
                   Your certificate has been generated and is available in your
                   certificates section.
                 </p>
               )}
-            </AlertDialogDescription>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setShowCongratulations(false)}>

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   EditIcon,
   TrashIcon,
@@ -33,7 +34,7 @@ interface InstructorCourseCardProps {
   course: {
     id: string;
     title: string;
-    subtitle: string;
+    subtitle: string | null;
     image: string | null;
     rating: number;
     ratingCount: number;
@@ -42,9 +43,11 @@ interface InstructorCourseCardProps {
     featured?: boolean;
     status?: string;
     price: number;
+    slug?: string;
   };
   onEdit?: (courseId: string) => void;
   onDelete?: (courseId: string) => void;
+  onView?: (courseSlug: string) => void;
 }
 
 // Generate a consistent placeholder color based on course ID
@@ -73,7 +76,9 @@ export function InstructorCourseCard({
   course,
   onEdit,
   onDelete,
+  onView,
 }: InstructorCourseCardProps) {
+  const router = useRouter();
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
 
   // Handle undefined/missing values with defaults
@@ -82,6 +87,16 @@ export function InstructorCourseCard({
   const enrollments = course?.enrollments ?? 0;
   const impressions = course?.impressions ?? 0;
   const price = course?.price ?? 0;
+
+  const handleView = () => {
+    if (course.slug) {
+      if (onView) {
+        onView(course.slug);
+      } else {
+        router.push(`/course/${course.slug}`);
+      }
+    }
+  };
 
   const handleEdit = () => {
     onEdit?.(course.id);
@@ -119,7 +134,9 @@ export function InstructorCourseCard({
           <h3 className="font-semibold text-foreground line-clamp-2">
             {course.title}
           </h3>
-          <p className="text-sm text-muted-foreground">{course.subtitle}</p>
+          {course.subtitle && (
+            <p className="text-sm text-muted-foreground">{course.subtitle}</p>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-3">
@@ -170,6 +187,14 @@ export function InstructorCourseCard({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              className="gap-2"
+              onClick={handleView}
+              disabled={!course.slug}
+            >
+              <EyeIcon className="size-4" />
+              View
+            </DropdownMenuItem>
             <DropdownMenuItem className="gap-2" onClick={handleEdit}>
               <EditIcon className="size-4" />
               Edit

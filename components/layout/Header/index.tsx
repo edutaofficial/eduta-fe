@@ -50,7 +50,7 @@ function ExploreDropdown({
 
   return (
     <NavigationMenuItem>
-      <NavigationMenuTrigger 
+      <NavigationMenuTrigger
         ref={exploreTriggerRef}
         onClick={(e) => {
           // On direct click, navigate to all courses
@@ -60,10 +60,7 @@ function ExploreDropdown({
       >
         Explore
       </NavigationMenuTrigger>
-      <NavMenuContentModified 
-        triggerRef={exploreTriggerRef}
-        className="left-0"
-      >
+      <NavMenuContentModified triggerRef={exploreTriggerRef} className="left-0">
         <ul className="grid w-[25rem] gap-2 p-4 md:w-[31.25rem] md:grid-cols-2 lg:w-[37.5rem]">
           {loading ? (
             // Skeleton
@@ -87,7 +84,8 @@ function ExploreDropdown({
                       {category.name}
                     </div>
                     <p className="text-sm leading-snug text-muted-foreground line-clamp-2 break-words">
-                      {category.description || "Explore courses in this category"}
+                      {category.description ||
+                        "Explore courses in this category"}
                     </p>
                   </Link>
                 </NavigationMenuLink>

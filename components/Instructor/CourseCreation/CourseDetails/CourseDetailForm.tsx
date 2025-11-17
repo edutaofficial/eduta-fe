@@ -349,7 +349,7 @@ const CourseDetailFormInner = (
               <React.Fragment key={category.categoryId}>
                 {/* Category as heading (disabled) */}
                 <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground bg-muted/50 sticky top-0 z-10">
-                  {category.name}
+                  {category.name} ({category.subcategories.length})
                 </div>
                 {/* Subcategories (selectable) */}
                 {category.subcategories.map((subcategory) => (

@@ -59,7 +59,7 @@ export const TitleDescriptionFields: React.FC<TitleDescriptionFieldsProps> = ({
             value={description}
             onChange={onDescriptionChange}
             placeholder={descriptionPlaceholder}
-            maxLength={2500}
+            maxLength={300}
             error={showErrors && !description.trim()}
           />
         </div>
@@ -72,4 +72,3 @@ export const TitleDescriptionFields: React.FC<TitleDescriptionFieldsProps> = ({
     </div>
   );
 };
-
