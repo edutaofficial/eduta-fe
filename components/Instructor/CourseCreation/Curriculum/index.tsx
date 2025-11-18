@@ -62,17 +62,26 @@ const CurriculumInner = (
   } = useCurriculumForm();
 
   // Track which accordion items should be open
-  const [openSections, setOpenSections] = React.useState<string[]>([
-    sections[0] ? `section-${sections[0].id}` : "",
-  ]);
+  const [openSections, setOpenSections] = React.useState<string[]>([]);
   const [openLectures, setOpenLectures] = React.useState<string[]>([]);
 
-  // Update open sections when sections change (e.g., adding new section)
+  // Initialize accordion state - only run once on mount
+  const isInitializedRef = React.useRef(false);
   React.useEffect(() => {
-    if (sections.length > 0 && openSections.length === 0) {
-      setOpenSections([`section-${sections[0].id}`]);
+    if (!isInitializedRef.current && sections.length > 0) {
+      isInitializedRef.current = true;
+      // Open first section and first lecture on initial render
+      const firstSectionKey = `section-${sections[0].id}`;
+      const firstLectureKey = sections[0].lectures[0] 
+        ? `lecture-${sections[0].lectures[0].id}`
+        : "";
+      
+      setOpenSections([firstSectionKey]);
+      if (firstLectureKey) {
+        setOpenLectures([firstLectureKey]);
+      }
     }
-  }, [sections, openSections.length]);
+  }, [sections]);
 
   // Enhanced validation that expands accordions
   const validateAndFocusWithExpand = React.useCallback(async (): Promise<boolean> => {
@@ -123,17 +132,11 @@ const CurriculumInner = (
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Course Curriculum</h2>
-          <p className="text-sm text-muted-foreground">
-            Organize your course into sections and lectures
-          </p>
-        </div>
-        <Button onClick={addSection} variant="outline" className="gap-2">
-          <PlusIcon className="size-4" />
-          Add Section
-        </Button>
+      <div>
+        <h2 className="text-xl font-semibold">Course Curriculum</h2>
+        <p className="text-sm text-muted-foreground">
+          Organize your course into sections and lectures
+        </p>
       </div>
 
       {/* Sections */}
@@ -171,6 +174,17 @@ const CurriculumInner = (
           />
         ))}
       </CourseAccordion>
+
+      {/* Add Section Button - At Bottom */}
+      <Button
+        type="button"
+        onClick={addSection}
+        variant="outline"
+        className="w-full gap-2"
+      >
+        <PlusIcon className="size-4" />
+        Add Section
+      </Button>
 
       {/* Preview Button */}
       {onPreview && (

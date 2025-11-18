@@ -100,19 +100,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
 
           {/* Lectures */}
           <div className="space-y-4 border-t pt-4 mt-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium">Lectures</h3>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onAddLecture}
-                className="gap-2"
-              >
-                <PlusIcon className="size-4" />
-                Add Lecture
-              </Button>
-            </div>
+            <h3 className="font-medium">Lectures</h3>
 
             <CourseAccordion
               type="multiple"
@@ -136,6 +124,18 @@ export const SectionItem: React.FC<SectionItemProps> = ({
                 />
               ))}
             </CourseAccordion>
+
+            {/* Add Lecture Button - At Bottom */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onAddLecture}
+              className="w-full gap-2 border border-dashed border-primary-300 hover:border-primary-400 hover:bg-primary-50"
+            >
+              <PlusIcon className="size-4" />
+              Add Lecture
+            </Button>
           </div>
         </div>
       </CourseAccordionContent>

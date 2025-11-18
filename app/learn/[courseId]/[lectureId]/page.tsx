@@ -222,10 +222,10 @@ export default function LecturePlayerPage() {
         hasShownCongratsRef.current = true;
       }
 
-      // Invalidate queries to refresh sidebar
+      // Invalidate and refetch queries to refresh sidebar with updated completion status
       queryClient.invalidateQueries({
         queryKey: ["courseContent", courseId],
-        refetchType: "none",
+        refetchType: "active",
       });
 
       // Auto-navigate to next lecture after a short delay
@@ -273,11 +273,13 @@ export default function LecturePlayerPage() {
           console.warn("Failed to save to localStorage:", e);
         }
         hasShownCongratsRef.current = true;
+      }
 
-        // Only invalidate when course is completed
+      // Invalidate and refetch sidebar when lecture is completed (from video end)
+      if (data.isCompleted) {
         queryClient.invalidateQueries({
           queryKey: ["courseContent", courseId],
-          refetchType: "none",
+          refetchType: "active",
         });
       }
     },
@@ -485,7 +487,7 @@ export default function LecturePlayerPage() {
     }
   };
 
-  const _handleNext = () => {
+  const handleNext = () => {
     if (nextLecture) {
       router.push(`/learn/${courseId}/${nextLecture.lectureId}`);
     }
@@ -630,6 +632,7 @@ export default function LecturePlayerPage() {
       <LectureHeader
         lectureName={currentLecture?.title || ""}
         onComplete={handleComplete}
+        onNext={handleNext}
         onPrevious={handlePrevious}
         onBack={handleBack}
         canGoPrevious={!!previousLecture}

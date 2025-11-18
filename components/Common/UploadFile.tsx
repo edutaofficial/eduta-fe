@@ -48,6 +48,8 @@ export function UploadFile({
   const [uploadedBytes, setUploadedBytes] = React.useState<number>(0);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const uploadStartTimeRef = React.useRef<number>(0);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+  const pendingFileRef = React.useRef<File | null>(null);
 
   // Track upload state changes (use ref to prevent infinite loops)
   const prevUploadingRef = React.useRef<boolean>(false);
@@ -152,6 +154,9 @@ export function UploadFile({
       return;
     }
 
+    // Store file for retry
+    pendingFileRef.current = file;
+
     setFileName(file.name);
     setFileSize(formatFileSize(file.size));
     setUploadError(null);
@@ -164,6 +169,9 @@ export function UploadFile({
     const formData = new FormData();
     formData.append("file", file);
 
+    // Create new abort controller for this upload
+    abortControllerRef.current = new AbortController();
+
     try {
       // Import upload-specific axios instance (no timeout)
       const { axiosUploadInstance } = await import("@/app/api/axiosInstance");
@@ -174,6 +182,7 @@ export function UploadFile({
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
+          signal: abortControllerRef.current.signal,
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const percentCompleted = Math.round(
@@ -199,6 +208,8 @@ export function UploadFile({
       if (asset && asset.asset_id) {
         onChange(asset.asset_id, file); // Pass the file to onChange
         setUploadProgress(100);
+        // Clear pending file on success
+        pendingFileRef.current = null;
         // Show success animation before clearing
         setTimeout(() => {
           setIsUploading(false);
@@ -210,6 +221,18 @@ export function UploadFile({
         throw new Error("Invalid response from server");
       }
     } catch (error: unknown) {
+      // Check if error was due to cancellation
+      if (error && typeof error === "object" && "code" in error && error.code === "ERR_CANCELED") {
+        // eslint-disable-next-line no-console
+        console.log("Upload cancelled by user");
+        setUploadError("Upload cancelled");
+        setIsUploading(false);
+        setUploadProgress(0);
+        setUploadSpeed(null);
+        setUploadedBytes(0);
+        return;
+      }
+
       // eslint-disable-next-line no-console
       console.error("Upload error:", error);
 
@@ -262,6 +285,18 @@ export function UploadFile({
       onChange(null);
       setFileName(null);
       setFileSize(null);
+    }
+  };
+
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  };
+
+  const handleRetry = () => {
+    if (pendingFileRef.current) {
+      handleFileSelect(pendingFileRef.current);
     }
   };
 
@@ -365,7 +400,7 @@ export function UploadFile({
         }}
       >
         {showProgress ? (
-          // Upload Progress State - Enhanced UI
+          // Upload Progress State - Enhanced UI with Cancel
           <div className="flex flex-col gap-4 w-full px-2">
             {/* Progress Circle and Status */}
             <div className="flex items-center gap-4">
@@ -434,6 +469,17 @@ export function UploadFile({
                   )}
                 </div>
               </div>
+
+              {/* Cancel Button */}
+              {uploadProgress < 100 && (
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="shrink-0 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
             </div>
 
             {/* Progress bar */}
@@ -545,9 +591,20 @@ export function UploadFile({
         )}
       </div>
 
-      {/* Error Display */}
+      {/* Error Display with Retry */}
       {(error || uploadError) && (
-        <p className="text-sm text-destructive mt-1">{error || uploadError}</p>
+        <div className="flex items-center justify-between gap-3 mt-1">
+          <p className="text-sm text-destructive flex-1">{error || uploadError}</p>
+          {uploadError && pendingFileRef.current && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="shrink-0 px-3 py-1.5 text-xs font-medium text-primary-600 hover:bg-primary-50 rounded-md transition-colors border border-primary-300"
+            >
+              Retry
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

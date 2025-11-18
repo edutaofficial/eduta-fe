@@ -84,6 +84,7 @@ export function StudentSettings() {
 
   const [activeTab, setActiveTab] = useState("account");
   const [profilePictureId, setProfilePictureId] = useState<number | null>(null);
+  const uploadedPictureIdRef = React.useRef<number | null>(null); // Track uploaded ID
 
   // Fetch profile picture asset only when we have a valid ID
   const { data: profilePictureAsset, isLoading: isLoadingAsset } =
@@ -150,6 +151,11 @@ export function StudentSettings() {
         "✅ Setting profilePictureId state to:",
         profile.profile_picture
       );
+      // eslint-disable-next-line no-console
+      console.log(
+        "✅ Current uploadedPictureIdRef.current:",
+        uploadedPictureIdRef.current
+      );
 
       accountFormik.setValues({
         firstName: profile.first_name || "",
@@ -157,10 +163,13 @@ export function StudentSettings() {
         phoneNumber: profile.phone_number || "",
         dateOfBirth: profile.date_of_birth || "",
       });
-      setProfilePictureId(profile.profile_picture);
+      
+      // If backend returned null but we have an uploaded ID, preserve it
+      const pictureId = profile.profile_picture || uploadedPictureIdRef.current;
+      setProfilePictureId(pictureId);
 
       // eslint-disable-next-line no-console
-      console.log("✅ profilePictureId state updated");
+      console.log("✅ profilePictureId state updated to:", pictureId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
@@ -201,12 +210,17 @@ export function StudentSettings() {
       clearError();
 
       try {
+        // Use the ref value if state is somehow null
+        const finalProfilePictureId = profilePictureId !== null 
+          ? profilePictureId 
+          : uploadedPictureIdRef.current;
+
         const payload = {
           first_name: values.firstName,
           last_name: values.lastName,
           phone_number: values.phoneNumber || null,
           date_of_birth: values.dateOfBirth || null,
-          profile_picture: profilePictureId, // Backend expects profile_picture (not profile_picture_id)
+          profile_picture: finalProfilePictureId, // Backend expects profile_picture (not profile_picture_id)
         };
 
         // eslint-disable-next-line no-console
@@ -214,13 +228,37 @@ export function StudentSettings() {
         // eslint-disable-next-line no-console
         console.log("📤 profilePictureId state value:", profilePictureId);
         // eslint-disable-next-line no-console
-        console.log("📤 profilePictureId type:", typeof profilePictureId);
+        console.log("📤 uploadedPictureIdRef.current:", uploadedPictureIdRef.current);
+        // eslint-disable-next-line no-console
+        console.log("📤 finalProfilePictureId (what we're sending):", finalProfilePictureId);
+        // eslint-disable-next-line no-console
+        console.log("📤 profilePictureId type:", typeof finalProfilePictureId);
         // eslint-disable-next-line no-console
         console.log("📤 Full payload:", JSON.stringify(payload, null, 2));
         // eslint-disable-next-line no-console
         console.log("📤 ============================================");
 
-        await updateProfile(payload);
+        const updatedProfile = await updateProfile(payload);
+
+        // eslint-disable-next-line no-console
+        console.log("📥 ==========  Backend Response ==========");
+        // eslint-disable-next-line no-console
+        console.log("📥 Received profile:", updatedProfile);
+        // eslint-disable-next-line no-console
+        console.log("📥 profile_picture from backend:", updatedProfile.profile_picture);
+        // eslint-disable-next-line no-console
+        console.log("📥 ========================================");
+
+        // If backend returned null, keep our uploaded value
+        if (!updatedProfile.profile_picture && finalProfilePictureId) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            "⚠️  Backend returned null profile_picture, but we sent:",
+            finalProfilePictureId
+          );
+          // eslint-disable-next-line no-console
+          console.warn("⚠️  This is a BACKEND BUG - it's not saving the profile_picture!");
+        }
 
         setAccountSuccess("Profile updated successfully!");
 
@@ -473,18 +511,34 @@ export function StudentSettings() {
                     onAssetIdChange={(assetId) => {
                       // eslint-disable-next-line no-console
                       console.log(
-                        "📸 Settings: onAssetIdChange called with ID:",
-                        assetId
+                        "📸 ==========  Profile Picture Upload Callback =========="
                       );
-                      setProfilePictureId(assetId);
                       // eslint-disable-next-line no-console
-                      console.log(
-                        "📸 Settings: profilePictureId state updated to:",
-                        assetId
-                      );
+                      console.log("📸 onAssetIdChange called with ID:", assetId);
+                      // eslint-disable-next-line no-console
+                      console.log("📸 ID type:", typeof assetId);
+                      // eslint-disable-next-line no-console
+                      console.log("📸 Previous profilePictureId state:", profilePictureId);
+                      
+                      setProfilePictureId(assetId);
+                      uploadedPictureIdRef.current = assetId; // Store in ref
+                      
+                      // eslint-disable-next-line no-console
+                      console.log("📸 setProfilePictureId called with:", assetId);
+                      // eslint-disable-next-line no-console
+                      console.log("📸 uploadedPictureIdRef.current set to:", assetId);
+                      // eslint-disable-next-line no-console
+                      console.log("📸 ===============================================");
                     }}
                     size="lg"
                   />
+                  {/* Debug display */}
+                  {process.env.NODE_ENV === "development" && (
+                    <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                      <p>Current profilePictureId state: <strong>{String(profilePictureId)}</strong></p>
+                      <p>Type: {typeof profilePictureId}</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Name Row */}

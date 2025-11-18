@@ -212,12 +212,54 @@ export function useCurriculumForm() {
     (sectionId: number | string, lectureId: number | string, isUploading: boolean) => {
       const key = `${sectionId}-${lectureId}`;
       setUploadingLectures((prev) => {
+        // If upload is complete (false), remove the key entirely
+        if (!isUploading) {
+          const newState = { ...prev };
+          delete newState[key];
+          return newState;
+        }
+        // If already in this state, don't update
         if (prev[key] === isUploading) return prev;
+        // Add new uploading state
         return { ...prev, [key]: isUploading };
       });
     },
     []
   );
+
+  // Cleanup upload states when lectures are removed
+  React.useEffect(() => {
+    setUploadingLectures((prev) => {
+      const newState = { ...prev };
+      let hasChanges = false;
+
+      // Check if any uploading lecture no longer exists
+      Object.keys(newState).forEach((key) => {
+        const [sectionId, lectureId] = key.split("-");
+        const sectionExists = formik.values.sections.some(
+          (s) => String(s.id) === sectionId
+        );
+        if (!sectionExists) {
+          delete newState[key];
+          hasChanges = true;
+          return;
+        }
+
+        const section = formik.values.sections.find(
+          (s) => String(s.id) === sectionId
+        );
+        const lectureExists = section?.lectures.some(
+          (l) => String(l.id) === lectureId
+        );
+        if (!lectureExists) {
+          delete newState[key];
+          hasChanges = true;
+        }
+      });
+
+      return hasChanges ? newState : prev;
+    });
+  }, [formik.values.sections]);
 
   // === Validation ===
   

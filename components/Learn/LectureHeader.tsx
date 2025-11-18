@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface LectureHeaderProps {
   lectureName: string;
   onComplete: () => void;
+  onNext: () => void;
   onPrevious: () => void;
   onBack: () => void;
   canGoPrevious: boolean;
@@ -20,6 +21,7 @@ interface LectureHeaderProps {
 export function LectureHeader({
   lectureName,
   onComplete,
+  onNext,
   onPrevious,
   onBack,
   canGoPrevious,
@@ -80,10 +82,10 @@ export function LectureHeader({
             Previous
           </Button>
 
-          {/* Complete Button - Shows chevron only if there's a next lecture */}
+          {/* Complete/Next Button */}
           <Button
-            onClick={onComplete}
-            disabled={isCompleted || isCompletingLecture}
+            onClick={isCompleted ? onNext : onComplete}
+            disabled={isCompletingLecture || (isCompleted && !hasNextLecture)}
             variant={isCompleted ? "outline" : "default"}
             className="flex items-center gap-2"
           >
@@ -94,12 +96,12 @@ export function LectureHeader({
               </>
             ) : isCompleted ? (
               <>
-                <CheckIcon className="size-4" />
-                Completed
+                Next
+                {hasNextLecture && <ChevronRightIcon className="size-4" />}
               </>
             ) : (
               <>
-                Complete
+                Complete & Next
                 {hasNextLecture && <ChevronRightIcon className="size-4" />}
               </>
             )}

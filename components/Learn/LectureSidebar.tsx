@@ -4,7 +4,6 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { CheckCircle2Icon, PlayCircleIcon } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Section, Lecture } from "@/app/api/learner/getCourseContent";
 
@@ -22,14 +21,14 @@ interface LectureSidebarProps {
 // Helper to format duration (duration is already in minutes from API)
 function formatDuration(minutes: number): string {
   if (!minutes || minutes < 0) return "0m";
-  
+
   // If 60 minutes or more, show in "XhYm" format (no space)
   if (minutes >= 60) {
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     return remainingMinutes > 0 ? `${hours}h${remainingMinutes}m` : `${hours}h`;
   }
-  
+
   // Otherwise show in "Xm" format
   return `${minutes}m`;
 }
@@ -80,7 +79,7 @@ export function LectureSidebar({
       </div>
 
       {/* Sections & Lectures - Scrollable */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-400">
         <div className="p-4 space-y-6">
           {sections.map((section, sectionIndex) => (
             <div key={section.sectionId} className="space-y-2">
@@ -111,7 +110,7 @@ export function LectureSidebar({
             </div>
           ))}
         </div>
-      </ScrollArea>
+      </div>
     </aside>
   );
 }
@@ -124,10 +123,18 @@ interface LectureItemProps {
   onClick: () => void;
 }
 
-function LectureItem({ lecture, lectureNumber, isActive, currentVideoPosition, onClick }: LectureItemProps) {
+function LectureItem({
+  lecture,
+  lectureNumber,
+  isActive,
+  currentVideoPosition,
+  onClick,
+}: LectureItemProps) {
   // Use real-time position if this is the active lecture, otherwise use saved watchTime
-  const displayWatchTime = isActive ? Math.floor(currentVideoPosition) : lecture.watchTime;
-  
+  const displayWatchTime = isActive
+    ? Math.floor(currentVideoPosition)
+    : lecture.watchTime;
+
   // Convert duration from minutes to seconds for progress calculation
   const durationInSeconds = lecture.duration * 60;
   return (
@@ -183,31 +190,19 @@ function LectureItem({ lecture, lectureNumber, isActive, currentVideoPosition, o
         </p>
       </div>
 
-      {/* Progress Indicator - Show for all lectures with progress < 100% */}
+      {/* Progress Percentage - Show for all lectures with progress > 0% and < 100% */}
       {displayWatchTime > 0 && displayWatchTime < durationInSeconds && (
         <div className="shrink-0">
-          <div
+          <span
             className={cn(
-              "w-12 h-1.5 rounded-full overflow-hidden",
-              isActive ? "bg-primary-800" : "bg-default-200"
+              "text-xs font-medium",
+              isActive ? "text-white" : "text-primary-600"
             )}
           >
-            <div
-              className={cn(
-                "h-full transition-all",
-                isActive ? "bg-white" : "bg-primary-600"
-              )}
-              style={{
-                width: `${Math.min(
-                  (displayWatchTime / durationInSeconds) * 100,
-                  100
-                )}%`,
-              }}
-            />
-          </div>
+            {Math.round((displayWatchTime / durationInSeconds) * 100)}%
+          </span>
         </div>
       )}
     </button>
   );
 }
-
