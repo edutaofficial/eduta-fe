@@ -118,12 +118,10 @@ function formatDuration(totalMinutes?: number): string {
 
 // Helper to format lecture duration
 function formatLectureDuration(duration?: string | number): string {
-  if (!duration) return "0:00";
+  if (!duration) return "0m";
   if (typeof duration === "number") {
-    // Assume minutes
-    const mins = Math.floor(duration);
-    const secs = Math.round((duration - mins) * 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+    // Duration is always in minutes
+    return `${duration}m`;
   }
   return duration; // Already formatted string
 }
@@ -511,14 +509,14 @@ export function CourseDetail({
                                     {isPreview ? (
                                       <PlayIcon className="size-5 text-primary-600 shrink-0" />
                                     ) : (
-                                      <LockIcon className="size-5 text-default-400 shrink-0" />
+                                      <LockIcon className="size-5 text-black shrink-0" />
                                     )}
 
                                     <span
                                       className={`${
                                         isPreview
                                           ? "text-default-700"
-                                          : "text-default-500"
+                                          : "text-black"
                                       }`}
                                     >
                                       {lecture.title}
@@ -534,8 +532,8 @@ export function CourseDetail({
                                   className="flex items-center justify-between py-2 px-3 rounded-md transition-colors cursor-not-allowed opacity-60"
                                 >
                                   <div className="flex items-center gap-3 flex-1">
-                                    <LockIcon className="size-5 text-default-400 shrink-0" />
-                                    <span className="text-default-500">
+                                    <LockIcon className="size-5 text-black shrink-0" />
+                                    <span className="text-black">
                                       {lecture.title}
                                     </span>
                                   </div>

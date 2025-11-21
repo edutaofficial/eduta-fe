@@ -25,10 +25,12 @@ function FAQComponent() {
         <Accordion type="single" collapsible className="w-full">
           {CONSTANTS.FAQS.map((faq) => (
             <AccordionItem key={faq.id} value={`item-${faq.id}`}>
-              <AccordionTrigger className="text-left">
+              <AccordionTrigger className="text-left text-lg md:text-xl font-medium">
                 {faq.question}
               </AccordionTrigger>
-              <AccordionContent>{faq.answer}</AccordionContent>
+              <AccordionContent className="text-base">
+                {faq.answer}
+              </AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>

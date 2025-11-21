@@ -60,17 +60,13 @@ export default Categories;
 function CategoryLinkCard({
   name,
   categoryId,
-  isParent,
 }: {
   name: string;
   categoryId: string;
   isParent: boolean;
 }) {
-  // For parent categories, link to all subcategories
-  // For subcategories, link directly to that subcategory
-  const link = isParent
-    ? `/all-courses?query=${encodeURIComponent(name)}`
-    : `/all-courses?categories=${categoryId}`;
+  // All categories (parent and sub) link using categoryId format
+  const link = `/all-courses?categories=${categoryId}`;
 
   return (
     <Link

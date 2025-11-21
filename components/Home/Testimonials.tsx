@@ -84,16 +84,31 @@ function TestimonialsCards({
         <div className="flex items-center gap-3">
           <span className="font-semibold text-default-900">{userName}</span>
           <div className="flex items-center gap-1">
-            {[...Array(5)].map((_, i) => (
-              <StarIcon
-                key={i}
-                className={`size-5 ${
-                  i < Math.floor(ratingCount)
-                    ? "fill-warning-400 text-warning-400"
-                    : "text-default-300"
-                }`}
-              />
-            ))}
+            {[...Array(5)].map((_, i) => {
+              const isFullStar = i < Math.floor(ratingCount);
+              const isHalfStar =
+                i === Math.floor(ratingCount) && ratingCount % 1 !== 0;
+              const isEmpty = i >= Math.ceil(ratingCount);
+
+              return (
+                <div key={i} className="relative size-5">
+                  {isFullStar && (
+                    <StarIcon className="size-5 fill-warning-400 text-warning-400" />
+                  )}
+                  {isHalfStar && (
+                    <>
+                      {/* Empty star base */}
+                      <StarIcon className="size-5 text-default-300" />
+                      {/* Half-filled star overlay */}
+                      <div className="absolute inset-0 overflow-hidden w-1/2">
+                        <StarIcon className="size-5 fill-warning-400 text-warning-400" />
+                      </div>
+                    </>
+                  )}
+                  {isEmpty && <StarIcon className="size-5 text-default-300" />}
+                </div>
+              );
+            })}
             <span className="ml-2 text-sm text-default-600">
               {ratingCount}/5
             </span>

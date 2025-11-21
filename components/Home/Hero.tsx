@@ -88,15 +88,18 @@ export default function Hero({ slides }: HeroProps) {
                   ))}
                 </ul>
 
-                {/* CTA Button */}
-                <div>
-                  <Button
-                    size="lg"
-                    className="text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all"
-                  >
-                    {slide.buttonText}
-                  </Button>
-                </div>
+                {/* CTA Button - Only show for first slide */}
+                {slide.id === 1 && (
+                  <div>
+                    <Button
+                      size="lg"
+                      className="text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all"
+                      asChild
+                    >
+                      <a href="/all-courses">{slide.buttonText}</a>
+                    </Button>
+                  </div>
+                )}
 
                 {/* Students Enrolled Section */}
                 <div className="flex items-center gap-4 pt-4">

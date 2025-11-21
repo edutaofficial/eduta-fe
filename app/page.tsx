@@ -88,8 +88,8 @@ export default function Page() {
     <>
       <Hero slides={data.heroSlides} />
       <Categories />
-      <ExploreCourses />
       <FeaturedCourses />
+      <ExploreCourses />
       <Testimonials />
       <FAQComponent />
     </>
