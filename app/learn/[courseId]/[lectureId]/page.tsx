@@ -15,6 +15,7 @@ import {
 import { LectureHeader } from "@/components/Learn/LectureHeader";
 import { LectureSidebar } from "@/components/Learn/LectureSidebar";
 import { VideoJSHlsPlayer } from "@/components/Learn/VideoJSHlsPlayer";
+import { LectureResources } from "@/components/Learn/LectureResources";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -119,6 +120,7 @@ export default function LecturePlayerPage() {
       hasShownCongratsRef.current = alreadyShown;
     } catch (e) {
       // If localStorage is not available, just continue
+      // eslint-disable-next-line no-console
       console.warn("localStorage not available:", e);
     }
   }, []);
@@ -217,6 +219,7 @@ export default function LecturePlayerPage() {
         try {
           localStorage.setItem(congratsShownKeyRef.current, "true");
         } catch (e) {
+          // eslint-disable-next-line no-console
           console.warn("Failed to save to localStorage:", e);
         }
         hasShownCongratsRef.current = true;
@@ -270,6 +273,7 @@ export default function LecturePlayerPage() {
         try {
           localStorage.setItem(congratsShownKeyRef.current, "true");
         } catch (e) {
+          // eslint-disable-next-line no-console
           console.warn("Failed to save to localStorage:", e);
         }
         hasShownCongratsRef.current = true;
@@ -643,47 +647,56 @@ export default function LecturePlayerPage() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Video Player */}
-        <div className="flex-1 flex items-center justify-center bg-default-900">
-          {loading ? (
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="text-white text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
-                <p>Loading lecture...</p>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex overflow-hidden">
+          {/* Video Player */}
+          <div className="flex-1 flex items-center justify-center bg-default-900">
+            {loading ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-white text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
+                  <p>Loading lecture...</p>
+                </div>
               </div>
-            </div>
-          ) : currentLecture && videoUrl ? (
-            <VideoJSHlsPlayer
-              videoUrl={videoUrl}
-              startPosition={currentLecture.lastPosition}
-              onProgressUpdate={handleProgressUpdate}
-              onVideoEnd={handleVideoEnd}
-              className="w-full h-full"
+            ) : currentLecture && videoUrl ? (
+              <VideoJSHlsPlayer
+                videoUrl={videoUrl}
+                startPosition={currentLecture.lastPosition}
+                onProgressUpdate={handleProgressUpdate}
+                onVideoEnd={handleVideoEnd}
+                className="w-full h-full"
+              />
+            ) : (
+              <div className="text-white text-center p-8">
+                <p className="text-lg">
+                  {currentLecture
+                    ? "No video available for this lecture"
+                    : "Lecture not found"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          {courseContent && (
+            <LectureSidebar
+              sections={courseContent.sections}
+              currentLectureId={lectureIdParam}
+              currentVideoPosition={currentVideoPosition}
+              onLectureClick={handleLectureClick}
+              overallProgress={courseContent.overallProgress}
+              completedLectures={courseContent.completedLectures}
+              totalLectures={courseContent.totalLectures}
+              loading={loading}
             />
-          ) : (
-            <div className="text-white text-center p-8">
-              <p className="text-lg">
-                {currentLecture
-                  ? "No video available for this lecture"
-                  : "Lecture not found"}
-              </p>
-            </div>
           )}
         </div>
 
-        {/* Sidebar */}
-        {courseContent && (
-          <LectureSidebar
-            sections={courseContent.sections}
-            currentLectureId={lectureIdParam}
-            currentVideoPosition={currentVideoPosition}
-            onLectureClick={handleLectureClick}
-            overallProgress={courseContent.overallProgress}
-            completedLectures={courseContent.completedLectures}
-            totalLectures={courseContent.totalLectures}
-            loading={loading}
-          />
+        {/* Resources Drawer */}
+        {currentLecture && currentLecture.resources && (
+          <div className="border-t border-gray-200 bg-white px-6 py-4">
+            <LectureResources resources={currentLecture.resources} />
+          </div>
         )}
       </div>
 

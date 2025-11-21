@@ -6,9 +6,33 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { StarIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CONSTANTS } from "@/lib/constants";
 
-export default function Hero() {
+interface Student {
+  id: number;
+  name: string;
+  image: string;
+}
+
+interface StudentStats {
+  students: Student[];
+  learnerCount: string;
+}
+
+interface HeroSlide {
+  id: number;
+  title: string;
+  subtitle: string;
+  highlights: string[];
+  image: string;
+  buttonText: string;
+  studentStats: StudentStats;
+}
+
+interface HeroProps {
+  slides: HeroSlide[];
+}
+
+export default function Hero({ slides }: HeroProps) {
   return (
     <section className="relative flex flex-col gap-14 bg-white pb-12 md:pb-20 overflow-hidden lg:mt-16 mt-20 md:px-6">
       {/* Container */}
@@ -34,7 +58,7 @@ export default function Hero() {
             className: "hero-pagination",
           }}
         >
-          {CONSTANTS.HERO_SLIDES.map((slide) => (
+          {slides.map((slide) => (
             <div
               key={slide.id}
               className="flex md:flex-row flex-col-reverse gap-12 items-center bg-white w-full"
@@ -51,10 +75,18 @@ export default function Hero() {
                   {slide.subtitle}
                 </p>
 
-                {/* Description */}
-                <p className="text-2xl font-semibold text-primary-800">
-                  {slide.description}
-                </p>
+                {/* Highlights */}
+                <ul className="space-y-3">
+                  {slide.highlights.map((highlight, index) => (
+                    <li
+                      key={index}
+                      className="flex items-start gap-3 text-lg text-primary-800"
+                    >
+                      <span className="text-primary-600 mt-1">✓</span>
+                      <span className="font-medium">{highlight}</span>
+                    </li>
+                  ))}
+                </ul>
 
                 {/* CTA Button */}
                 <div>
@@ -70,16 +102,16 @@ export default function Hero() {
                 <div className="flex items-center gap-4 pt-4">
                   {/* Stacked Profile Images */}
                   <div className="flex -space-x-3">
-                    {CONSTANTS.STUDENT_PROFILES.map((student, index) => (
+                    {slide.studentStats.students.map((student, index) => (
                       <Avatar
                         key={student.id}
                         className="size-12 border-2 border-white shadow-md"
                         style={{
-                          zIndex: CONSTANTS.STUDENT_PROFILES.length - index,
+                          zIndex: slide.studentStats.students.length - index,
                         }}
                       >
                         <AvatarImage src={student.image} alt={student.name} />
-                        <AvatarFallback>S{student.id}</AvatarFallback>
+                        <AvatarFallback>{student.name[0]}</AvatarFallback>
                       </Avatar>
                     ))}
                   </div>
@@ -95,7 +127,7 @@ export default function Hero() {
                       ))}
                     </div>
                     <p className="text-sm font-medium text-foreground">
-                      100+ students enrolled
+                      {slide.studentStats.learnerCount} learners enrolled
                     </p>
                   </div>
                 </div>
@@ -108,7 +140,7 @@ export default function Hero() {
                 alt={slide.title}
                 width={650}
                 height={650}
-                className="md:w-[40%] w-full md:min-h-[40.625rem] h-full object-cover"
+                className="md:w-[40%] w-full h-[40.625rem] object-cover"
                 priority
               />
             </div>

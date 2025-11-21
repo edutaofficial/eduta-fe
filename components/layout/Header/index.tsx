@@ -50,7 +50,7 @@ function ExploreDropdown({
 
   return (
     <NavigationMenuItem>
-      <NavigationMenuTrigger
+      <NavigationMenuTrigger 
         ref={exploreTriggerRef}
         onClick={(e) => {
           // On direct click, navigate to all courses
@@ -221,7 +221,7 @@ export default function Header() {
                           className="ml-2 p-0 hover:bg-transparent"
                         >
                           <Avatar className="size-10">
-                            <AvatarImage src={CONSTANTS.USER_DATA.avatar} />
+                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} />
                             <AvatarFallback>
                               {user?.name?.charAt(0).toUpperCase() || "U"}
                             </AvatarFallback>
@@ -246,7 +246,7 @@ export default function Header() {
                           className="ml-2 p-0 hover:bg-transparent"
                         >
                           <Avatar className="size-10">
-                            <AvatarImage src={CONSTANTS.USER_DATA.avatar} />
+                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} />
                             <AvatarFallback>
                               {user?.name?.charAt(0).toUpperCase() || "U"}
                             </AvatarFallback>
@@ -259,7 +259,7 @@ export default function Header() {
                         {/* User Info Section */}
                         <div className="flex items-center gap-3 p-4">
                           <Avatar className="size-14">
-                            <AvatarImage src={CONSTANTS.USER_DATA.avatar} />
+                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} />
                             <AvatarFallback>
                               {user?.name?.charAt(0).toUpperCase() || "U"}
                             </AvatarFallback>

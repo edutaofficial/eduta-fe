@@ -343,6 +343,7 @@ export interface PublicCourse {
     totalDurationFormatted: string;
     avgRating: string;
     totalReviews: number;
+    viewsCount: number;
   };
   createdAt: string;
 }

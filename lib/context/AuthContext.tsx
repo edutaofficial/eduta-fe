@@ -18,6 +18,7 @@ export interface User {
   token?: string;
   instructorId?: number;
   learnerId?: number;
+  profilePictureUrl?: string;
 }
 
 // JWT payload typing not required with next-auth session callbacks
@@ -36,6 +37,7 @@ interface AuthContextType {
     options?: { professionalTitle?: string; bio?: string }
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  updateProfilePictureUrl: (url: string) => void;
   isLoading: boolean;
 }
 
@@ -45,10 +47,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // const API_BASE_URL = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
 const API_BASE_URL = "http://13.56.12.137:3005";
 
-// Decode JWT to extract instructor_id and learner_id
+// Decode JWT to extract instructor_id, learner_id, and profile_picture_url
 function decodeJwt(token: string): {
   instructor_id?: number;
   learner_id?: number;
+  profile_picture_url?: string;
+  [key: string]: unknown;
 } | null {
   try {
     const parts = token.split(".");
@@ -63,6 +67,7 @@ function decodeJwt(token: string): {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const [isLoading] = useState(false);
+  const [profilePictureOverride, setProfilePictureOverride] = useState<string | null>(null);
 
   // Extract user data from session
   const user: User | null = session?.user
@@ -80,6 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           token,
           instructorId: decoded?.instructor_id,
           learnerId: decoded?.learner_id,
+          // Use override if available, otherwise use token value
+          profilePictureUrl: profilePictureOverride || (decoded?.profile_picture_url as string | undefined),
         };
       })()
     : null;
@@ -273,11 +280,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Request Headers: { Authorization: `Bearer ${token}` }
    */
   const logout = () => {
+    setProfilePictureOverride(null); // Clear override on logout
     nextAuthSignOut({ redirect: true, callbackUrl: "/login" });
   };
 
+  const updateProfilePictureUrl = (url: string) => {
+    setProfilePictureOverride(url);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, updateProfilePictureUrl, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -253,7 +253,7 @@ export default function ExploreCourses() {
                       rating={parseFloat(course.stats.avgRating) || 0}
                       ratingCount={course.stats.totalReviews}
                       enrollments={course.stats.totalStudents}
-                      impressions={0}
+                      impressions={course.stats.viewsCount}
                       featured={false}
                       price={
                         course.pricing ? parseFloat(course.pricing.amount) : 0

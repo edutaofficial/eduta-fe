@@ -23,7 +23,8 @@ export interface LearnerProfile {
   last_name: string;
   phone_number: string | null;
   date_of_birth: string | null;
-  profile_picture: number | null; // Backend uses profile_picture (not profile_picture_id)
+  profile_picture: number | null;
+  profile_picture_url: string;
   created_at: string;
   updated_at: string;
 }
@@ -33,7 +34,7 @@ export interface UpdateLearnerProfileRequest {
   last_name: string;
   phone_number?: string | null;
   date_of_birth?: string | null;
-  profile_picture?: number | null; // Backend expects profile_picture (not profile_picture_id)
+  profile_picture_id?: number | null; // Backend expects profile_picture_id
 }
 
 interface LearnerState {
@@ -124,6 +125,7 @@ export const useLearnerStore = create<LearnerStore>((set) => ({
         phone_number: string | null;
         date_of_birth: string | null;
         profile_picture: number | null;
+        profile_picture_url: string;
         created_at: string;
         updated_at: string;
       }>("/api/v1/learner/profile");
@@ -134,6 +136,7 @@ export const useLearnerStore = create<LearnerStore>((set) => ({
         phone_number: response.data.phone_number,
         date_of_birth: response.data.date_of_birth,
         profile_picture: response.data.profile_picture,
+        profile_picture_url: response.data.profile_picture_url,
         created_at: response.data.created_at,
         updated_at: response.data.updated_at,
       };
@@ -165,9 +168,9 @@ export const useLearnerStore = create<LearnerStore>((set) => ({
     }));
 
     try {
-      // Ensure profile_picture is always sent, convert to number if it exists
-      const profilePictureValue = data.profile_picture !== null && data.profile_picture !== undefined
-        ? Number(data.profile_picture)
+      // Ensure profile_picture_id is always sent, convert to number if it exists
+      const profilePictureValue = data.profile_picture_id !== null && data.profile_picture_id !== undefined
+        ? Number(data.profile_picture_id)
         : null;
 
       const requestData = {
@@ -175,13 +178,13 @@ export const useLearnerStore = create<LearnerStore>((set) => ({
         last_name: data.last_name,
         phone_number: data.phone_number || null,
         date_of_birth: data.date_of_birth || null,
-        profile_picture: profilePictureValue, // Backend expects profile_picture (not profile_picture_id)
+        profile_picture_id: profilePictureValue, // Backend expects profile_picture_id
       };
 
       // eslint-disable-next-line no-console
       console.log("📤 Sending learner profile update:", requestData);
       // eslint-disable-next-line no-console
-      console.log("📤 profile_picture value:", profilePictureValue, typeof profilePictureValue);
+      console.log("📤 profile_picture_id value:", profilePictureValue, typeof profilePictureValue);
 
       const response = await axiosInstance.post<{
         first_name: string;
@@ -189,6 +192,7 @@ export const useLearnerStore = create<LearnerStore>((set) => ({
         phone_number: string | null;
         date_of_birth: string | null;
         profile_picture: number | null;
+        profile_picture_url: string;
         created_at: string;
         updated_at: string;
       }>("/api/v1/learner/profile", requestData);
@@ -199,6 +203,7 @@ export const useLearnerStore = create<LearnerStore>((set) => ({
         phone_number: response.data.phone_number,
         date_of_birth: response.data.date_of_birth,
         profile_picture: response.data.profile_picture,
+        profile_picture_url: response.data.profile_picture_url,
         created_at: response.data.created_at,
         updated_at: response.data.updated_at,
       };

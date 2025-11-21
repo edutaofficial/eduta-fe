@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { StarIcon, UsersIcon, EyeIcon, BookOpenIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, formatCompactNumber } from "@/lib/utils";
 
 // Generate a consistent placeholder color based on course title
 function getPlaceholderColor(title?: string): string {
@@ -126,7 +126,9 @@ export function CourseCard({
           </div>
           <div className="flex items-center gap-1 text-muted-foreground">
             <UsersIcon className="size-4" />
-            <span className="text-xs font-medium">{enrollments}+</span>
+            <span className="text-xs font-medium">
+              {formatCompactNumber(enrollments)}+
+            </span>
           </div>
         </div>
 
@@ -138,7 +140,9 @@ export function CourseCard({
           </div>
           <div className="flex items-center gap-1 text-muted-foreground">
             <EyeIcon className="size-4" />
-            <span className="text-xs font-medium">{impressions}+</span>
+            <span className="text-xs font-medium">
+              {formatCompactNumber(impressions)}+
+            </span>
           </div>
         </div>
       </div>

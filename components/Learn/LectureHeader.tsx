@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeftIcon, ChevronRightIcon, CheckIcon, ArrowLeft } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface LectureHeaderProps {
@@ -111,4 +111,3 @@ export function LectureHeader({
     </header>
   );
 }
-

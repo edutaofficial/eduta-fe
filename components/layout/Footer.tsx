@@ -13,6 +13,7 @@ import {
   YoutubeIcon,
   MailIcon,
   PhoneIcon,
+  MapPin,
 } from "lucide-react";
 import { useCategoryStore } from "@/store/useCategoryStore";
 
@@ -95,6 +96,19 @@ export default function Footer() {
               </div>
               <span>{CONSTANTS.CONTACT_INFO.phone}</span>
             </a>
+            <div className="flex items-start gap-3 text-default-200 text-sm">
+              <div className="size-8 rounded-lg bg-primary-800 flex items-center justify-center text-default-200 shrink-0">
+                <MapPin className="size-4" />
+              </div>
+              <div>
+                <p className="font-medium">{CONSTANTS.CONTACT_INFO.address.company}</p>
+                <p>{CONSTANTS.CONTACT_INFO.address.street}</p>
+                <p>
+                  {CONSTANTS.CONTACT_INFO.address.city}, {CONSTANTS.CONTACT_INFO.address.province}, {CONSTANTS.CONTACT_INFO.address.postalCode}
+                </p>
+                <p>{CONSTANTS.CONTACT_INFO.address.country}</p>
+              </div>
+            </div>
           </div>
         </div>
 

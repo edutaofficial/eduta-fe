@@ -6,7 +6,7 @@ import { useFormik } from "formik";
 import { z } from "zod";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useInstructorStore } from "@/store/useInstructorStore";
-import { useUpload } from "@/hooks/useUpload";
+import { getBaseUrl } from "@/lib/config/api";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Card,
@@ -68,7 +68,7 @@ const accountSettingsSchema = z.object({
 type AccountSettingsFormValues = z.infer<typeof accountSettingsSchema>;
 
 export function InstructorSettings() {
-  const { user } = useAuth();
+  const { user, updateProfilePictureUrl } = useAuth();
   const {
     profile,
     loading,
@@ -78,42 +78,11 @@ export function InstructorSettings() {
     clearError,
   } = useInstructorStore();
 
-  const { useGetAssetById } = useUpload();
-
   const [activeTab, setActiveTab] = useState("account");
   const [profilePictureId, setProfilePictureId] = useState<number | null>(null);
-
-  // Fetch profile picture asset only when we have a valid ID
-  // This hook will automatically refetch when profilePictureId changes
-  const { data: profilePictureAsset, isLoading: isLoadingAsset } =
-    useGetAssetById(profilePictureId || 0);
-
-  // Get the image URL (prefer presigned_url for S3, fallback to file_url)
-  const profilePictureUrl = React.useMemo(() => {
-    if (!profilePictureAsset) return null;
-    return (
-      profilePictureAsset.presigned_url || profilePictureAsset.file_url || null
-    );
-  }, [profilePictureAsset]);
-
-  // Debug logging
-  React.useEffect(() => {
-    if (profilePictureId) {
-      // eslint-disable-next-line no-console
-      console.log("🖼️ Profile Picture ID changed to:", profilePictureId);
-      // eslint-disable-next-line no-console
-      console.log("🖼️ Asset data:", profilePictureAsset);
-      // eslint-disable-next-line no-console
-      console.log("🖼️ Image URL:", profilePictureUrl);
-      // eslint-disable-next-line no-console
-      console.log("🖼️ Is loading asset:", isLoadingAsset);
-    }
-  }, [
-    profilePictureId,
-    profilePictureAsset,
-    profilePictureUrl,
-    isLoadingAsset,
-  ]);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(
+    null
+  );
   const [accountSuccess, setAccountSuccess] = useState("");
   const [accountError, setAccountError] = useState("");
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -141,14 +110,6 @@ export function InstructorSettings() {
   // Update form when profile is loaded
   useEffect(() => {
     if (profile) {
-      // eslint-disable-next-line no-console
-      console.log("✅ Profile loaded in Settings:", profile);
-      // eslint-disable-next-line no-console
-      console.log(
-        "✅ Setting profilePictureId state to:",
-        profile.profile_picture_id
-      );
-
       accountFormik.setValues({
         firstName: profile.first_name || "",
         lastName: profile.last_name || "",
@@ -157,9 +118,7 @@ export function InstructorSettings() {
         bio: profile.bio || "",
       });
       setProfilePictureId(profile.profile_picture_id);
-
-      // eslint-disable-next-line no-console
-      console.log("✅ profilePictureId state updated");
+      setProfilePictureUrl(profile.profile_picture_url || null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
@@ -201,6 +160,8 @@ export function InstructorSettings() {
       clearError();
 
       try {
+        const oldProfilePictureId = profile?.profile_picture_id;
+
         const payload = {
           first_name: values.firstName,
           last_name: values.lastName,
@@ -210,12 +171,15 @@ export function InstructorSettings() {
           profile_picture_id: profilePictureId,
         };
 
-        // eslint-disable-next-line no-console
-        console.log("Submitting profile update with payload:", payload);
-        // eslint-disable-next-line no-console
-        console.log("profilePictureId state value:", profilePictureId);
+        const updatedProfile = await updateProfile(payload);
 
-        await updateProfile(payload);
+        // If profile picture was updated, update the header avatar
+        if (
+          oldProfilePictureId !== updatedProfile.profile_picture_id &&
+          updatedProfile.profile_picture_url
+        ) {
+          updateProfilePictureUrl(updatedProfile.profile_picture_url);
+        }
 
         setAccountSuccess("Profile updated successfully!");
 
@@ -241,8 +205,7 @@ export function InstructorSettings() {
 
     try {
       const response = await fetch(
-        // `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/forgot-password`,
-        "http://13.56.12.137:3005/api/v1/user/forgot-password",
+        `${getBaseUrl()}/api/v1/user/forgot-password`,
         {
           method: "POST",
           headers: {
@@ -283,8 +246,7 @@ export function InstructorSettings() {
 
     try {
       const response = await fetch(
-        // `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/forgot-password`,
-        "http://13.56.12.137:3005/api/v1/user/forgot-password",
+        `${getBaseUrl()}/api/v1/user/forgot-password`,
         {
           method: "POST",
           headers: {
@@ -317,21 +279,17 @@ export function InstructorSettings() {
     setOtpError("");
 
     try {
-      const response = await fetch(
-        // `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/verify-otp`,
-        "http://13.56.12.137:3005/api/v1/user/verify-otp",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            email: passwordResetEmail,
-            otp_code: otpCode,
-          }),
-        }
-      );
+      const response = await fetch(`${getBaseUrl()}/api/v1/user/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          email: passwordResetEmail,
+          otp_code: otpCode,
+        }),
+      });
 
       const data = await response.json();
 
@@ -375,8 +333,7 @@ export function InstructorSettings() {
 
     try {
       const response = await fetch(
-        // `${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/reset-password`,
-        "http://13.56.12.137:3005/api/v1/user/reset-password",
+        `${getBaseUrl()}/api/v1/user/reset-password`,
         {
           method: "POST",
           headers: {

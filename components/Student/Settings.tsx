@@ -6,7 +6,7 @@ import { useFormik } from "formik";
 import { z } from "zod";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useLearnerStore } from "@/store/useLearnerStore";
-import { useUpload } from "@/hooks/useUpload";
+import { getBaseUrl } from "@/lib/config/api";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Card,
@@ -70,7 +70,7 @@ const accountSettingsSchema = z.object({
 type AccountSettingsFormValues = z.infer<typeof accountSettingsSchema>;
 
 export function StudentSettings() {
-  const { user } = useAuth();
+  const { user, updateProfilePictureUrl } = useAuth();
   const {
     profile,
     loading,
@@ -80,42 +80,11 @@ export function StudentSettings() {
     clearError,
   } = useLearnerStore();
 
-  const { useGetAssetById } = useUpload();
-
   const [activeTab, setActiveTab] = useState("account");
   const [profilePictureId, setProfilePictureId] = useState<number | null>(null);
-  const uploadedPictureIdRef = React.useRef<number | null>(null); // Track uploaded ID
-
-  // Fetch profile picture asset only when we have a valid ID
-  const { data: profilePictureAsset, isLoading: isLoadingAsset } =
-    useGetAssetById(profilePictureId || 0);
-
-  // Get the image URL (prefer presigned_url for S3, fallback to file_url)
-  const profilePictureUrl = React.useMemo(() => {
-    if (!profilePictureAsset) return null;
-    return (
-      profilePictureAsset.presigned_url || profilePictureAsset.file_url || null
-    );
-  }, [profilePictureAsset]);
-
-  // Debug logging
-  React.useEffect(() => {
-    if (profilePictureId) {
-      // eslint-disable-next-line no-console
-      console.log("🖼️ Profile Picture ID changed to:", profilePictureId);
-      // eslint-disable-next-line no-console
-      console.log("🖼️ Asset data:", profilePictureAsset);
-      // eslint-disable-next-line no-console
-      console.log("🖼️ Image URL:", profilePictureUrl);
-      // eslint-disable-next-line no-console
-      console.log("🖼️ Is loading asset:", isLoadingAsset);
-    }
-  }, [
-    profilePictureId,
-    profilePictureAsset,
-    profilePictureUrl,
-    isLoadingAsset,
-  ]);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(
+    null
+  );
 
   const [accountSuccess, setAccountSuccess] = useState("");
   const [accountError, setAccountError] = useState("");
@@ -144,32 +113,15 @@ export function StudentSettings() {
   // Update form when profile is loaded
   useEffect(() => {
     if (profile) {
-      // eslint-disable-next-line no-console
-      console.log("✅ Profile loaded in Settings:", profile);
-      // eslint-disable-next-line no-console
-      console.log(
-        "✅ Setting profilePictureId state to:",
-        profile.profile_picture
-      );
-      // eslint-disable-next-line no-console
-      console.log(
-        "✅ Current uploadedPictureIdRef.current:",
-        uploadedPictureIdRef.current
-      );
-
       accountFormik.setValues({
         firstName: profile.first_name || "",
         lastName: profile.last_name || "",
         phoneNumber: profile.phone_number || "",
         dateOfBirth: profile.date_of_birth || "",
       });
-      
-      // If backend returned null but we have an uploaded ID, preserve it
-      const pictureId = profile.profile_picture || uploadedPictureIdRef.current;
-      setProfilePictureId(pictureId);
 
-      // eslint-disable-next-line no-console
-      console.log("✅ profilePictureId state updated to:", pictureId);
+      setProfilePictureId(profile.profile_picture);
+      setProfilePictureUrl(profile.profile_picture_url || null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
@@ -210,54 +162,24 @@ export function StudentSettings() {
       clearError();
 
       try {
-        // Use the ref value if state is somehow null
-        const finalProfilePictureId = profilePictureId !== null 
-          ? profilePictureId 
-          : uploadedPictureIdRef.current;
+        const oldProfilePictureId = profile?.profile_picture;
 
         const payload = {
           first_name: values.firstName,
           last_name: values.lastName,
           phone_number: values.phoneNumber || null,
           date_of_birth: values.dateOfBirth || null,
-          profile_picture: finalProfilePictureId, // Backend expects profile_picture (not profile_picture_id)
+          profile_picture_id: profilePictureId, // Backend expects profile_picture_id
         };
-
-        // eslint-disable-next-line no-console
-        console.log("📤 ==========  Student Settings Update ==========");
-        // eslint-disable-next-line no-console
-        console.log("📤 profilePictureId state value:", profilePictureId);
-        // eslint-disable-next-line no-console
-        console.log("📤 uploadedPictureIdRef.current:", uploadedPictureIdRef.current);
-        // eslint-disable-next-line no-console
-        console.log("📤 finalProfilePictureId (what we're sending):", finalProfilePictureId);
-        // eslint-disable-next-line no-console
-        console.log("📤 profilePictureId type:", typeof finalProfilePictureId);
-        // eslint-disable-next-line no-console
-        console.log("📤 Full payload:", JSON.stringify(payload, null, 2));
-        // eslint-disable-next-line no-console
-        console.log("📤 ============================================");
 
         const updatedProfile = await updateProfile(payload);
 
-        // eslint-disable-next-line no-console
-        console.log("📥 ==========  Backend Response ==========");
-        // eslint-disable-next-line no-console
-        console.log("📥 Received profile:", updatedProfile);
-        // eslint-disable-next-line no-console
-        console.log("📥 profile_picture from backend:", updatedProfile.profile_picture);
-        // eslint-disable-next-line no-console
-        console.log("📥 ========================================");
-
-        // If backend returned null, keep our uploaded value
-        if (!updatedProfile.profile_picture && finalProfilePictureId) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            "⚠️  Backend returned null profile_picture, but we sent:",
-            finalProfilePictureId
-          );
-          // eslint-disable-next-line no-console
-          console.warn("⚠️  This is a BACKEND BUG - it's not saving the profile_picture!");
+        // If profile picture was updated, update the header avatar
+        if (
+          oldProfilePictureId !== updatedProfile.profile_picture &&
+          updatedProfile.profile_picture_url
+        ) {
+          updateProfilePictureUrl(updatedProfile.profile_picture_url);
         }
 
         setAccountSuccess("Profile updated successfully!");
@@ -284,7 +206,7 @@ export function StudentSettings() {
 
     try {
       const response = await fetch(
-        "http://13.56.12.137:3005/api/v1/user/forgot-password",
+        `${getBaseUrl()}/api/v1/user/forgot-password`,
         {
           method: "POST",
           headers: {
@@ -325,7 +247,7 @@ export function StudentSettings() {
 
     try {
       const response = await fetch(
-        "http://13.56.12.137:3005/api/v1/user/forgot-password",
+        `${getBaseUrl()}/api/v1/user/forgot-password`,
         {
           method: "POST",
           headers: {
@@ -358,20 +280,17 @@ export function StudentSettings() {
     setOtpError("");
 
     try {
-      const response = await fetch(
-        "http://13.56.12.137:3005/api/v1/user/verify-otp",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            email: passwordResetEmail,
-            otp_code: otpCode,
-          }),
-        }
-      );
+      const response = await fetch(`${getBaseUrl()}/api/v1/user/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          email: passwordResetEmail,
+          otp_code: otpCode,
+        }),
+      });
 
       const data = await response.json();
 
@@ -415,7 +334,7 @@ export function StudentSettings() {
 
     try {
       const response = await fetch(
-        "http://13.56.12.137:3005/api/v1/user/reset-password",
+        `${getBaseUrl()}/api/v1/user/reset-password`,
         {
           method: "POST",
           headers: {
@@ -508,34 +427,16 @@ export function StudentSettings() {
                     currentImageUrl={profilePictureUrl}
                     currentAssetId={profilePictureId}
                     fallbackText={getInitials()}
-                    onAssetIdChange={(assetId) => {
-                      // eslint-disable-next-line no-console
-                      console.log(
-                        "📸 ==========  Profile Picture Upload Callback =========="
-                      );
-                      // eslint-disable-next-line no-console
-                      console.log("📸 onAssetIdChange called with ID:", assetId);
-                      // eslint-disable-next-line no-console
-                      console.log("📸 ID type:", typeof assetId);
-                      // eslint-disable-next-line no-console
-                      console.log("📸 Previous profilePictureId state:", profilePictureId);
-                      
-                      setProfilePictureId(assetId);
-                      uploadedPictureIdRef.current = assetId; // Store in ref
-                      
-                      // eslint-disable-next-line no-console
-                      console.log("📸 setProfilePictureId called with:", assetId);
-                      // eslint-disable-next-line no-console
-                      console.log("📸 uploadedPictureIdRef.current set to:", assetId);
-                      // eslint-disable-next-line no-console
-                      console.log("📸 ===============================================");
-                    }}
+                    onAssetIdChange={setProfilePictureId}
                     size="lg"
                   />
                   {/* Debug display */}
                   {process.env.NODE_ENV === "development" && (
-                    <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
-                      <p>Current profilePictureId state: <strong>{String(profilePictureId)}</strong></p>
+                    <div className="text-xs hidden  text-muted-foreground p-2 bg-muted rounded">
+                      <p>
+                        Current profilePictureId state:{" "}
+                        <strong>{String(profilePictureId)}</strong>
+                      </p>
                       <p>Type: {typeof profilePictureId}</p>
                     </div>
                   )}

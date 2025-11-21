@@ -10,6 +10,7 @@ export interface InstructorProfile {
   phone_number: string | null;
   specialization: string;
   profile_picture_id: number | null;
+  profile_picture_url: string;
   bio: string;
   created_at: string;
   updated_at: string;
@@ -66,7 +67,8 @@ export const useInstructorStore = create<InstructorStore>((set) => ({
         last_name: string;
         phone_number: string | null;
         specialization: string;
-        profile_picture_id: number | null; // Backend returns profile_picture_id
+        profile_picture_id: number | null;
+        profile_picture_url: string;
         bio: string;
         created_at: string;
         updated_at: string;
@@ -78,7 +80,8 @@ export const useInstructorStore = create<InstructorStore>((set) => ({
         last_name: response.data.last_name,
         phone_number: response.data.phone_number,
         specialization: response.data.specialization,
-        profile_picture_id: response.data.profile_picture_id, // Map profile_picture_id to profile_picture_id
+        profile_picture_id: response.data.profile_picture_id,
+        profile_picture_url: response.data.profile_picture_url,
         bio: response.data.bio,
         created_at: response.data.created_at,
         updated_at: response.data.updated_at,
@@ -128,7 +131,8 @@ export const useInstructorStore = create<InstructorStore>((set) => ({
         last_name: string;
         phone_number: string | null;
         specialization: string;
-        profile_picture_id: number | null; // Backend returns profile_picture
+        profile_picture_id: number | null;
+        profile_picture_url: string;
         bio: string;
         created_at: string;
         updated_at: string;
@@ -140,7 +144,8 @@ export const useInstructorStore = create<InstructorStore>((set) => ({
         last_name: response.data.last_name,
         phone_number: response.data.phone_number,
         specialization: response.data.specialization,
-        profile_picture_id: response.data.profile_picture_id, // Map profile_picture to profile_picture_id
+        profile_picture_id: response.data.profile_picture_id,
+        profile_picture_url: response.data.profile_picture_url,
         bio: response.data.bio,
         created_at: response.data.created_at,
         updated_at: response.data.updated_at,

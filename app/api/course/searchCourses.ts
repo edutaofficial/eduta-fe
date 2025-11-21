@@ -43,6 +43,7 @@ export interface CourseStats {
   totalDurationFormatted: string;
   avgRating: string;
   totalReviews: number;
+  viewsCount: number;
 }
 
 export interface PublicCourse {

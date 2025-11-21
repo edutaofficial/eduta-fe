@@ -71,6 +71,7 @@ export async function magicalTokenRefresh(): Promise<string | null> {
     const session = await getSession();
     
     if (!session) {
+      // eslint-disable-next-line no-console
       console.error("No session found");
       return null;
     }
@@ -79,6 +80,7 @@ export async function magicalTokenRefresh(): Promise<string | null> {
     const refreshToken = (session as unknown as { refreshToken?: string })?.refreshToken;
     
     if (!refreshToken) {
+      // eslint-disable-next-line no-console
       console.error("No refresh token found in session");
       // If no refresh token, user needs to login again
       await signOut({ redirect: true, callbackUrl: "/login" });
@@ -149,6 +151,7 @@ export async function magicalTokenRefresh(): Promise<string | null> {
     return newAccessToken;
   } catch (error) {
     isRefreshing = false;
+    // eslint-disable-next-line no-console
     console.error("Token refresh failed:", error);
     
     // If refresh fails, user needs to login again
@@ -166,6 +169,7 @@ export async function magicalTokenRefresh(): Promise<string | null> {
 export async function verifyAndRefreshToken(token: string): Promise<string | null> {
   // Check if token is expired
   if (isTokenExpired(token)) {
+    // eslint-disable-next-line no-console
     console.log("Token expired, refreshing...");
     return await magicalTokenRefresh();
   }

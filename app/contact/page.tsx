@@ -157,9 +157,9 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-default-900 mb-1">Phone</h3>
-                  <p className="text-default-700">051-000-000-00</p>
+                  <p className="text-default-700">+1 (289) 698-5448</p>
                   <p className="text-sm text-default-600">
-                    Monday - Friday, 9am - 6pm PST
+                    Monday - Friday, 9am - 6pm EST
                   </p>
                 </div>
               </div>
@@ -170,14 +170,16 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-default-900 mb-1">
-                    Office
+                    Office Address
                   </h3>
                   <p className="text-default-700">
-                    123 Learning Street
+                    Eduta, Inc.
                     <br />
-                    San Francisco, CA 94102
+                    169 Fifth Avenue
                     <br />
-                    United States
+                    Kitchener, Ontario, N2C 1P6
+                    <br />
+                    Canada
                   </p>
                 </div>
               </div>

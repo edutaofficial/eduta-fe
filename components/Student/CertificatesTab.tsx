@@ -130,6 +130,7 @@ export function CertificatesTab() {
               {filteredCertificates.map((certificate) => (
                 <TableRow key={certificate.certificateId} className="hover:bg-default-50">
                   <TableCell className="font-medium">
+                    {certificate.certificateUrl ? (
                     <Link
                       href={certificate.certificateUrl}
                       target="_blank"
@@ -138,6 +139,11 @@ export function CertificatesTab() {
                       {certificate.courseTitle}
                       <ExternalLinkIcon className="size-4" />
                     </Link>
+                    ) : (
+                      <span className="text-default-900 flex items-center gap-2">
+                        {certificate.courseTitle}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-default-700">
                     {certificate.instructorName}
@@ -159,7 +165,7 @@ export function CertificatesTab() {
                       size="sm"
                       className="w-full"
                     >
-                      <Link href={`/certificate/verify?code=${certificate.verificationCode}`}>
+                      <Link href={`/certificate/verify/${certificate.certificateId}`}>
                         Verification Link
                       </Link>
                     </Button>

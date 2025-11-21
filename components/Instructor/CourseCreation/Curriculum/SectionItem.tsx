@@ -100,7 +100,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
 
           {/* Lectures */}
           <div className="space-y-4 border-t pt-4 mt-4">
-            <h3 className="font-medium">Lectures</h3>
+              <h3 className="font-medium">Lectures</h3>
 
             <CourseAccordion
               type="multiple"

@@ -5,8 +5,8 @@ export interface CourseDetailInstructor {
   instructorId: number;
   name: string;
   bio: string;
-  professionalTitle: string;
-  profilePictureId: number;
+  professionalTitle: string | null;
+  profilePictureId: number | null;
   profilePictureUrl: string | null;
 }
 
@@ -26,12 +26,14 @@ export interface CourseDetailPricing {
 }
 
 export interface CourseDetailStats {
-  avgRating: number;
+  avgRating: number | null;
   totalReviews: number;
   totalStudents: number;
   totalLectures: number;
   totalSections: number;
   totalDuration: number;
+  totalExercises: number;
+  totalProjects: number;
   viewsCount: number;
 }
 
@@ -68,6 +70,26 @@ export interface CoursePreviewLecture {
   isPreview: boolean;
 }
 
+export interface CourseDetailLecture {
+  lectureId: string;
+  title: string;
+  description: string;
+  duration: number;
+  durationFormatted: string;
+  videoId: number;
+  isPreview: boolean;
+  displayOrder: number;
+  lectureType: string;
+}
+
+export interface CourseDetailSection {
+  sectionId: string;
+  title: string;
+  description: string;
+  displayOrder: number;
+  lectures: CourseDetailLecture[];
+}
+
 export interface CourseDetail {
   courseId: string;
   title: string;
@@ -81,10 +103,10 @@ export interface CourseDetail {
   promoVideoUrl: string | null;
   courseBannerId: number;
   courseBannerUrl: string;
-  courseLogoId: number;
-  courseLogoUrl: string;
-  welcomeMessage: string;
-  congratulationMessage: string;
+  courseLogoId: number | null;
+  courseLogoUrl: string | null;
+  welcomeMessage: string | null;
+  congratulationMessage: string | null;
   isEnrolled: boolean;
   enrollmentId: string | null;
   instructor: CourseDetailInstructor;
@@ -95,7 +117,9 @@ export interface CourseDetail {
   requirements: CourseRequirement[];
   targetAudience: CourseTargetAudience[];
   tags: CourseTag[];
+  sections: CourseDetailSection[];
   previewLectures: CoursePreviewLecture[];
+  reviews: unknown[];
   publishedAt: string;
   createdAt: string;
   updatedAt: string;

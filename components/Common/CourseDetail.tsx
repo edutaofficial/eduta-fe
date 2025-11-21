@@ -31,13 +31,15 @@ import {
   UserIcon,
   ChevronDownIcon,
   ArrowRightIcon,
+  LockIcon,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCourseStore } from "@/store/useCourseStore";
 import FAQComponent from "../Home/FAQ";
 import { useAuth } from "@/lib/context/AuthContext";
 import { VideoPlayer } from "../Learn/VideoPlayer";
+import { useUpload } from "@/hooks/useUpload";
 
 import type { CourseDetail as CourseDetailAPI } from "@/app/api/course/getCourseDetail";
 import type { CourseReview } from "@/app/api/learner/reviews";
@@ -78,6 +80,8 @@ interface CourseData {
       id: string;
       title: string;
       duration?: string | number;
+      isPreview?: boolean;
+      videoId?: number;
     }>;
   }>;
   promoVideo?: string | number | null;
@@ -146,6 +150,12 @@ export function CourseDetail({
   const [showAllSections, setShowAllSections] = React.useState(false);
   const [showFullDescription, setShowFullDescription] = React.useState(false);
   const [showPromoVideo, setShowPromoVideo] = React.useState(false);
+  const [selectedLecture, setSelectedLecture] = React.useState<{
+    lectureId: string;
+    title: string;
+    videoId: number;
+  } | null>(null);
+  const { useGetAssetById } = useUpload();
 
   // Update wishlist state when prop changes
   React.useEffect(() => {
@@ -187,7 +197,7 @@ export function CourseDetail({
         subHeading: apiCourseData.category.name,
         duration: formatDuration(apiCourseData.stats.totalDuration),
         viewsCount: apiCourseData.stats.viewsCount || 0,
-        rating: apiCourseData.stats.avgRating,
+        rating: apiCourseData.stats.avgRating ?? undefined,
         ratingCount: apiCourseData.stats.totalReviews,
         enrollments: apiCourseData.stats.totalStudents,
         learningPoints: apiCourseData.learningPoints.map(
@@ -195,24 +205,28 @@ export function CourseDetail({
         ),
         description: apiCourseData.fullDescription,
         outline:
-          apiCourseData.previewLectures.length > 0
-            ? [
-                {
-                  id: "preview",
-                  title: "Preview Lectures",
-                  lectures: apiCourseData.previewLectures.map((lecture) => ({
-                    id: lecture.lectureId,
-                    title: lecture.title,
-                    duration: lecture.durationFormatted,
-                  })),
-                },
-              ]
+          apiCourseData.sections && apiCourseData.sections.length > 0
+            ? apiCourseData.sections
+                .sort((a, b) => a.displayOrder - b.displayOrder)
+                .map((section) => ({
+                  id: section.sectionId,
+                  title: section.title,
+                  lectures: section.lectures
+                    .sort((a, b) => a.displayOrder - b.displayOrder)
+                    .map((lecture) => ({
+                      id: lecture.lectureId,
+                      title: lecture.title,
+                      duration: lecture.durationFormatted,
+                      isPreview: lecture.isPreview,
+                      videoId: lecture.videoId,
+                    })),
+                }))
             : [],
         promoVideo: apiCourseData.promoVideoId,
         instructor: {
           id: apiCourseData.instructor.instructorId,
           name: apiCourseData.instructor.name,
-          title: apiCourseData.instructor.professionalTitle,
+          title: apiCourseData.instructor.professionalTitle || "Instructor",
           bio: apiCourseData.instructor.bio,
           avatar: apiCourseData.instructor.profilePictureUrl,
           rating: undefined,
@@ -474,23 +488,63 @@ export function CourseDetail({
                         </AccordionTrigger>
                         <AccordionContent>
                           <div className="space-y-3 pt-2">
-                            {section.lectures.map((lecture) => (
-                              <div
-                                key={lecture.id}
-                                className="flex items-center justify-between py-2 px-3 hover:bg-default-100 rounded-md transition-colors"
-                              >
-                                <div className="flex items-center gap-3 flex-1">
-                                  <VideoIcon className="size-5 text-error-700 shrink-0" />
+                            {section.lectures.map((lecture) => {
+                              const isPreview = lecture.isPreview ?? false;
+                              const handleLectureClick = () => {
+                                if (isPreview && lecture.videoId) {
+                                  setSelectedLecture({
+                                    lectureId: lecture.id,
+                                    title: lecture.title,
+                                    videoId: lecture.videoId,
+                                  });
+                                }
+                              };
 
-                                  <span className="text-default-700">
-                                    {lecture.title}
+                              return isPreview ? (
+                                <button
+                                  key={lecture.id}
+                                  type="button"
+                                  onClick={handleLectureClick}
+                                  className="flex items-center justify-between py-2 px-3 rounded-md transition-colors hover:bg-default-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 w-full text-left"
+                                >
+                                  <div className="flex items-center gap-3 flex-1">
+                                    {isPreview ? (
+                                      <PlayIcon className="size-5 text-primary-600 shrink-0" />
+                                    ) : (
+                                      <LockIcon className="size-5 text-default-400 shrink-0" />
+                                    )}
+
+                                    <span
+                                      className={`${
+                                        isPreview
+                                          ? "text-default-700"
+                                          : "text-default-500"
+                                      }`}
+                                    >
+                                      {lecture.title}
+                                    </span>
+                                  </div>
+                                  <span className="text-sm text-default-600">
+                                    {formatLectureDuration(lecture.duration)}
+                                  </span>
+                                </button>
+                              ) : (
+                                <div
+                                  key={lecture.id}
+                                  className="flex items-center justify-between py-2 px-3 rounded-md transition-colors cursor-not-allowed opacity-60"
+                                >
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <LockIcon className="size-5 text-default-400 shrink-0" />
+                                    <span className="text-default-500">
+                                      {lecture.title}
+                                    </span>
+                                  </div>
+                                  <span className="text-sm text-default-600">
+                                    {formatLectureDuration(lecture.duration)}
                                   </span>
                                 </div>
-                                <span className="text-sm text-default-600">
-                                  {formatLectureDuration(lecture.duration)}
-                                </span>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </AccordionContent>
                       </AccordionItem>
@@ -897,6 +951,9 @@ export function CourseDetail({
       {/* Promo Video Dialog */}
       <Dialog open={showPromoVideo} onOpenChange={setShowPromoVideo}>
         <DialogContent className="max-w-7xl w-[95vw] p-0 gap-0 bg-black border-none">
+          <DialogTitle className="sr-only">
+            Course Preview: {courseData.title}
+          </DialogTitle>
           {/* Close Button - Always visible */}
           <button
             onClick={() => setShowPromoVideo(false)}
@@ -976,6 +1033,130 @@ export function CourseDetail({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Lecture Preview Video Dialog */}
+      {selectedLecture && (
+        <LecturePreviewDialog
+          lecture={selectedLecture}
+          courseTitle={courseData.title}
+          onClose={() => setSelectedLecture(null)}
+          useGetAssetById={useGetAssetById}
+        />
+      )}
     </div>
+  );
+}
+
+// Separate component for lecture preview dialog
+interface LecturePreviewDialogProps {
+  lecture: {
+    lectureId: string;
+    title: string;
+    videoId: number;
+  };
+  courseTitle: string;
+  onClose: () => void;
+  useGetAssetById: (assetId: number) => {
+    data: { presigned_url?: string; file_url?: string } | undefined;
+    isLoading: boolean;
+  };
+}
+
+function LecturePreviewDialog({
+  lecture,
+  courseTitle,
+  onClose,
+  useGetAssetById,
+}: LecturePreviewDialogProps) {
+  const { data: videoAsset, isLoading: videoAssetLoading } = useGetAssetById(
+    lecture.videoId
+  );
+
+  const videoUrl = React.useMemo(() => {
+    if (!videoAsset) return null;
+    return videoAsset.presigned_url || videoAsset.file_url || null;
+  }, [videoAsset]);
+
+  return (
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-7xl w-[95vw] p-0 gap-0 bg-black border-none">
+        <DialogTitle className="sr-only">
+          Lecture Preview: {lecture.title} - {courseTitle}
+        </DialogTitle>
+        {/* Close Button - Always visible */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full p-2.5 transition-all group"
+          aria-label="Close video"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="size-6 text-white group-hover:scale-110 transition-transform"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+
+        {/* Header with course info */}
+        <div className="bg-gradient-to-b from-black/90 to-transparent px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary-600 rounded-full p-2">
+              <PlayIcon className="size-4 text-white fill-white" />
+            </div>
+            <div>
+              <h3 className="text-white font-semibold line-clamp-1">
+                {lecture.title}
+              </h3>
+              <p className="text-white/70 text-xs">{courseTitle}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Video Container - No overlays blocking controls */}
+        <div className="relative w-full aspect-video bg-black">
+          {videoAssetLoading ? (
+            <div className="w-full h-full flex flex-col items-center justify-center text-white gap-4">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary-500 border-t-transparent" />
+              <p className="text-lg font-medium">Loading video preview...</p>
+            </div>
+          ) : videoUrl ? (
+            <div className="w-full h-full">
+              <VideoPlayer
+                videoUrl={videoUrl}
+                startPosition={0}
+                onProgressUpdate={() => {}}
+                onVideoEnd={() => {}}
+              />
+            </div>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-white gap-4">
+              <VideoIcon className="size-16 text-white/40" />
+              <p className="text-lg font-medium">Video not available</p>
+              <p className="text-sm text-white/60">
+                This preview video could not be loaded
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom info bar - Doesn't overlay video controls */}
+        <div className="bg-gradient-to-t from-black/90 to-transparent px-6 py-3">
+          <div className="flex items-center justify-between text-white/80 text-sm">
+            <div className="flex items-center gap-4">
+              <span className="text-white/50 text-xs">Lecture Preview</span>
+            </div>
+            <span className="text-white/50 text-xs">Press ESC to close</span>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
