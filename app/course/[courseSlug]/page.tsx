@@ -346,7 +346,7 @@ export default function CourseDetailPage() {
             </DialogTitle>
           </DialogHeader>
           <div
-            className="prose prose-lg max-w-none py-4"
+            className="course-description py-4"
             dangerouslySetInnerHTML={{ __html: welcomeMessage }}
           />
           <DialogFooter>

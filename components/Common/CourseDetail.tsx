@@ -8,7 +8,6 @@ import {
   Breadcrumb,
   BreadcrumbList,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
@@ -214,7 +213,7 @@ export function CourseDetail({
                     .map((lecture) => ({
                       id: lecture.lectureId,
                       title: lecture.title,
-                      duration: lecture.durationFormatted,
+                      duration: lecture.duration,
                       isPreview: lecture.isPreview,
                       videoId: lecture.videoId,
                     })),
@@ -336,21 +335,15 @@ export function CourseDetail({
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem>
-                    <BreadcrumbLink
-                      href="/"
-                      className="text-primary-400 hover:text-primary-500"
-                    >
+                    <span className="text-default-900">
                       Eduta
-                    </BreadcrumbLink>
+                    </span>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <BreadcrumbLink
-                      href={`/category/${courseData.category?.toLowerCase().replace(/\s+/g, "-") || "category"}`}
-                      className="text-default-900 hover:text-primary-400"
-                    >
+                    <span className="text-default-900">
                       {courseData.category || "Category"}
-                    </BreadcrumbLink>
+                    </span>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
@@ -574,7 +567,7 @@ export function CourseDetail({
                     Course Description
                   </h2>
                   <div
-                    className={`prose prose-lg max-w-none text-default-700 transition-all duration-300 ${
+                    className={`course-description transition-all duration-300 ${
                       !showFullDescription
                         ? "max-h-96 overflow-hidden relative"
                         : ""

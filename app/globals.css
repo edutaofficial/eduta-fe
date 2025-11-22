@@ -721,3 +721,330 @@ html {
     font-size: 0.875rem;
   }
 }
+
+/* Course Description Styles */
+.course-description {
+  color: var(--color-default-700);
+  line-height: 1.75;
+}
+
+.course-description h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-default-900);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.course-description h2 {
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: var(--color-default-900);
+  margin-top: 1.75rem;
+  margin-bottom: 0.875rem;
+  line-height: 1.35;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--color-default-200);
+}
+
+.course-description h3 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--color-default-900);
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.course-description h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-default-800);
+  margin-top: 1.25rem;
+  margin-bottom: 0.625rem;
+  line-height: 1.45;
+}
+
+.course-description h5 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-default-800);
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.course-description h6 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-default-700);
+  margin-top: 0.875rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.course-description p {
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--color-default-700);
+  margin-bottom: 1.25rem;
+}
+
+.course-description p:first-child {
+  margin-top: 0;
+}
+
+.course-description p:last-child {
+  margin-bottom: 0;
+}
+
+.course-description strong,
+.course-description b {
+  font-weight: 700;
+  color: var(--color-default-900);
+}
+
+.course-description em,
+.course-description i {
+  font-style: italic;
+  color: var(--color-default-700);
+}
+
+.course-description a {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s ease;
+}
+
+.course-description a:hover {
+  color: var(--color-primary-700);
+  text-decoration-color: var(--color-primary-700);
+}
+
+.course-description ul,
+.course-description ol {
+  margin: 1.25rem 0;
+  padding-left: 2rem;
+}
+
+.course-description ul {
+  list-style-type: disc;
+}
+
+.course-description ol {
+  list-style-type: decimal;
+}
+
+.course-description li {
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--color-default-700);
+  margin-bottom: 0.625rem;
+  padding-left: 0.5rem;
+}
+
+.course-description li::marker {
+  color: var(--color-primary-600);
+  font-weight: 600;
+}
+
+.course-description ul ul,
+.course-description ol ol,
+.course-description ul ol,
+.course-description ol ul {
+  margin: 0.5rem 0;
+}
+
+.course-description code {
+  background-color: var(--color-default-100);
+  color: var(--color-error-600);
+  padding: 0.1875rem 0.4375rem;
+  border-radius: 0.375rem;
+  font-size: 0.875em;
+  font-family: "Monaco", "Courier New", monospace;
+  font-weight: 500;
+}
+
+.course-description pre {
+  background-color: var(--color-default-100);
+  color: var(--color-default-900);
+  padding: 1.25rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border: 1px solid var(--color-default-200);
+}
+
+.course-description pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.9375rem;
+}
+
+.course-description blockquote {
+  border-left: 4px solid var(--color-primary-400);
+  padding-left: 1.5rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: var(--color-default-600);
+  background-color: var(--color-default-50);
+  padding: 1.25rem 1.5rem;
+  border-radius: 0.375rem;
+}
+
+.course-description blockquote p {
+  margin-bottom: 0.5rem;
+}
+
+.course-description blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.course-description img {
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin: 1.5rem auto;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.course-description hr {
+  border: none;
+  border-top: 2px solid var(--color-default-200);
+  margin: 2rem 0;
+}
+
+.course-description table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  display: block;
+}
+
+.course-description thead {
+  background-color: var(--color-default-100);
+}
+
+.course-description th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-default-900);
+  border: 1px solid var(--color-default-200);
+  font-size: 0.9375rem;
+}
+
+.course-description td {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-default-200);
+  color: var(--color-default-700);
+  font-size: 0.9375rem;
+}
+
+.course-description tbody tr:nth-child(even) {
+  background-color: var(--color-default-50);
+}
+
+.course-description tbody tr:hover {
+  background-color: var(--color-default-100);
+}
+
+.course-description dl {
+  margin: 1.25rem 0;
+}
+
+.course-description dt {
+  font-weight: 600;
+  color: var(--color-default-900);
+  margin-top: 0.875rem;
+  font-size: 1rem;
+}
+
+.course-description dd {
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  color: var(--color-default-700);
+  font-size: 1rem;
+}
+
+.course-description kbd {
+  background-color: var(--color-default-100);
+  border: 1px solid var(--color-default-200);
+  border-radius: 0.25rem;
+  padding: 0.1875rem 0.4375rem;
+  font-family: "Monaco", "Courier New", monospace;
+  font-size: 0.875rem;
+  color: var(--color-default-900);
+}
+
+.course-description mark {
+  background-color: var(--color-warning-200);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  color: var(--color-default-900);
+}
+
+.course-description sub,
+.course-description sup {
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+.course-description sub {
+  bottom: -0.25em;
+}
+
+.course-description sup {
+  top: -0.5em;
+}
+
+.course-description abbr {
+  text-decoration: underline dotted;
+  cursor: help;
+}
+
+/* Mobile responsiveness for course description */
+@media (max-width: 768px) {
+  .course-description h1 {
+    font-size: 1.75rem;
+  }
+
+  .course-description h2 {
+    font-size: 1.5rem;
+  }
+
+  .course-description h3 {
+    font-size: 1.25rem;
+  }
+
+  .course-description h4 {
+    font-size: 1.125rem;
+  }
+
+  .course-description p,
+  .course-description li {
+    font-size: 0.9375rem;
+  }
+
+  .course-description pre {
+    padding: 1rem;
+    font-size: 0.875rem;
+  }
+
+  .course-description table {
+    font-size: 0.875rem;
+  }
+
+  .course-description ul,
+  .course-description ol {
+    padding-left: 1.5rem;
+  }
+}
