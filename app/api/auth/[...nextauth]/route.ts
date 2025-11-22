@@ -47,7 +47,7 @@ async function handleOAuthUser(
     }
 
     return { token, refresh_token, payload };
-  } catch (loginError) {
+  } catch {
     // If login fails, user doesn't exist - create account
     // eslint-disable-next-line no-console
     console.log(`User ${email} not found, creating new account via ${provider}`);
@@ -201,7 +201,7 @@ export const authOptions: NextAuthOptions = {
       // For credentials provider, allow sign-in
       return true;
     },
-    async jwt({ token, user, trigger, session, account }) {
+    async jwt({ token, user, trigger, session, account: _account }) {
       // Initial sign in - store tokens from user object
       if (user) {
         (token as unknown as Record<string, unknown>).role = (user as unknown as { role?: string }).role;
