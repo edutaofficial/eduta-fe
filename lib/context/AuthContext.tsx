@@ -199,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           password,
           confirm_password: password,
           user_type,
+          provider: "local", // Explicitly set provider for local signup
           professional_title:
             role === "instructor" ? options?.professionalTitle || "" : "",
           bio: role === "instructor" ? options?.bio || "" : "",
