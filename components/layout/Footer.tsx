@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -11,10 +13,20 @@ import {
   YoutubeIcon,
   MailIcon,
   PhoneIcon,
+  MapPin,
 } from "lucide-react";
+import { useCategoryStore } from "@/store/useCategoryStore";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const { categories, loading, fetchCategories } = useCategoryStore();
+
+  // Fetch categories on mount
+  React.useEffect(() => {
+    if (categories.length === 0) {
+      fetchCategories();
+    }
+  }, [categories.length, fetchCategories]);
 
   const socialIcons = [
     {
@@ -84,30 +96,134 @@ export default function Footer() {
               </div>
               <span>{CONSTANTS.CONTACT_INFO.phone}</span>
             </a>
+            <div className="flex items-start gap-3 text-default-200 text-sm">
+              <div className="size-8 rounded-lg bg-primary-800 flex items-center justify-center text-default-200 shrink-0">
+                <MapPin className="size-4" />
+              </div>
+              <div>
+                <p className="font-medium">{CONSTANTS.CONTACT_INFO.address.company}</p>
+                <p>{CONSTANTS.CONTACT_INFO.address.street}</p>
+                <p>
+                  {CONSTANTS.CONTACT_INFO.address.city}, {CONSTANTS.CONTACT_INFO.address.province}, {CONSTANTS.CONTACT_INFO.address.postalCode}
+                </p>
+                <p>{CONSTANTS.CONTACT_INFO.address.country}</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12 mb-12">
-          {CONSTANTS.FOOTER_CATEGORIES.map((category) => (
-            <div key={`${category.id}-${category.title}`}>
-              <h3 className="text-default-50 font-bold text-base mb-4">
-                {category.title}
-              </h3>
-              <ul className="space-y-2.5">
-                {category.links.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        {/* Links Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-8 lg:gap-12 mb-12">
+          {/* Company Section */}
+          <div>
+            <h3 className="text-default-50 font-bold text-base mb-4">Company</h3>
+            <ul className="space-y-2.5">
+              <li>
+                <Link
+                  href="/about"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/contact"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/blog"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  Blog
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Support Section */}
+          <div>
+            <h3 className="text-default-50 font-bold text-base mb-4">Support</h3>
+            <ul className="space-y-2.5">
+              <li>
+                <Link
+                  href="/faqs"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  FAQs
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/privacy"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms"
+                  className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                >
+                  Terms & Conditions
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {loading ? (
+            // Skeleton Loading State for Categories
+            <>
+              {[...Array(4)].map((_, i) => (
+                <div key={i}>
+                  <div className="h-6 w-32 bg-primary-800 animate-pulse rounded mb-4" />
+                  <div className="space-y-2.5">
+                    {[...Array(5)].map((_, j) => (
+                      <div key={j} className="h-4 w-full bg-primary-800 animate-pulse rounded" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            // Dynamic Categories
+            <>
+              {categories.slice(0, 4).map((category) => (
+                <div key={category.categoryId}>
+                  <h3 className="text-default-50 font-bold text-base mb-4">
+                    {category.name}
+                  </h3>
+                  <ul className="space-y-2.5">
+                    {category.subcategories.slice(0, 5).map((subcategory) => (
+                      <li key={subcategory.categoryId}>
+                        <Link
+                          href={`/all-courses?categories=${subcategory.categoryId}`}
+                          className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
+                        >
+                          {subcategory.name}
+                        </Link>
+                      </li>
+                    ))}
+                    {category.subcategories.length > 5 && (
+                      <li>
+                        <Link
+                          href={`/all-courses?categories=${category.categoryId}`}
+                          className="text-primary-300 text-sm hover:text-primary-200 transition-colors inline-block font-medium"
+                        >
+                          View all →
+                        </Link>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              ))}
+            </>
+          )}
         </div>
 
         {/* Separator */}

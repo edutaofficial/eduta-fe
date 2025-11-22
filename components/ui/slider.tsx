@@ -119,6 +119,7 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
       React.useState<SwiperType | null>(null);
     const [paginationEl, setPaginationEl] =
       React.useState<HTMLDivElement | null>(null);
+    const [showNavigation, setShowNavigation] = React.useState(true);
 
     // Merge configs with defaults
     const navigation = navigationProp
@@ -143,6 +144,32 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
     // Handle swiper instance
     const handleSwiper = (swiper: SwiperType) => {
       setSwiperInstance(swiper);
+
+      // Check if navigation should be shown
+      const checkNavigationVisibility = () => {
+        if (swiper && slidesPerView === "auto") {
+          const { slides, width: containerWidth } = swiper;
+          let totalSlidesWidth = 0;
+
+          slides.forEach((slide) => {
+            totalSlidesWidth += slide.offsetWidth;
+          });
+
+          // Add space between slides
+          const totalSpaceBetween = (slides.length - 1) * spaceBetween;
+          totalSlidesWidth += totalSpaceBetween;
+
+          // Hide navigation if all slides fit in container
+          setShowNavigation(totalSlidesWidth > containerWidth);
+        } else {
+          setShowNavigation(true);
+        }
+      };
+
+      // Check immediately and on resize
+      checkNavigationVisibility();
+      swiper.on("resize", checkNavigationVisibility);
+
       onSwiper?.(swiper);
     };
 
@@ -150,9 +177,15 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
     const slides = React.Children.toArray(children);
 
     // Navigation button classes
-    const getNavigationButtonClasses = (isNext = false) => {
+    const getNavigationButtonClasses = (
+      isNext = false,
+      variant = "default"
+    ) => {
       const baseClasses =
         "absolute z-10 size-10 rounded-full bg-white shadow-lg hover:bg-default-600 transition-all bg-default-700 flex items-center justify-center text-default-50 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed";
+      if (variant === "outline") {
+        return cn(baseClasses, "border border-default-700");
+      }
 
       if (navigation.position === "outside") {
         return cn(
@@ -179,7 +212,14 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
     };
 
     return (
-      <div ref={ref} className={cn("relative", navigation.spacing, className)}>
+      <div
+        ref={ref}
+        className={cn(
+          "relative",
+          showNavigation && navigation.spacing,
+          className
+        )}
+      >
         <Swiper
           modules={modules}
           spaceBetween={spaceBetween}
@@ -219,7 +259,7 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
         </Swiper>
 
         {/* Custom Navigation Buttons */}
-        {navigation.enabled && navigation.showArrows && (
+        {navigation.enabled && navigation.showArrows && showNavigation && (
           <>
             {navigation.customPrevButton ? (
               <button
