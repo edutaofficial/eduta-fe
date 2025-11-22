@@ -28,12 +28,30 @@ async function handleOAuthUser(
   provider: "google" | "facebook",
   name: string
 ): Promise<{ token: string; refresh_token?: string; payload: Record<string, unknown> }> {
+  // eslint-disable-next-line no-console
+  console.log(`[OAuth] Starting authentication for ${email} via ${provider}`, {
+    email,
+    provider,
+    providerId: providerId.substring(0, 10) + "...", // Log partial ID for debugging
+    name,
+  });
+
   try {
+    // eslint-disable-next-line no-console
+    console.log(`[OAuth] Attempting login for existing user: ${email}`);
+    
     // Try to login first (user might already exist)
     const loginResponse = await loginUser({
       email,
       provider,
       providerId,
+    });
+
+    // eslint-disable-next-line no-console
+    console.log(`[OAuth] Login response received for ${email}`, {
+      hasToken: !!loginResponse.data.token,
+      hasRefreshToken: !!loginResponse.data.refresh_token,
+      status: loginResponse.status,
     });
 
     const { token, refresh_token } = loginResponse.data;
@@ -46,43 +64,99 @@ async function handleOAuthUser(
       throw new Error("Invalid token received");
     }
 
-    return { token, refresh_token, payload };
-  } catch {
-    // If login fails, user doesn't exist - create account
     // eslint-disable-next-line no-console
-    console.log(`User ${email} not found, creating new account via ${provider}`);
+    console.log(`[OAuth] Login successful for ${email}`, {
+      userId: payload.user_id,
+      userType: payload.user_type,
+      email: payload.email,
+    });
+
+    return { token, refresh_token, payload };
+  } catch (loginError) {
+    // If login fails, user doesn't exist - create account
+    const errorMessage = loginError instanceof Error ? loginError.message : "Unknown error";
+    // eslint-disable-next-line no-console
+    console.log(`[OAuth] Login failed for ${email}, attempting signup`, {
+      error: errorMessage,
+      provider,
+    });
 
     const [firstName, ...rest] = name.trim().split(" ");
     const lastName = rest.join(" ");
 
-    // Create new user via OAuth signup
-    await signupUser({
-      email,
-      first_name: firstName || name,
-      last_name: lastName || "",
-      user_type: "learner", // Default to learner for OAuth signups
-      provider,
-      providerId,
-    });
+    try {
+      // eslint-disable-next-line no-console
+      console.log(`[OAuth] Creating new account for ${email}`, {
+        firstName,
+        lastName,
+        userType: "learner",
+        provider,
+      });
 
-    // Now login with the newly created account
-    const loginResponse = await loginUser({
-      email,
-      provider,
-      providerId,
-    });
+      // Create new user via OAuth signup
+      const signupResponse = await signupUser({
+        email,
+        first_name: firstName || name,
+        last_name: lastName || "",
+        user_type: "learner", // Default to learner for OAuth signups
+        provider,
+        providerId,
+      });
 
-    const { token, refresh_token } = loginResponse.data;
-    if (!token) {
-      throw new Error("No token received after signup");
+      // eslint-disable-next-line no-console
+      console.log(`[OAuth] Signup successful for ${email}`, {
+        status: signupResponse.status,
+        userId: signupResponse.data?.user_id,
+      });
+
+      // eslint-disable-next-line no-console
+      console.log(`[OAuth] Attempting login after signup for ${email}`);
+
+      // Now login with the newly created account
+      const loginResponse = await loginUser({
+        email,
+        provider,
+        providerId,
+      });
+
+      // eslint-disable-next-line no-console
+      console.log(`[OAuth] Post-signup login response for ${email}`, {
+        hasToken: !!loginResponse.data.token,
+        hasRefreshToken: !!loginResponse.data.refresh_token,
+        status: loginResponse.status,
+      });
+
+      const { token, refresh_token } = loginResponse.data;
+      if (!token) {
+        throw new Error("No token received after signup");
+      }
+
+      const payload = decodeJwtPayload(token);
+      if (!payload) {
+        throw new Error("Invalid token received after signup");
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(`[OAuth] Post-signup login successful for ${email}`, {
+        userId: payload.user_id,
+        userType: payload.user_type,
+      });
+
+      return { token, refresh_token, payload };
+    } catch (signupError) {
+      // eslint-disable-next-line no-console
+      console.error(`[OAuth] Signup/login failed for ${email}:`, {
+        error: signupError instanceof Error ? signupError.message : "Unknown error",
+        stack: signupError instanceof Error ? signupError.stack : undefined,
+        provider,
+      });
+      
+      // Re-throw with more context
+      const errorMessage = signupError instanceof Error 
+        ? signupError.message 
+        : "Failed to create account via OAuth";
+      throw new Error(`OAuth authentication failed: ${errorMessage}`);
     }
-
-    const payload = decodeJwtPayload(token);
-    if (!payload) {
-      throw new Error("Invalid token received after signup");
-    }
-
-    return { token, refresh_token, payload };
   }
 }
 
@@ -162,16 +236,47 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
+      // eslint-disable-next-line no-console
+      console.log("[NextAuth] signIn callback triggered", {
+        provider: account?.provider,
+        hasProviderAccountId: !!account?.providerAccountId,
+        userEmail: user.email,
+        userName: user.name,
+      });
+
       // Handle OAuth sign-in (Google)
       if (account?.provider === "google" && account.providerAccountId) {
         try {
+          // eslint-disable-next-line no-console
+          console.log("[NextAuth] Processing Google OAuth sign-in");
+          
           const googleProfile = profile as { email?: string; name?: string } | undefined;
           const email = user.email || googleProfile?.email;
           const name = user.name || googleProfile?.name || "User";
           
+          // eslint-disable-next-line no-console
+          console.log("[NextAuth] Extracted OAuth data", {
+            email,
+            name,
+            providerAccountId: account.providerAccountId.substring(0, 10) + "...",
+            userEmail: user.email,
+            userProfileEmail: googleProfile?.email,
+          });
+          
           if (!email) {
+            // eslint-disable-next-line no-console
+            console.error("[NextAuth] Email is missing for OAuth sign-in", {
+              userEmail: user.email,
+              profileEmail: googleProfile?.email,
+            });
             throw new Error("Email is required for OAuth sign-in");
           }
+
+          // eslint-disable-next-line no-console
+          console.log("[NextAuth] Calling handleOAuthUser", {
+            email,
+            provider: "google",
+          });
 
           // Handle OAuth authentication (login or signup)
           const { token, refresh_token, payload } = await handleOAuthUser(
@@ -180,6 +285,15 @@ export const authOptions: NextAuthOptions = {
             "google",
             name
           );
+
+          // eslint-disable-next-line no-console
+          console.log("[NextAuth] handleOAuthUser completed successfully", {
+            email,
+            hasToken: !!token,
+            hasRefreshToken: !!refresh_token,
+            userId: payload.user_id,
+            userType: payload.user_type,
+          });
 
           // Store OAuth data in user object for JWT callback
           (user as unknown as Record<string, unknown>).token = token;
@@ -190,27 +304,71 @@ export const authOptions: NextAuthOptions = {
             .filter(Boolean)
             .join(" ") || name;
 
+          // eslint-disable-next-line no-console
+          console.log("[NextAuth] User object updated, returning true", {
+            email,
+            role: (user as unknown as Record<string, unknown>).role,
+            id: (user as unknown as Record<string, unknown>).id,
+          });
+
           return true;
         } catch (error) {
           // eslint-disable-next-line no-console
-          console.error("OAuth sign-in failed:", error);
+          console.error("[NextAuth] OAuth sign-in failed:", error);
+          // Log detailed error for debugging on Vercel
+          if (error instanceof Error) {
+            // eslint-disable-next-line no-console
+            console.error("[NextAuth] OAuth error details:", {
+              message: error.message,
+              stack: error.stack,
+              name: error.name,
+            });
+          } else {
+            // eslint-disable-next-line no-console
+            console.error("[NextAuth] OAuth error (non-Error object):", error);
+          }
+          // Return false to deny access - NextAuth will show AccessDenied error
           return false;
         }
       }
 
+      // eslint-disable-next-line no-console
+      console.log("[NextAuth] Non-OAuth sign-in, allowing (credentials provider)");
       // For credentials provider, allow sign-in
       return true;
     },
     async jwt({ token, user, trigger, session, account: _account }) {
+      // eslint-disable-next-line no-console
+      console.log("[NextAuth] JWT callback triggered", {
+        hasUser: !!user,
+        trigger,
+        hasSession: !!session,
+        tokenSub: token.sub,
+      });
+
       // Initial sign in - store tokens from user object
       if (user) {
-        (token as unknown as Record<string, unknown>).role = (user as unknown as { role?: string }).role;
-        (token as unknown as Record<string, unknown>).accessToken = (user as unknown as { token?: string }).token;
-        (token as unknown as Record<string, unknown>).refreshToken = (user as unknown as { refreshToken?: string }).refreshToken;
+        const userRole = (user as unknown as { role?: string }).role;
+        const userToken = (user as unknown as { token?: string }).token;
+        const userRefreshToken = (user as unknown as { refreshToken?: string }).refreshToken;
+
+        // eslint-disable-next-line no-console
+        console.log("[NextAuth] Storing user data in JWT token", {
+          role: userRole,
+          hasToken: !!userToken,
+          hasRefreshToken: !!userRefreshToken,
+          userId: (user as unknown as { id?: string }).id,
+        });
+
+        (token as unknown as Record<string, unknown>).role = userRole;
+        (token as unknown as Record<string, unknown>).accessToken = userToken;
+        (token as unknown as Record<string, unknown>).refreshToken = userRefreshToken;
       }
       
       // Handle token refresh - update tokens when explicitly triggered
       if (trigger === "update" && session) {
+        // eslint-disable-next-line no-console
+        console.log("[NextAuth] Updating JWT token from session");
         const sessionData = session as { accessToken?: string; refreshToken?: string };
         if (sessionData.accessToken) {
           (token as unknown as Record<string, unknown>).accessToken = sessionData.accessToken;

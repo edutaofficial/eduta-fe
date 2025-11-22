@@ -88,9 +88,17 @@ const requestInterceptor = async (config: InternalAxiosRequestConfig): Promise<I
   const isAuthEndpoint = config.url?.includes("/api/v1/auth/login") || 
                          config.url?.includes("/api/v1/auth/signup") ||
                          config.url?.includes("/api/v1/auth/verify") ||
-                         config.url?.includes("/api/v1/auth/refresh");
+                         config.url?.includes("/api/v1/auth/refresh") ||
+                         config.url?.includes("/api/v1/user/login") ||
+                         (config.url?.includes("/api/v1/user") && config.method === "POST");
   
   if (isAuthEndpoint) {
+    // eslint-disable-next-line no-console
+    console.log("[Axios] Skipping auth token for endpoint", {
+      url: config.url,
+      method: config.method,
+      isAuthEndpoint: true,
+    });
     return config;
   }
 
@@ -179,7 +187,8 @@ const responseErrorInterceptor = async (error: AxiosError) => {
     const isAuthEndpoint = originalRequest.url?.includes("/api/v1/auth/login") || 
                            originalRequest.url?.includes("/api/v1/auth/signup") ||
                            originalRequest.url?.includes("/api/v1/auth/verify") ||
-                           originalRequest.url?.includes("/api/v1/user/");
+                           originalRequest.url?.includes("/api/v1/user/login") ||
+                           (originalRequest.url?.includes("/api/v1/user") && originalRequest.method === "POST");
     
     if (isAuthEndpoint || !isTokenExpiredError) {
       // If not an auth endpoint and not token expired, or if auth endpoint, reject

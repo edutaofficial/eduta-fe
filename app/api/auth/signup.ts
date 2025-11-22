@@ -71,22 +71,61 @@ export async function signupUser(
             ...(signupData.bio && { bio: signupData.bio }),
           };
 
+    // eslint-disable-next-line no-console
+    console.log("[API] signupUser - Making request", {
+      endpoint: "/api/v1/user",
+      provider: signupPayload.provider,
+      email: signupPayload.email,
+      userType: signupPayload.user_type,
+      hasProviderId: !!(signupPayload as { providerId?: string }).providerId,
+      firstName: signupPayload.first_name,
+      lastName: signupPayload.last_name,
+    });
+
     const { data } = await axiosInstance.post<SignupResponse>(
       "/api/v1/user",
       signupPayload
     );
 
+    // eslint-disable-next-line no-console
+    console.log("[API] signupUser - Response received", {
+      status: data.status,
+      message: data.message,
+      errorCode: data.error_code,
+      userId: data.data?.user_id,
+    });
+
     if (data.status !== "success") {
       // Handle duplicate email/nickname error
       if (data.error_code === "USER__DUPLICATE_EMAIL_OR_NICKNAME") {
+        // eslint-disable-next-line no-console
+        console.error("[API] signupUser - Duplicate email/nickname", {
+          email: signupPayload.email,
+          errorCode: data.error_code,
+        });
         throw new Error("An account with this email already exists");
       }
+      // eslint-disable-next-line no-console
+      console.error("[API] signupUser - Signup failed", {
+        status: data.status,
+        message: data.message,
+        errorCode: data.error_code,
+      });
       throw new Error(data.message || "Signup failed");
     }
 
     return data;
   } catch (error: unknown) {
     const errorMessage = extractErrorMessage(error);
+    // eslint-disable-next-line no-console
+    console.error("[API] signupUser - Exception caught", {
+      error: errorMessage,
+      originalError: error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      } : error,
+    });
     throw new Error(errorMessage);
   }
 }
