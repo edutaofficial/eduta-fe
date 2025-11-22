@@ -125,8 +125,8 @@ body {
  --secondary-foreground:var(--color-secondary-900);
  --muted:var(--color-primary-100);
  --muted-foreground:var(--color-primary-600);
- --accent:var(--color-secondary-100);
- --accent-foreground:var(--color-secondary-900);
+ --accent:var(--color-primary-100);
+ --accent-foreground:var(--color-primary-900);
  --destructive:var(--color-error-600);
  --border:var(--color-primary-200);
  --input:var(--color-primary-200);
@@ -159,8 +159,8 @@ body {
  --secondary-foreground:var(--color-secondary-50);
  --muted:var(--color-primary-800);
  --muted-foreground:var(--color-primary-300);
- --accent:var(--color-secondary-800);
- --accent-foreground:var(--color-secondary-50);
+ --accent:var(--color-primary-700);
+ --accent-foreground:var(--color-primary-50);
  --destructive:var(--color-error-500);
  --border:var(--color-primary-700);
  --input:var(--color-primary-700);
@@ -277,4 +277,774 @@ html {
   background: #2977A9;
   width: 32px;
   border-radius: 6px;
+}
+
+/* TipTap Rich Text Editor Styles */
+.ProseMirror {
+  outline: none;
+  min-height: 200px;
+}
+
+.ProseMirror h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--color-default-900);
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: var(--color-default-900);
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-default-900);
+}
+
+.ProseMirror p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+  color: var(--color-default-900);
+}
+
+.ProseMirror p:first-child {
+  margin-top: 0;
+}
+
+.ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  margin-left: 1.5rem;
+  margin-bottom: 0.75rem;
+  padding-left: 1rem;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.ProseMirror li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+  color: var(--color-default-900);
+}
+
+.ProseMirror li p {
+  margin-bottom: 0.25rem;
+}
+
+.ProseMirror strong {
+  font-weight: 700;
+  color: var(--color-default-900);
+}
+
+.ProseMirror em {
+  font-style: italic;
+  color: var(--color-default-900);
+}
+
+.ProseMirror a {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ProseMirror a:hover {
+  color: var(--color-primary-700);
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid var(--color-primary-400);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--color-default-700);
+  font-style: italic;
+}
+
+.ProseMirror code {
+  background-color: var(--color-default-100);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  font-family: monospace;
+}
+
+.ProseMirror pre {
+  background-color: var(--color-default-100);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.ProseMirror pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--color-default-300);
+  margin: 1.5rem 0;
+}
+
+.ProseMirror::placeholder {
+  color: var(--color-default-400);
+}
+
+.ProseMirror.is-focused {
+  outline: none;
+}
+
+/* Empty state styling */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-default-400);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* React Phone Number Input Styles */
+.PhoneInput {
+  outline: none !important;
+}
+
+.PhoneInput input {
+  outline: none !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.PhoneInput input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.PhoneInputCountry {
+  outline: none !important;
+}
+
+.PhoneInputCountrySelect {
+  outline: none !important;
+}
+
+.PhoneInputCountrySelect:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Blog Content Styles */
+.blog-content h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 2rem 0 1rem 0;
+  line-height: 1.2;
+}
+
+.blog-content h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 2.5rem 0 1rem 0;
+  line-height: 1.3;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.blog-content h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 2rem 0 0.75rem 0;
+  line-height: 1.4;
+}
+
+.blog-content h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 1.5rem 0 0.5rem 0;
+}
+
+.blog-content p {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: #374151;
+  margin-bottom: 1.5rem;
+}
+
+.blog-content strong,
+.blog-content b {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.blog-content em,
+.blog-content i {
+  font-style: italic;
+  color: #4b5563;
+}
+
+.blog-content a {
+  color: #3b82f6;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.blog-content a:hover {
+  border-bottom-color: #3b82f6;
+}
+
+.blog-content ul,
+.blog-content ol {
+  margin: 1.5rem 0;
+  padding-left: 2rem;
+}
+
+.blog-content ul {
+  list-style-type: disc;
+}
+
+.blog-content ol {
+  list-style-type: decimal;
+}
+
+.blog-content li {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: #374151;
+  margin-bottom: 0.75rem;
+  padding-left: 0.5rem;
+}
+
+.blog-content li::marker {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.blog-content ul ul,
+.blog-content ol ol,
+.blog-content ul ol,
+.blog-content ol ul {
+  margin: 0.5rem 0;
+}
+
+.blog-content code {
+  background-color: #f3f4f6;
+  color: #e11d48;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.9em;
+  font-family: "Monaco", "Courier New", monospace;
+  font-weight: 500;
+}
+
+.blog-content pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 2rem 0;
+  border: 1px solid #374151;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.blog-content pre code {
+  background-color: transparent;
+  color: #f9fafb;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.blog-content blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 1.5rem;
+  margin: 2rem 0;
+  font-style: italic;
+  color: #4b5563;
+  background-color: #f9fafb;
+  padding: 1.5rem;
+  border-radius: 0.375rem;
+}
+
+.blog-content blockquote p {
+  margin-bottom: 0;
+}
+
+.blog-content img {
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  max-width: 100%;
+  height: auto;
+}
+
+.blog-content hr {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 3rem 0;
+}
+
+.blog-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  overflow-x: auto;
+  display: block;
+}
+
+.blog-content thead {
+  background-color: #f3f4f6;
+}
+
+.blog-content th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #1a1a1a;
+  border: 1px solid #d1d5db;
+}
+
+.blog-content td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.blog-content tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.blog-content tbody tr:hover {
+  background-color: #f3f4f6;
+}
+
+.blog-content dl {
+  margin: 1.5rem 0;
+}
+
+.blog-content dt {
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-top: 1rem;
+}
+
+.blog-content dd {
+  margin-left: 2rem;
+  margin-top: 0.5rem;
+  color: #4b5563;
+}
+
+.blog-content kbd {
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-family: "Monaco", "Courier New", monospace;
+  font-size: 0.875rem;
+  color: #1a1a1a;
+}
+
+.blog-content mark {
+  background-color: #fef08a;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.blog-content sub,
+.blog-content sup {
+  font-size: 0.75em;
+}
+
+.blog-content abbr {
+  text-decoration: underline dotted;
+  cursor: help;
+}
+
+/* Mobile responsiveness for blog content */
+@media (max-width: 768px) {
+  .blog-content h1 {
+    font-size: 1.875rem;
+  }
+
+  .blog-content h2 {
+    font-size: 1.5rem;
+  }
+
+  .blog-content h3 {
+    font-size: 1.25rem;
+  }
+
+  .blog-content p,
+  .blog-content li {
+    font-size: 1rem;
+  }
+
+  .blog-content pre {
+    padding: 1rem;
+  }
+
+  .blog-content table {
+    font-size: 0.875rem;
+  }
+}
+
+/* Course Description Styles */
+.course-description {
+  color: var(--color-default-700);
+  line-height: 1.75;
+}
+
+.course-description h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-default-900);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.course-description h2 {
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: var(--color-default-900);
+  margin-top: 1.75rem;
+  margin-bottom: 0.875rem;
+  line-height: 1.35;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--color-default-200);
+}
+
+.course-description h3 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--color-default-900);
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.course-description h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-default-800);
+  margin-top: 1.25rem;
+  margin-bottom: 0.625rem;
+  line-height: 1.45;
+}
+
+.course-description h5 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-default-800);
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.course-description h6 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-default-700);
+  margin-top: 0.875rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.course-description p {
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--color-default-700);
+  margin-bottom: 1.25rem;
+}
+
+.course-description p:first-child {
+  margin-top: 0;
+}
+
+.course-description p:last-child {
+  margin-bottom: 0;
+}
+
+.course-description strong,
+.course-description b {
+  font-weight: 700;
+  color: var(--color-default-900);
+}
+
+.course-description em,
+.course-description i {
+  font-style: italic;
+  color: var(--color-default-700);
+}
+
+.course-description a {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s ease;
+}
+
+.course-description a:hover {
+  color: var(--color-primary-700);
+  text-decoration-color: var(--color-primary-700);
+}
+
+.course-description ul,
+.course-description ol {
+  margin: 1.25rem 0;
+  padding-left: 2rem;
+}
+
+.course-description ul {
+  list-style-type: disc;
+}
+
+.course-description ol {
+  list-style-type: decimal;
+}
+
+.course-description li {
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--color-default-700);
+  margin-bottom: 0.625rem;
+  padding-left: 0.5rem;
+}
+
+.course-description li::marker {
+  color: var(--color-primary-600);
+  font-weight: 600;
+}
+
+.course-description ul ul,
+.course-description ol ol,
+.course-description ul ol,
+.course-description ol ul {
+  margin: 0.5rem 0;
+}
+
+.course-description code {
+  background-color: var(--color-default-100);
+  color: var(--color-error-600);
+  padding: 0.1875rem 0.4375rem;
+  border-radius: 0.375rem;
+  font-size: 0.875em;
+  font-family: "Monaco", "Courier New", monospace;
+  font-weight: 500;
+}
+
+.course-description pre {
+  background-color: var(--color-default-100);
+  color: var(--color-default-900);
+  padding: 1.25rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border: 1px solid var(--color-default-200);
+}
+
+.course-description pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.9375rem;
+}
+
+.course-description blockquote {
+  border-left: 4px solid var(--color-primary-400);
+  padding-left: 1.5rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: var(--color-default-600);
+  background-color: var(--color-default-50);
+  padding: 1.25rem 1.5rem;
+  border-radius: 0.375rem;
+}
+
+.course-description blockquote p {
+  margin-bottom: 0.5rem;
+}
+
+.course-description blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.course-description img {
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin: 1.5rem auto;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.course-description hr {
+  border: none;
+  border-top: 2px solid var(--color-default-200);
+  margin: 2rem 0;
+}
+
+.course-description table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  display: block;
+}
+
+.course-description thead {
+  background-color: var(--color-default-100);
+}
+
+.course-description th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-default-900);
+  border: 1px solid var(--color-default-200);
+  font-size: 0.9375rem;
+}
+
+.course-description td {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-default-200);
+  color: var(--color-default-700);
+  font-size: 0.9375rem;
+}
+
+.course-description tbody tr:nth-child(even) {
+  background-color: var(--color-default-50);
+}
+
+.course-description tbody tr:hover {
+  background-color: var(--color-default-100);
+}
+
+.course-description dl {
+  margin: 1.25rem 0;
+}
+
+.course-description dt {
+  font-weight: 600;
+  color: var(--color-default-900);
+  margin-top: 0.875rem;
+  font-size: 1rem;
+}
+
+.course-description dd {
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  color: var(--color-default-700);
+  font-size: 1rem;
+}
+
+.course-description kbd {
+  background-color: var(--color-default-100);
+  border: 1px solid var(--color-default-200);
+  border-radius: 0.25rem;
+  padding: 0.1875rem 0.4375rem;
+  font-family: "Monaco", "Courier New", monospace;
+  font-size: 0.875rem;
+  color: var(--color-default-900);
+}
+
+.course-description mark {
+  background-color: var(--color-warning-200);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  color: var(--color-default-900);
+}
+
+.course-description sub,
+.course-description sup {
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+.course-description sub {
+  bottom: -0.25em;
+}
+
+.course-description sup {
+  top: -0.5em;
+}
+
+.course-description abbr {
+  text-decoration: underline dotted;
+  cursor: help;
+}
+
+/* Mobile responsiveness for course description */
+@media (max-width: 768px) {
+  .course-description h1 {
+    font-size: 1.75rem;
+  }
+
+  .course-description h2 {
+    font-size: 1.5rem;
+  }
+
+  .course-description h3 {
+    font-size: 1.25rem;
+  }
+
+  .course-description h4 {
+    font-size: 1.125rem;
+  }
+
+  .course-description p,
+  .course-description li {
+    font-size: 0.9375rem;
+  }
+
+  .course-description pre {
+    padding: 1rem;
+    font-size: 0.875rem;
+  }
+
+  .course-description table {
+    font-size: 0.875rem;
+  }
+
+  .course-description ul,
+  .course-description ol {
+    padding-left: 1.5rem;
+  }
 }

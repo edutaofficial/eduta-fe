@@ -29,7 +29,7 @@ export default function Loading() {
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary-50 via-white to-secondary-50",
+        "hidden fixed inset-0 z-[9999] items-center justify-center overflow-hidden bg-gradient-to-br from-primary-50 via-white to-secondary-50",
         "transition-all duration-700 ease-in-out",
         !isVisible && "opacity-0 scale-95"
       )}

@@ -1,5 +1,0 @@
-import { UnderDevelopment } from "@/components/Common";
-
-export default function SignUpPage() {
-  return <UnderDevelopment />;
-}
