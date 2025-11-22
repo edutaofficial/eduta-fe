@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "http",
-        hostname: "13.56.12.137",
+        hostname: "https://api.eduta.org/",
         port: "3005",
         pathname: "/api/assets/**",
       },
