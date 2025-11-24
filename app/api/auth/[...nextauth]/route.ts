@@ -160,7 +160,7 @@ async function handleOAuthUser(
   }
 }
 
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   providers: [
     GoogleProvider({
@@ -323,12 +323,25 @@ export const authOptions: NextAuthOptions = {
               stack: error.stack,
               name: error.name,
             });
+            
+            // Check if it's a network/API error vs authentication error
+            const isNetworkError = error.message.includes("Network") || 
+                                   error.message.includes("fetch") ||
+                                   error.message.includes("ECONNREFUSED") ||
+                                   error.message.includes("timeout");
+            
+            if (isNetworkError) {
+              // For network errors, throw a more descriptive error
+              throw new Error("Unable to connect to the server. Please check your internet connection and try again.");
+            }
+            
+            // For other errors, throw with the original message
+            throw new Error(`Authentication failed: ${error.message}`);
           } else {
             // eslint-disable-next-line no-console
             console.error("[NextAuth] OAuth error (non-Error object):", error);
+            throw new Error("An unexpected error occurred during authentication. Please try again.");
           }
-          // Return false to deny access - NextAuth will show AccessDenied error
-          return false;
         }
       }
 

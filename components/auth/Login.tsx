@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useFormik } from "formik";
@@ -43,6 +43,28 @@ export default function Login() {
   useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // Check for error from NextAuth OAuth redirect
+  const errorParam = searchParams.get("error");
+  
+  // Derive error message from error parameter (no useEffect needed)
+  const oauthError = React.useMemo(() => {
+    if (errorParam === "AccessDenied") {
+      return "Google sign-in was denied or failed. Please try again or use email/password to sign in.";
+    }
+    if (errorParam) {
+      return `Authentication error: ${errorParam}. Please try again.`;
+    }
+    return null;
+  }, [errorParam]);
+  
+  // Clear error from URL after component mounts
+  useEffect(() => {
+    if (errorParam && typeof window !== "undefined") {
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [errorParam]);
 
   const loginMutation = useMutation({
     mutationFn: async (values: LoginFormValues) => {
@@ -136,6 +158,15 @@ export default function Login() {
           </CardHeader>
 
           <CardContent>
+            {/* Display OAuth error if present */}
+            {oauthError && (
+              <div className="mb-4 p-3 bg-error-50 border border-error-200 rounded-lg">
+                <p className="text-sm text-error-700 flex items-center gap-2">
+                  <AlertCircleIcon className="size-4 flex-shrink-0" />
+                  {oauthError}
+                </p>
+              </div>
+            )}
             <form onSubmit={formik.handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-default-700">

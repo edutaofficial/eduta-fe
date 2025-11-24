@@ -64,7 +64,7 @@ export default function CourseDetailPage() {
   });
 
   // Fetch course detail
-  const { data: course, isLoading } = useQuery({
+  const { data: course, isLoading, isFetching } = useQuery({
     queryKey: ["courseDetail", courseSlug],
     queryFn: () => getCourseDetail(courseSlug),
     enabled: !!courseSlug,
@@ -281,25 +281,33 @@ export default function CourseDetailPage() {
     queryClient.invalidateQueries({ queryKey: ["courseReviews", course?.courseId] });
   };
 
-  if (isLoading) {
-    return <CourseDetailSkeleton />;
+  // Show loading skeleton immediately to prevent layout shift
+  // Check isLoading, isFetching, or if courseSlug is not available yet
+  if (isLoading || isFetching || !courseSlug) {
+    return (
+      <main className="min-h-screen">
+        <CourseDetailSkeleton />
+      </main>
+    );
   }
 
+  // Show error state if course is not found after loading completes
   if (!course) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <main className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Course not found</h1>
           <Button onClick={() => router.push("/all-courses")} className="mt-4">
             Browse Courses
           </Button>
         </div>
-      </div>
+      </main>
     );
   }
 
+
   return (
-    <>
+    <main className="min-h-screen">
       <CourseDetail
         courseData={course}
         isWishlisted={isWishlisted}
@@ -425,6 +433,6 @@ export default function CourseDetailPage() {
         description={loginDialogConfig.description}
         onSuccess={handleLoginSuccess}
       />
-    </>
+    </main>
   );
 }

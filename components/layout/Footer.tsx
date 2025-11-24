@@ -237,7 +237,7 @@ export default function Footer() {
           </div>
 
           {/* Social Icons */}
-          <div className="flex items-center gap-4">
+          <div className="flex hidden items-center gap-4">
             {socialIcons.map((social) => {
               const Icon = social.icon;
               return (
