@@ -32,7 +32,7 @@ async function handleOAuthUser(
   console.log(`[OAuth] Starting authentication for ${email} via ${provider}`, {
     email,
     provider,
-    providerId: providerId.substring(0, 10) + "...", // Log partial ID for debugging
+    providerId: `${providerId.substring(0, 10)}...`, // Log partial ID for debugging
     name,
   });
 
@@ -258,7 +258,7 @@ export const authOptions: NextAuthOptions = {
           console.log("[NextAuth] Extracted OAuth data", {
             email,
             name,
-            providerAccountId: account.providerAccountId.substring(0, 10) + "...",
+            providerAccountId: `${account.providerAccountId.substring(0, 10)}...`,
             userEmail: user.email,
             userProfileEmail: googleProfile?.email,
           });

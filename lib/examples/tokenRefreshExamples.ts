@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * 🪄 Token Refresh System - Usage Examples
  * 

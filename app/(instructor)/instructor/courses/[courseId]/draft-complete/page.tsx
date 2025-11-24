@@ -1,10 +1,11 @@
 import { CourseEditWizard } from "@/components/Instructor/CourseEditWizard";
 
-export default function DraftCompletePage({
+export default async function DraftCompletePage({
   params,
 }: {
-  params: { courseId: string };
+  params: Promise<{ courseId: string }>;
 }) {
-  return <CourseEditWizard courseId={params.courseId} isDraft={true} />;
+  const { courseId } = await params;
+  return <CourseEditWizard courseId={courseId} isDraft={true} />;
 }
 

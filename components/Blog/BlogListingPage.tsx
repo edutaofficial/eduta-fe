@@ -98,7 +98,7 @@ export function BlogListingPage() {
     router.replace(newUrl, { scroll: false });
   }, [debouncedSearchQuery, selectedTag, featuredFilter, currentPage, router]);
 
-  const posts = blogsData?.data?.posts || [];
+  const posts = React.useMemo(() => blogsData?.data?.posts || [], [blogsData?.data?.posts]);
   const pagination = blogsData?.pagination;
 
   // Extract unique tags from posts for filter

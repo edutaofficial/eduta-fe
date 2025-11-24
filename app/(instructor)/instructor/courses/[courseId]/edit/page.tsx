@@ -1,9 +1,10 @@
 import { CourseEditWizard } from "@/components/Instructor/CourseEditWizard";
 
-export default function EditCoursePage({
+export default async function EditCoursePage({
   params,
 }: {
-  params: { courseId: string };
+  params: Promise<{ courseId: string }>;
 }) {
-  return <CourseEditWizard courseId={params.courseId} isDraft={false} />;
+  const { courseId } = await params;
+  return <CourseEditWizard courseId={courseId} isDraft={false} />;
 }

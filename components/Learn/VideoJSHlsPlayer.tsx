@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable no-console */
 import * as React from "react";
 import videojs from "video.js";
 import type Player from "video.js/dist/types/player";
@@ -428,6 +429,7 @@ export function VideoJSHlsPlayer({
       // Position will be taken from startPositionRef.current
       console.log("⏳ Position will be set after metadata loads...");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoUrl, authToken, videoType, isHLS]); // Removed startPosition from deps - using ref instead!
 
   // Dispose the Video.js player when the functional component unmounts
