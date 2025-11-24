@@ -15,13 +15,11 @@ export const API_CONFIG = {
 /**
  * Get base URL
  * Each API function specifies its own full path (e.g., /api/v1/user/login)
- * Normalizes trailing slashes to prevent double slashes in URLs
  */
 export function getBaseUrl(): string {
   if (!API_CONFIG.BASE_URL) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL environment variable is not defined");
   }
-  // Remove trailing slashes to prevent double slashes when combining with paths
-  return API_CONFIG.BASE_URL.replace(/\/+$/, "");
+  return API_CONFIG.BASE_URL;
 }
 

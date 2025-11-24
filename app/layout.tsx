@@ -5,6 +5,7 @@ import ClientLayout from "@/components/layout/ClientLayout";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import QueryProvider from "@/components/providers/QueryProvider";
 import NextAuthSessionProvider from "@/components/providers/SessionProvider";
+import { ToastProvider } from "@/components/ui/toast";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -115,11 +116,13 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <QueryProvider>
           <NextAuthSessionProvider>
-            <main>
-              <AuthProvider>
-                <ClientLayout>{children}</ClientLayout>
-              </AuthProvider>
-            </main>
+            <ToastProvider>
+              <main>
+                <AuthProvider>
+                  <ClientLayout>{children}</ClientLayout>
+                </AuthProvider>
+              </main>
+            </ToastProvider>
           </NextAuthSessionProvider>
         </QueryProvider>
       </body>

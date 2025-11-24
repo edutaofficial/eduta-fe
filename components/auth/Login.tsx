@@ -8,6 +8,7 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 import {
   Card,
   CardHeader,
@@ -43,56 +44,50 @@ export default function Login() {
   useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
   
   // Check for error from NextAuth OAuth redirect
   const errorParam = searchParams.get("error");
   
-  // Derive error message from error parameter (no useEffect needed)
-  const oauthError = React.useMemo(() => {
-    if (!errorParam) return null;
-    
-    // Decode URL-encoded error message
-    const decodedError = decodeURIComponent(errorParam);
-    
-    // Check for specific backend errors
-    if (decodedError.includes("get_by_provider") || 
-        decodedError.includes("UserRepositoryAdapter") ||
-        decodedError.includes("has no attribute")) {
-      return (
-        "OAuth authentication is currently unavailable due to a backend configuration issue. " +
-        "Please use email/password to sign in, or contact support if you need OAuth access."
-      );
-    }
-    
-    if (errorParam === "AccessDenied") {
-      return "Google sign-in was denied or failed. Please try again or use email/password to sign in.";
-    }
-    
-    // Check for OAuth authentication failed errors
-    if (decodedError.includes("OAuth authentication failed")) {
-      // Extract the underlying error message if available
-      const underlyingError = decodedError.replace("Authentication failed: OAuth authentication failed: ", "");
-      if (underlyingError.includes("Failed to create user")) {
-        return (
-          "Unable to create account via Google sign-in. " +
-          "This may be due to a backend configuration issue. " +
-          "Please try using email/password signup instead, or contact support."
-        );
-      }
-      return `OAuth sign-in failed: ${underlyingError}. Please try using email/password instead.`;
-    }
-    
-    // Generic error message
-    return `Authentication error: ${decodedError}. Please try again or use email/password to sign in.`;
-  }, [errorParam]);
-  
-  // Clear error from URL after component mounts
+  // Show error toast when OAuth fails
   useEffect(() => {
     if (errorParam && typeof window !== "undefined") {
+      // Decode URL-encoded error message
+      const decodedError = decodeURIComponent(errorParam);
+      
+      // Determine error type and message
+      let errorMessage = "";
+      let errorType: "error" | "warning" = "error";
+      
+      if (decodedError.includes("email is already in use") || 
+          decodedError.includes("email already in use")) {
+        errorMessage = "This email is already registered. Please sign in with your email and password, or contact support to link your Google account.";
+        errorType = "warning";
+      } else if (decodedError.includes("get_by_provider") || 
+                 decodedError.includes("UserRepositoryAdapter")) {
+        errorMessage = "OAuth authentication is currently unavailable due to a backend configuration issue. Please use email/password to sign in.";
+        errorType = "error";
+      } else if (decodedError.includes("OAuth authentication failed")) {
+        const underlyingError = decodedError.replace("Authentication failed: OAuth authentication failed: ", "");
+        if (underlyingError.includes("Failed to create user")) {
+          errorMessage = "Unable to create account via Google sign-in. Please try using email/password signup instead.";
+        } else {
+          errorMessage = `OAuth sign-in failed: ${underlyingError}. Please try using email/password instead.`;
+        }
+      } else if (errorParam === "AccessDenied") {
+        errorMessage = "Google sign-in was denied or failed. Please try again or use email/password to sign in.";
+      } else {
+        errorMessage = `Authentication error: ${decodedError}. Please try again.`;
+      }
+      
+      // Show toast notification
+      showToast(errorMessage, errorType, 8000);
+      
+      // Clear error from URL
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
     }
-  }, [errorParam]);
+  }, [errorParam, showToast]);
 
   const loginMutation = useMutation({
     mutationFn: async (values: LoginFormValues) => {
@@ -144,10 +139,10 @@ export default function Login() {
     onSubmit: async (values) => {
       const result = await loginMutation.mutateAsync(values);
       if (!result.success) {
-        formik.setFieldError(
-          "password",
-          result.error || "Something went wrong. Please try again."
-        );
+        const errorMessage = result.error || "Something went wrong. Please try again.";
+        // Show toast notification
+        showToast(errorMessage, "error", 6000);
+        formik.setFieldError("password", errorMessage);
       }
       if (result.success) {
         const redirect = searchParams.get("redirect");
@@ -186,15 +181,6 @@ export default function Login() {
           </CardHeader>
 
           <CardContent>
-            {/* Display OAuth error if present */}
-            {oauthError && (
-              <div className="mb-4 p-3 bg-error-50 border border-error-200 rounded-lg">
-                <p className="text-sm text-error-700 flex items-center gap-2">
-                  <AlertCircleIcon className="size-4 flex-shrink-0" />
-                  {oauthError}
-                </p>
-              </div>
-            )}
             <form onSubmit={formik.handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-default-700">

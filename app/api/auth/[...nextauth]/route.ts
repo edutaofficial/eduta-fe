@@ -1,6 +1,7 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { cookies } from "next/headers";
 import { loginUser } from "@/app/api/auth/login";
 import { signupUser } from "@/app/api/auth/signup";
 
@@ -19,29 +20,16 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 }
 
 /**
- * Check if error is related to backend's missing get_by_provider method
- */
-function isBackendProviderMethodError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  const errorMessage = error.message.toLowerCase();
-  return (
-    errorMessage.includes("get_by_provider") ||
-    errorMessage.includes("userrepositoryadapter") ||
-    errorMessage.includes("has no attribute") ||
-    errorMessage.includes("object has no attribute")
-  );
-}
-
-/**
  * Handle OAuth user authentication (Google/Facebook)
  * Tries to login first, if user doesn't exist, creates account
- * Includes workaround for backend's missing get_by_provider method
+ * @param userType - Optional user type (learner/instructor) from signup page selection
  */
 async function handleOAuthUser(
   email: string,
   providerId: string,
   provider: "google" | "facebook",
-  name: string
+  name: string,
+  userType?: "learner" | "instructor"
 ): Promise<{ token: string; refresh_token?: string; payload: Record<string, unknown> }> {
   // eslint-disable-next-line no-console
   console.log(`[OAuth] Starting authentication for ${email} via ${provider}`, {
@@ -88,23 +76,28 @@ async function handleOAuthUser(
 
     return { token, refresh_token, payload };
   } catch (loginError) {
-    // Check if this is the backend provider method error
-    if (isBackendProviderMethodError(loginError)) {
-      // eslint-disable-next-line no-console
-      console.error(`[OAuth] Backend provider method error detected for ${email}`, {
-        error: loginError instanceof Error ? loginError.message : "Unknown error",
-      });
-      
-      // Provide a clear error message about backend issue
+    // Check if error is "user not found" or "email already in use"
+    const errorMessage = loginError instanceof Error ? loginError.message : "Unknown error";
+    const isUserNotFound = errorMessage.toLowerCase().includes("user not found") || 
+                          errorMessage.toLowerCase().includes("failed to login");
+    const isEmailInUse = errorMessage.toLowerCase().includes("email is already in use") ||
+                        errorMessage.toLowerCase().includes("email already in use");
+    
+    // If email is already in use, this means user exists but with different provider
+    // Throw a helpful error
+    if (isEmailInUse) {
       throw new Error(
-        "OAuth authentication is currently unavailable due to a backend configuration issue. " +
-        "Please use email/password login or contact support. " +
-        "The backend team needs to implement the 'get_by_provider' method in UserRepositoryAdapter."
+        "This email is already registered. Please sign in with your email and password, " +
+        "or contact support to link your Google account."
       );
     }
-
-    // If login fails (and it's not the provider method error), user doesn't exist - create account
-    const errorMessage = loginError instanceof Error ? loginError.message : "Unknown error";
+    
+    // If user not found, proceed with signup
+    if (!isUserNotFound) {
+      // Some other error occurred, re-throw it
+      throw loginError;
+    }
+    
     // eslint-disable-next-line no-console
     console.log(`[OAuth] Login failed for ${email}, attempting signup`, {
       error: errorMessage,
@@ -124,11 +117,17 @@ async function handleOAuthUser(
       });
 
       // Create new user via OAuth signup
+      // Use userType from signup page selection, default to learner
+      const finalUserType = userType || "learner";
+      
+      // eslint-disable-next-line no-console
+      console.log(`[OAuth] Creating account with user_type: ${finalUserType}`);
+      
       const signupResponse = await signupUser({
         email,
         first_name: firstName || name,
         last_name: lastName || "",
-        user_type: "learner", // Default to learner for OAuth signups
+        user_type: finalUserType,
         provider,
         providerId,
       });
@@ -174,20 +173,6 @@ async function handleOAuthUser(
 
       return { token, refresh_token, payload };
     } catch (signupError) {
-      // Check if signup also has the backend provider method error
-      if (isBackendProviderMethodError(signupError)) {
-        // eslint-disable-next-line no-console
-        console.error(`[OAuth] Backend provider method error during signup for ${email}`, {
-          error: signupError instanceof Error ? signupError.message : "Unknown error",
-        });
-        
-        throw new Error(
-          "OAuth signup is currently unavailable due to a backend configuration issue. " +
-          "The backend's UserRepositoryAdapter is missing the 'get_by_provider' method. " +
-          "Please use email/password signup or contact support."
-        );
-      }
-
       // eslint-disable-next-line no-console
       console.error(`[OAuth] Signup/login failed for ${email}:`, {
         error: signupError instanceof Error ? signupError.message : "Unknown error",
@@ -195,10 +180,19 @@ async function handleOAuthUser(
         provider,
       });
       
+      // Check for specific errors
+      const errorMessage = signupError instanceof Error ? signupError.message : "Unknown error";
+      const isEmailInUse = errorMessage.toLowerCase().includes("email is already in use") ||
+                          errorMessage.toLowerCase().includes("email already in use");
+      
+      if (isEmailInUse) {
+        throw new Error(
+          "This email is already registered. Please sign in with your email and password, " +
+          "or contact support to link your Google account."
+        );
+      }
+      
       // Re-throw with more context
-      const errorMessage = signupError instanceof Error 
-        ? signupError.message 
-        : "Failed to create account via OAuth";
       throw new Error(`OAuth authentication failed: ${errorMessage}`);
     }
   }
@@ -316,10 +310,27 @@ const authOptions: NextAuthOptions = {
             throw new Error("Email is required for OAuth sign-in");
           }
 
+          // Get user_type from cookies if available (set by signup page)
+          let oauthUserType: "learner" | "instructor" | undefined;
+          try {
+            const cookieStore = await cookies();
+            const userTypeCookie = cookieStore.get("oauth_user_type");
+            if (userTypeCookie?.value === "instructor" || userTypeCookie?.value === "learner") {
+              oauthUserType = userTypeCookie.value;
+              // Clear the cookie after reading
+              cookieStore.delete("oauth_user_type");
+            }
+          } catch (e) {
+            // Cookie access failed, ignore and use default
+            // eslint-disable-next-line no-console
+            console.warn("[NextAuth] Failed to read oauth_user_type cookie:", e);
+          }
+
           // eslint-disable-next-line no-console
           console.log("[NextAuth] Calling handleOAuthUser", {
             email,
             provider: "google",
+            userType: oauthUserType || "learner (default)",
           });
 
           // Handle OAuth authentication (login or signup)
@@ -327,7 +338,8 @@ const authOptions: NextAuthOptions = {
             email,
             account.providerAccountId,
             "google",
-            name
+            name,
+            oauthUserType
           );
 
           // eslint-disable-next-line no-console
@@ -367,25 +379,12 @@ const authOptions: NextAuthOptions = {
               stack: error.stack,
               name: error.name,
             });
-            
-            // Check if it's a network/API error vs authentication error
-            const isNetworkError = error.message.includes("Network") || 
-                                   error.message.includes("fetch") ||
-                                   error.message.includes("ECONNREFUSED") ||
-                                   error.message.includes("timeout");
-            
-            if (isNetworkError) {
-              // For network errors, throw a more descriptive error
-              throw new Error("Unable to connect to the server. Please check your internet connection and try again.");
-            }
-            
-            // For other errors, throw with the original message
-            throw new Error(`Authentication failed: ${error.message}`);
           } else {
             // eslint-disable-next-line no-console
             console.error("[NextAuth] OAuth error (non-Error object):", error);
-            throw new Error("An unexpected error occurred during authentication. Please try again.");
           }
+          // Return false to deny access - NextAuth will show AccessDenied error
+          return false;
         }
       }
 

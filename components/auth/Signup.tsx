@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useFormik } from "formik";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signupUser } from "@/app/api/auth/signup";
+import { useToast } from "@/components/ui/toast";
 import {
   Card,
   CardHeader,
@@ -97,6 +98,50 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
+  
+  // Check for error from NextAuth OAuth redirect
+  const errorParam = searchParams.get("error");
+  
+  // Show error toast when OAuth fails
+  useEffect(() => {
+    if (errorParam && typeof window !== "undefined") {
+      // Decode URL-encoded error message
+      const decodedError = decodeURIComponent(errorParam);
+      
+      // Determine error type and message
+      let errorMessage = "";
+      let errorType: "error" | "warning" = "error";
+      
+      if (decodedError.includes("email is already in use") || 
+          decodedError.includes("email already in use")) {
+        errorMessage = "This email is already registered. Please sign in with your email and password, or contact support to link your Google account.";
+        errorType = "warning";
+      } else if (decodedError.includes("get_by_provider") || 
+                 decodedError.includes("UserRepositoryAdapter")) {
+        errorMessage = "OAuth authentication is currently unavailable due to a backend configuration issue. Please use email/password to sign up.";
+        errorType = "error";
+      } else if (decodedError.includes("OAuth authentication failed")) {
+        const underlyingError = decodedError.replace("Authentication failed: OAuth authentication failed: ", "");
+        if (underlyingError.includes("Failed to create user")) {
+          errorMessage = "Unable to create account via Google sign-in. Please try using email/password signup instead.";
+        } else {
+          errorMessage = `OAuth sign-up failed: ${underlyingError}. Please try using email/password instead.`;
+        }
+      } else if (errorParam === "AccessDenied") {
+        errorMessage = "Google sign-in was denied or failed. Please try again or use email/password to sign up.";
+      } else {
+        errorMessage = `Authentication error: ${decodedError}. Please try again.`;
+      }
+      
+      // Show toast notification
+      showToast(errorMessage, errorType, 8000);
+      
+      // Clear error from URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [errorParam, showToast]);
 
   const signupStudentMutation = useMutation({
     mutationFn: async (values: StudentSignupFormValues) => {
@@ -135,9 +180,12 @@ export default function Signup() {
 
         return { success: true };
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Signup failed";
+        // Show toast for signup errors
+        showToast(errorMessage, "error", 6000);
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Signup failed",
+          error: errorMessage,
         };
       }
     },
@@ -182,9 +230,12 @@ export default function Signup() {
 
         return { success: true };
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Signup failed";
+        // Show toast for signup errors
+        showToast(errorMessage, "error", 6000);
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Signup failed",
+          error: errorMessage,
         };
       }
     },
@@ -688,7 +739,12 @@ export default function Signup() {
 
               <Button
                 type="button"
-                onClick={() => signIn("google")}
+                onClick={() => {
+                  // Store user_type in cookie so OAuth callback can use it (server-side)
+                  const userType = activeTab === "instructor" ? "instructor" : "learner";
+                  document.cookie = `oauth_user_type=${userType}; path=/; max-age=300; SameSite=Lax`;
+                  signIn("google");
+                }}
                 disabled={
                   activeTab === "student"
                     ? signupStudentMutation.isPending
