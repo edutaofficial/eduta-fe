@@ -19,8 +19,23 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 }
 
 /**
+ * Check if error is related to backend's missing get_by_provider method
+ */
+function isBackendProviderMethodError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const errorMessage = error.message.toLowerCase();
+  return (
+    errorMessage.includes("get_by_provider") ||
+    errorMessage.includes("userrepositoryadapter") ||
+    errorMessage.includes("has no attribute") ||
+    errorMessage.includes("object has no attribute")
+  );
+}
+
+/**
  * Handle OAuth user authentication (Google/Facebook)
  * Tries to login first, if user doesn't exist, creates account
+ * Includes workaround for backend's missing get_by_provider method
  */
 async function handleOAuthUser(
   email: string,
@@ -73,7 +88,22 @@ async function handleOAuthUser(
 
     return { token, refresh_token, payload };
   } catch (loginError) {
-    // If login fails, user doesn't exist - create account
+    // Check if this is the backend provider method error
+    if (isBackendProviderMethodError(loginError)) {
+      // eslint-disable-next-line no-console
+      console.error(`[OAuth] Backend provider method error detected for ${email}`, {
+        error: loginError instanceof Error ? loginError.message : "Unknown error",
+      });
+      
+      // Provide a clear error message about backend issue
+      throw new Error(
+        "OAuth authentication is currently unavailable due to a backend configuration issue. " +
+        "Please use email/password login or contact support. " +
+        "The backend team needs to implement the 'get_by_provider' method in UserRepositoryAdapter."
+      );
+    }
+
+    // If login fails (and it's not the provider method error), user doesn't exist - create account
     const errorMessage = loginError instanceof Error ? loginError.message : "Unknown error";
     // eslint-disable-next-line no-console
     console.log(`[OAuth] Login failed for ${email}, attempting signup`, {
@@ -144,6 +174,20 @@ async function handleOAuthUser(
 
       return { token, refresh_token, payload };
     } catch (signupError) {
+      // Check if signup also has the backend provider method error
+      if (isBackendProviderMethodError(signupError)) {
+        // eslint-disable-next-line no-console
+        console.error(`[OAuth] Backend provider method error during signup for ${email}`, {
+          error: signupError instanceof Error ? signupError.message : "Unknown error",
+        });
+        
+        throw new Error(
+          "OAuth signup is currently unavailable due to a backend configuration issue. " +
+          "The backend's UserRepositoryAdapter is missing the 'get_by_provider' method. " +
+          "Please use email/password signup or contact support."
+        );
+      }
+
       // eslint-disable-next-line no-console
       console.error(`[OAuth] Signup/login failed for ${email}:`, {
         error: signupError instanceof Error ? signupError.message : "Unknown error",

@@ -49,13 +49,41 @@ export default function Login() {
   
   // Derive error message from error parameter (no useEffect needed)
   const oauthError = React.useMemo(() => {
+    if (!errorParam) return null;
+    
+    // Decode URL-encoded error message
+    const decodedError = decodeURIComponent(errorParam);
+    
+    // Check for specific backend errors
+    if (decodedError.includes("get_by_provider") || 
+        decodedError.includes("UserRepositoryAdapter") ||
+        decodedError.includes("has no attribute")) {
+      return (
+        "OAuth authentication is currently unavailable due to a backend configuration issue. " +
+        "Please use email/password to sign in, or contact support if you need OAuth access."
+      );
+    }
+    
     if (errorParam === "AccessDenied") {
       return "Google sign-in was denied or failed. Please try again or use email/password to sign in.";
     }
-    if (errorParam) {
-      return `Authentication error: ${errorParam}. Please try again.`;
+    
+    // Check for OAuth authentication failed errors
+    if (decodedError.includes("OAuth authentication failed")) {
+      // Extract the underlying error message if available
+      const underlyingError = decodedError.replace("Authentication failed: OAuth authentication failed: ", "");
+      if (underlyingError.includes("Failed to create user")) {
+        return (
+          "Unable to create account via Google sign-in. " +
+          "This may be due to a backend configuration issue. " +
+          "Please try using email/password signup instead, or contact support."
+        );
+      }
+      return `OAuth sign-in failed: ${underlyingError}. Please try using email/password instead.`;
     }
-    return null;
+    
+    // Generic error message
+    return `Authentication error: ${decodedError}. Please try again or use email/password to sign in.`;
   }, [errorParam]);
   
   // Clear error from URL after component mounts
