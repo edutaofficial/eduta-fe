@@ -162,9 +162,9 @@ export default function Header() {
                 <Image
                   src="/logo-main.webp"
                   alt="logo"
-                  width={100}
-                  height={32}
-                  className="min-w-[6.25rem] min-h-[2rem]"
+                  width={120  }
+                  height={36}
+                  className="min-w-[7.5rem] min-h-[2.25rem]"
                 />
               </Link>
               <ExploreDropdown exploreTriggerRef={exploreTriggerRef} />

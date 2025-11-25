@@ -287,6 +287,16 @@ export function CourseDetail({
     totalDuration,
   ]);
 
+  // Calculate total number of lectures
+  const totalLectures = React.useMemo(() => {
+    if (courseData.outline && courseData.outline.length > 0) {
+      return courseData.outline.reduce((total, section) => {
+        return total + (section.lectures?.length || 0);
+      }, 0);
+    }
+    return 0;
+  }, [courseData.outline]);
+
   // Get course banner URL for thumbnail (separate from promo video)
   // In preview mode, fetch from store's courseBannerId
   const courseBannerId = isPreview ? basicInfo?.courseBannerId : apiCourseData?.courseBannerId;
@@ -370,32 +380,9 @@ export function CourseDetail({
           {/* Border below breadcrumb */}
           {!isPreview && <Separator className="relative z-10  mb-6" />}
 
-          {/* Course Detail Banner - Hide in preview mode */}
-          {!isPreview && (
-            <div className="absolute top-[126px] left-0 w-full h-171.25 aspect-video bg-default-100 group cursor-pointer z-0">
-              <Image
-                src="/detail-banner.webp"
-                alt="Course Detail Banner"
-                fill
-                className="object-cover"
-                priority
-              />
-            </div>
-          )}
+     
 
-          {/* Logo - Hide in preview mode */}
-          {!isPreview && (
-            <div className="relative z-10 mb-6 max-w-container mx-auto">
-              <Image
-                src="/logo-main.webp"
-                alt="Eduta Logo"
-                width={220}
-                height={70}
-                className="w-55 h-auto"
-                priority
-              />
-            </div>
-          )}
+  
 
           {/* Main Content Grid */}
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12 max-w-container mx-auto">
@@ -411,12 +398,11 @@ export function CourseDetail({
                 </h1>
                 <div className="flex flex-wrap items-center gap-4 text-sm text-default-700">
                   <span>{courseData.duration || "0 hours"}</span>
-                  {courseData.viewsCount !== undefined && (
+                  {totalLectures > 0 && (
                     <>
                       <span className="text-default-400">•</span>
                       <span>
-                        {courseData.viewsCount.toLocaleString()} view
-                        {courseData.viewsCount !== 1 ? "s" : ""}
+                        {totalLectures} lecture{totalLectures !== 1 ? "s" : ""}
                       </span>
                     </>
                   )}
@@ -469,7 +455,7 @@ export function CourseDetail({
               {courseData.outline && courseData.outline.length > 0 && (
                 <div className="space-y-4">
                   <h2 className="text-2xl font-semibold text-default-900">
-                    Course Outline
+                    Course Curriculum
                   </h2>
                   <Accordion
                     type="multiple"
@@ -854,12 +840,11 @@ export function CourseDetail({
                     {/* Meta Info */}
                     <div className="flex flex-wrap items-center gap-3 text-sm text-default-700">
                       <span>{courseData.duration || "0 hours"}</span>
-                      {courseData.viewsCount !== undefined && (
+                      {totalLectures > 0 && (
                         <>
                           <span className="text-default-400">•</span>
                           <span>
-                            {courseData.viewsCount.toLocaleString()} view
-                            {courseData.viewsCount !== 1 ? "s" : ""}
+                            {totalLectures} lecture{totalLectures !== 1 ? "s" : ""}
                           </span>
                         </>
                       )}

@@ -16,10 +16,7 @@ export function CourseDetailSkeleton() {
             </div>
           </div>
 
-          {/* Logo skeleton */}
-          <div className="relative z-10 mb-6 max-w-container mx-auto">
-            <Skeleton className="h-16 w-48" />
-          </div>
+       
 
           {/* Main Content Grid */}
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12 max-w-container mx-auto">

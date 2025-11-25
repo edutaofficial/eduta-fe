@@ -66,15 +66,15 @@ export function RichTextEditor({
           // If we're at or over the limit, prevent character insertion
           if (currentLength >= maxLength) {
             // Allow deletion keys (Backspace, Delete)
-            if (event.key === 'Backspace' || event.key === 'Delete') {
+            if (event.key === "Backspace" || event.key === "Delete") {
               return false; // Allow deletion
             }
             // Allow navigation keys
-            if (event.key.startsWith('Arrow') || 
-                event.key === 'Home' || 
-                event.key === 'End' ||
-                event.key === 'PageUp' ||
-                event.key === 'PageDown') {
+            if (event.key.startsWith("Arrow") || 
+                event.key === "Home" || 
+                event.key === "End" ||
+                event.key === "PageUp" ||
+                event.key === "PageDown") {
               return false; // Allow navigation
             }
             // Allow modifier keys (Ctrl, Alt, Meta) for shortcuts
@@ -82,7 +82,7 @@ export function RichTextEditor({
               return false; // Allow shortcuts
             }
             // Prevent all other keys that would insert text
-            if (event.key.length === 1 || event.key === 'Enter') {
+            if (event.key.length === 1 || event.key === "Enter") {
               event.preventDefault();
               return true; // Block insertion
             }
@@ -109,7 +109,7 @@ export function RichTextEditor({
         let safeBreak = truncateAt;
         for (let i = truncateAt - 1; i >= Math.max(0, truncateAt - 50); i--) {
           const char = htmlContent[i];
-          if (char === '>' || char === ' ') {
+          if (char === ">" || char === " ") {
             // Found a safe break point, use position after this character
             safeBreak = i + 1;
             // Ensure we don't exceed maxLength
@@ -132,7 +132,7 @@ export function RichTextEditor({
         const tagStack: string[] = [];
         for (const match of openTagMatches) {
           const tagName = match.match(/<(\w+)/)?.[1];
-          if (tagName && !match.endsWith('/>')) {
+          if (tagName && !match.endsWith("/>")) {
             tagStack.push(tagName);
           }
         }
@@ -157,7 +157,7 @@ export function RichTextEditor({
               truncatedHtml += closingTag;
             } else {
               // Can't close this tag without exceeding limit, remove the opening tag instead
-              truncatedHtml = truncatedHtml.replace(new RegExp(`<${tag}[^>]*>`, 'g'), '');
+              truncatedHtml = truncatedHtml.replace(new RegExp(`<${tag}[^>]*>`, "g"), "");
               break;
             }
           }
@@ -167,7 +167,7 @@ export function RichTextEditor({
         if (truncatedHtml.length > maxLength) {
           truncatedHtml = truncatedHtml.substring(0, maxLength);
           // Remove any partial tags at the end
-          truncatedHtml = truncatedHtml.replace(/<[^>]*$/, '');
+          truncatedHtml = truncatedHtml.replace(/<[^>]*$/, "");
         }
         
         // Set the truncated content
@@ -179,7 +179,7 @@ export function RichTextEditor({
       // This is a critical check to prevent any edge cases
       if (maxLength && html.length > maxLength) {
         html = html.substring(0, maxLength);
-        html = html.replace(/<[^>]*$/, '');
+        html = html.replace(/<[^>]*$/, "");
         editor.commands.setContent(html);
       }
 
@@ -201,7 +201,7 @@ export function RichTextEditor({
         const closeTags = (contentToSet.match(/<\/[^>]*>/g) || []).length;
         if (openTags > closeTags) {
           // Remove unclosed tags at the end
-          contentToSet = contentToSet.replace(/<[^/][^>]*>$/, '');
+          contentToSet = contentToSet.replace(/<[^/][^>]*>$/, "");
         }
       }
       
