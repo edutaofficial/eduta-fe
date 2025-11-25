@@ -56,7 +56,7 @@ const CourseDetailFormInner = (
   // Formik setup with validation
   const formik = useFormik<CourseDetailsFormValues>({
     initialValues,
-    enableReinitialize: false,
+    enableReinitialize: true, // Enable to sync with store when coming back from preview
     validate: (values) => {
       const result = courseDetailsValidationSchema.safeParse(values);
       if (result.success) return {};
@@ -124,7 +124,7 @@ const CourseDetailFormInner = (
     formik.setFieldValue("learningPoints", newPoints);
 
     const filledPoints = newPoints.filter((p) => p.text.trim().length > 0);
-    if (filledPoints.length >= 3 && formik.errors.learningPoints) {
+    if (filledPoints.length >= 4 && formik.errors.learningPoints) {
       formik.setFieldError("learningPoints", undefined);
     }
   }, [formik]);
@@ -132,7 +132,7 @@ const CourseDetailFormInner = (
   const removeLearningPoint = React.useCallback(
     (id: number) => {
       const currentPoints = formik.values.learningPoints;
-      if (currentPoints.length > 3) {
+      if (currentPoints.length > 4) {
         const newPoints = currentPoints.filter((p) => p.id !== id);
         formik.setFieldValue("learningPoints", newPoints);
       }
@@ -149,7 +149,7 @@ const CourseDetailFormInner = (
           (p) => p.text.trim().length > 0
         );
         if (
-          filledPoints.length >= 3 &&
+          filledPoints.length >= 4 &&
           typeof formik.errors.learningPoints === "string"
         ) {
           formik.setFieldError("learningPoints", undefined);
@@ -385,7 +385,7 @@ const CourseDetailFormInner = (
             }
           }}
           placeholder="Describe what students will learn in this course..."
-          maxLength={2500}
+          maxLength={6500}
           error={!!(formik.touched.description && formik.errors.description)}
         />
         {formik.touched.description && formik.errors.description && (
@@ -404,7 +404,6 @@ const CourseDetailFormInner = (
           value={formik.values.promoVideoId}
           onChange={handlePromoVideoChange}
           onUploadStateChange={handlePromoVideoUploadState}
-          required
           disabled={isSubmitting}
           error={
             formik.touched.promoVideoId && formik.errors.promoVideoId
@@ -444,7 +443,7 @@ const CourseDetailFormInner = (
               : "text-muted-foreground"
           )}
         >
-          At least 3 learning points are required (max 120 characters each)
+          At least 4 learning points are required (max 120 characters each)
         </p>
 
         <div
@@ -518,7 +517,7 @@ const CourseDetailFormInner = (
                       </p>
                     )}
                 </div>
-                {formik.values.learningPoints.length > 3 && (
+                {formik.values.learningPoints.length > 4 && (
                   <Button
                     type="button"
                     variant="ghost"
@@ -564,7 +563,13 @@ const CourseDetailFormInner = (
           <Button
             type="button"
             variant="outline"
-            onClick={onPreview}
+            onClick={async () => {
+              // Save current form data to store before preview
+              // This ensures preview has access to the latest form data
+              await onSubmit(formik.values);
+              // Then trigger preview
+              onPreview();
+            }}
             disabled={isSubmitting}
             className="w-full gap-2"
           >

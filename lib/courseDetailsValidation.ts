@@ -21,9 +21,8 @@ export const courseDetailsValidationSchema = z.object({
   
   description: z
     .string()
-    .min(1, "Course description is required")
     .min(50, "Course description must be at least 50 characters")
-    .max(2500, "Course description must be less than 2500 characters"),
+    .max(6500, "Course description must be less than 6500 characters"),
   
   learningPoints: z
     .array(
@@ -35,10 +34,10 @@ export const courseDetailsValidationSchema = z.object({
     .refine(
       (points) => {
         const filledPoints = points.filter((p) => p.text.trim().length > 0);
-        return filledPoints.length >= 3;
+        return filledPoints.length >= 4;
       },
       {
-        message: "At least 3 learning points are required",
+        message: "At least 4 learning points are required",
       }
     )
     .refine(
@@ -48,11 +47,7 @@ export const courseDetailsValidationSchema = z.object({
       }
     ),
   
-  promoVideoId: z
-    .union([z.number(), z.null()])
-    .refine((val) => val !== null, {
-      message: "Promo video is required",
-    }),
+  promoVideoId: z.union([z.number(), z.null()]).nullable(),
   
   courseBannerId: z
     .union([z.number(), z.null()])

@@ -288,11 +288,22 @@ export function CourseDetail({
   ]);
 
   // Get course banner URL for thumbnail (separate from promo video)
-  const courseBannerUrl = apiCourseData?.courseBannerUrl || "";
+  // In preview mode, fetch from store's courseBannerId
+  const courseBannerId = isPreview ? basicInfo?.courseBannerId : apiCourseData?.courseBannerId;
+  const { data: bannerAsset } = useGetAssetById(courseBannerId || 0);
+  const courseBannerUrl = React.useMemo(() => {
+    if (apiCourseData?.courseBannerUrl) {
+      return apiCourseData.courseBannerUrl;
+    }
+    if (isPreview && bannerAsset) {
+      return bannerAsset.presigned_url || bannerAsset.file_url || "";
+    }
+    return "";
+  }, [apiCourseData?.courseBannerUrl, isPreview, bannerAsset]);
 
   // Use course banner as thumbnail for the video player button
   const promoVideoSrc = React.useMemo(() => {
-    // Priority: courseBannerUrl from API > placeholder
+    // Priority: courseBannerUrl from API or store > placeholder
     if (courseBannerUrl) {
       return courseBannerUrl;
     }
