@@ -86,6 +86,9 @@ const CourseDetailFormInner = (
     onSubmit,
   });
 
+  // Track which initialValues have already been applied to avoid infinite loops
+  const hydratedInitialRef = React.useRef<CourseDetailsFormValues | null>(null);
+
   // Hydrate form when we receive initial values (e.g., editing existing course)
   React.useEffect(() => {
     const hasStoreData =
@@ -98,8 +101,14 @@ const CourseDetailFormInner = (
       return;
     }
 
+    const alreadyHydrated = hydratedInitialRef.current === initialValues;
+    if (alreadyHydrated) {
+      return;
+    }
+
     // Only hydrate when the form is pristine so we don't overwrite user input
     if (!formik.dirty) {
+      hydratedInitialRef.current = initialValues;
       formik.setValues(initialValues);
     }
   }, [initialValues, formik]);
