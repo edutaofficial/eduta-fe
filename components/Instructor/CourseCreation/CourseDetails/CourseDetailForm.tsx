@@ -54,9 +54,11 @@ const CourseDetailFormInner = (
   }, [categoryList.length, fetchCategoriesFromStore]);
 
   // Formik setup with validation
+  // CRITICAL: enableReinitialize must be false to prevent form reset when store updates
+  // We only want to initialize once on mount, not every time the store updates
   const formik = useFormik<CourseDetailsFormValues>({
     initialValues,
-    enableReinitialize: true, // Enable to sync with store when coming back from preview
+    enableReinitialize: false, // Prevent form reset when store updates (e.g., banner upload)
     validate: (values) => {
       const result = courseDetailsValidationSchema.safeParse(values);
       if (result.success) return {};
@@ -84,11 +86,33 @@ const CourseDetailFormInner = (
     onSubmit,
   });
 
+  // Hydrate form when we receive initial values (e.g., editing existing course)
+  React.useEffect(() => {
+    const hasStoreData =
+      Boolean(initialValues.courseTitle) ||
+      Boolean(initialValues.selectedCategory) ||
+      Boolean(initialValues.description) ||
+      initialValues.learningPoints.some((lp) => lp.text.trim().length > 0);
+
+    if (!hasStoreData) {
+      return;
+    }
+
+    // Only hydrate when the form is pristine so we don't overwrite user input
+    if (!formik.dirty) {
+      formik.setValues(initialValues);
+    }
+  }, [initialValues, formik]);
+
   // File upload handlers
+  // CRITICAL: Update form field first, then store
+  // Since enableReinitialize is false, updating store won't reset the form
   const handlePromoVideoChange = React.useCallback(
     (assetId: number | null) => {
-      setBasicInfo({ promoVideoId: assetId });
+      // Update form field first
       formik.setFieldValue("promoVideoId", assetId);
+      // Then update store (this won't reset form because enableReinitialize is false)
+      setBasicInfo({ promoVideoId: assetId });
       if (assetId !== null && formik.errors.promoVideoId) {
         formik.setFieldError("promoVideoId", undefined);
       }
@@ -98,8 +122,10 @@ const CourseDetailFormInner = (
 
   const handleCoverBannerChange = React.useCallback(
     (assetId: number | null) => {
-      setBasicInfo({ courseBannerId: assetId });
+      // Update form field first
       formik.setFieldValue("courseBannerId", assetId);
+      // Then update store (this won't reset form because enableReinitialize is false)
+      setBasicInfo({ courseBannerId: assetId });
       if (assetId !== null && formik.errors.courseBannerId) {
         formik.setFieldError("courseBannerId", undefined);
       }
