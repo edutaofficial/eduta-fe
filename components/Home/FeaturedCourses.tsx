@@ -80,21 +80,33 @@ export default function FeaturedCourses() {
               enabled: false,
             }}
           >
-            {courses.map((course) => (
-              <CourseCard
-                key={course.courseId}
-                slug={course.slug}
-                image={course.courseBannerUrl || "/placeholder-course.png"}
-                title={course.title}
-                company={`${course.instructor.firstName} ${course.instructor.lastName}`}
-                rating={parseFloat(course.stats.avgRating) || 0}
-                ratingCount={course.stats.totalReviews}
-                enrollments={course.stats.totalStudents}
-                impressions={0}
-                featured={true}
-                price={course.pricing ? parseFloat(course.pricing.amount) : 0}
-              />
-            ))}
+            {courses.map((course) => {
+              const instructorName = course.instructor
+                ? `${course.instructor.firstName ?? ""} ${course.instructor.lastName ?? ""}`.trim() ||
+                  "Expert Instructor"
+                : "Expert Instructor";
+              const courseStats = course.stats || {
+                avgRating: "0",
+                totalReviews: 0,
+                totalStudents: 0,
+              };
+
+              return (
+                <CourseCard
+                  key={course.courseId}
+                  slug={course.slug}
+                  image={course.courseBannerUrl || "/placeholder-course.png"}
+                  title={course.title}
+                  company={instructorName}
+                  rating={parseFloat(courseStats.avgRating) || 0}
+                  ratingCount={courseStats.totalReviews}
+                  enrollments={courseStats.totalStudents}
+                  impressions={0}
+                  featured={true}
+                  price={course.pricing ? parseFloat(course.pricing.amount) : 0}
+                />
+              );
+            })}
           </Slider>
         )}
       </div>

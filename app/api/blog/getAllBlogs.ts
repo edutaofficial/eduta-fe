@@ -22,7 +22,7 @@ export async function getAllBlogs(
   params.append("page", String(page));
   params.append("pageSize", String(pageSize));
 
-  const url = `${getBaseUrl()}/api/v1/blog?${params.toString()}`;
+  const url = `${getBaseUrl()}api/v1/blog?${params.toString()}`;
 
   const response = await fetch(url, {
     method: "GET",
