@@ -421,6 +421,8 @@ const CourseDetailFormInner = (
           }}
           placeholder="Describe what students will learn in this course..."
           maxLength={6500}
+          minWords={1000}
+          maxWords={3000}
           error={!!(formik.touched.description && formik.errors.description)}
         />
         {formik.touched.description && formik.errors.description && (

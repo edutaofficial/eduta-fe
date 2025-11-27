@@ -4,6 +4,7 @@
  */
 
 import * as z from "zod";
+import { countWords } from "./textUtils";
 
 export const courseDetailsValidationSchema = z.object({
   courseTitle: z
@@ -21,8 +22,24 @@ export const courseDetailsValidationSchema = z.object({
   
   description: z
     .string()
-    .min(50, "Course description must be at least 50 characters")
-    .max(6500, "Course description must be less than 6500 characters"),
+    .refine(
+      (val) => {
+        const words = countWords(val);
+        return words >= 1000;
+      },
+      {
+        message: "Course description must be at least 1,000 words",
+      }
+    )
+    .refine(
+      (val) => {
+        const words = countWords(val);
+        return words <= 3000;
+      },
+      {
+        message: "Course description must not exceed 3,000 words",
+      }
+    ),
   
   learningPoints: z
     .array(
