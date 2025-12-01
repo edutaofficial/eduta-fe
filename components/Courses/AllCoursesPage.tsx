@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { CoursesSearchBar } from "./CoursesSearchBar";
@@ -20,6 +20,7 @@ interface AllCoursesPageProps {
 export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
   const { categories, fetchCategories } = useCategoryStore();
 
   // Fetch categories on mount
@@ -28,6 +29,80 @@ export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
       fetchCategories();
     }
   }, [categories.length, fetchCategories]);
+
+  // Get current URL params as strings for dependency tracking
+  // Use toString() to ensure we detect URL changes properly
+  const categoryParamFromUrl = searchParams.get("category");
+  const searchParamsString = searchParams.toString(); // This changes when URL changes
+
+  // Handle "category" param from URL (from breadcrumb) - convert to "categories" with all subcategories
+  React.useEffect(() => {
+    // Only process if category param exists and categories are loaded
+    if (!categoryParamFromUrl || categories.length === 0) {
+      return;
+    }
+    
+    // Find the category in the categories list
+    const category = categories.find((c) => c.categoryId === categoryParamFromUrl);
+    
+    if (!category) {
+      return;
+    }
+    
+    const hasSubcategories = category.subcategories.length > 0;
+    let newCategories: string[] = [];
+    
+    if (hasSubcategories) {
+      // If category has subcategories, select all subcategories (not the parent)
+      const allSubcategoryIds = category.subcategories.map((sub) => sub.categoryId);
+      newCategories = allSubcategoryIds;
+    } else {
+      // If category has no subcategories, select the category itself
+      newCategories = [categoryParamFromUrl];
+    }
+    
+    // Update URL to use "categories" param instead of "category"
+    // The sync effect below will update state and trigger refetch
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("category");
+    if (newCategories.length > 0) {
+      params.set("categories", newCategories.join(","));
+    }
+    const newUrl = params.toString() ? `/topics?${params.toString()}` : "/topics";
+    router.replace(newUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryParamFromUrl, categories.length]);
+
+  // Sync selectedCategories with "categories" URL param - this is the single source of truth
+  // This effect runs whenever the URL changes (including external navigation)
+  React.useEffect(() => {
+    // Read params directly from searchParams inside effect to ensure we get latest values
+    const categoryParam = searchParams.get("category");
+    const categoriesParam = searchParams.get("categories");
+    
+    // If category param exists, let the conversion effect handle it first
+    if (categoryParam) {
+      return;
+    }
+    
+    const urlCategories = categoriesParam
+      ? categoriesParam.split(",").filter(Boolean)
+      : [];
+    
+    // Always sync from URL - URL is the source of truth
+    // Compare as strings to ensure we catch all changes
+    const currentSorted = [...selectedCategories].sort().join(",");
+    const urlSorted = [...urlCategories].sort().join(",");
+    
+    if (currentSorted !== urlSorted) {
+      // Update state - this will trigger query refetch via apiParams dependency
+      setSelectedCategories(urlCategories);
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParamsString, pathname, searchParams]); // Watch searchParamsString, pathname, and searchParams to detect any URL changes
 
   // Initialize state from URL parameters
   const [searchQuery, setSearchQuery] = React.useState(
@@ -43,14 +118,16 @@ export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
     Number(searchParams.get("page")) || 1
   );
 
-  // Filters from URL
+  // Filters from URL - categories will be synced via useEffect below
   const [selectedLevels, setSelectedLevels] = React.useState<SkillLevel[]>(
     (searchParams.get("levels")?.split(",").filter(Boolean) as SkillLevel[]) ||
       []
   );
-  const [selectedCategories, setSelectedCategories] = React.useState<string[]>(
-    searchParams.get("categories")?.split(",").filter(Boolean) || []
-  );
+  // Initialize from URL, then sync effect will keep it updated
+  const [selectedCategories, setSelectedCategories] = React.useState<string[]>(() => {
+    const categoriesParam = searchParams.get("categories");
+    return categoriesParam ? categoriesParam.split(",").filter(Boolean) : [];
+  });
   const [selectedDurations, setSelectedDurations] = React.useState<string[]>(
     searchParams.get("durations")?.split(",").filter(Boolean) || []
   );
@@ -209,7 +286,7 @@ export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
       }
 
       const queryString = params.toString();
-      router.push(queryString ? `/all-courses?${queryString}` : "/all-courses");
+      router.push(queryString ? `/topics?${queryString}` : "/topics");
     },
     [
       debouncedSearchQuery,
@@ -272,10 +349,12 @@ export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
   ]);
 
   // Use TanStack Query for data fetching
+  // Refetch when category param changes
   const { data, isLoading, error } = useQuery({
     queryKey: ["courses", apiParams],
     queryFn: () => searchCourses(apiParams),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
   });
 
   const courses = data?.data || [];
@@ -383,7 +462,8 @@ export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
         }
       }
 
-      setSelectedCategories(newCategories);
+      // Update URL - the sync effect will update selectedCategories state
+      // This ensures URL is the single source of truth
       setCurrentPage(1);
       updateURL({ categories: newCategories, page: 1 });
     },
@@ -407,11 +487,12 @@ export function AllCoursesPage({ className: _className }: AllCoursesPageProps) {
 
   const handleClearFilters = () => {
     setSelectedLevels([]);
-    setSelectedCategories([]);
     setSelectedDurations([]);
     setMinRating(0);
     setCurrentPage(1);
-    router.push("/all-courses");
+    // Clear categories by navigating to URL without categories param
+    // The sync effect will update selectedCategories state
+    router.push("/topics");
   };
 
   const handleSearchChange = (value: string) => {

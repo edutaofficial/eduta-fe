@@ -96,7 +96,7 @@ export default function Hero({ slides }: HeroProps) {
                       className="text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all"
                       asChild
                     >
-                      <a href="/all-courses">{slide.buttonText}</a>
+                      <a href="/topics">{slide.buttonText}</a>
                     </Button>
                   </div>
                 )}

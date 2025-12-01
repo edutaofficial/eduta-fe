@@ -365,6 +365,7 @@ html {
   color: var(--color-primary-600);
   text-decoration: underline;
   text-underline-offset: 2px;
+  position: static;
 }
 
 .ProseMirror a:hover {

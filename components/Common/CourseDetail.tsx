@@ -33,12 +33,14 @@ import {
   LockIcon,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCourseStore } from "@/store/useCourseStore";
 import FAQComponent from "../Home/FAQ";
 import { useAuth } from "@/lib/context/AuthContext";
-import { VideoPlayer } from "../Learn/VideoPlayer";
 import { useUpload } from "@/hooks/useUpload";
+import { VideoPreviewModal } from "./VideoPreviewModal";
+import { useQuery } from "@tanstack/react-query";
+import { getInstructorProfile } from "@/app/api/instructor/getInstructorProfile";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import type { CourseDetail as CourseDetailAPI } from "@/app/api/course/getCourseDetail";
 import type { CourseReview } from "@/app/api/learner/reviews";
@@ -72,6 +74,7 @@ interface CourseData {
   enrollments?: number;
   learningPoints: string[];
   description: string;
+  updatedAt?: string;
   outline?: Array<{
     id: string;
     title: string;
@@ -154,6 +157,29 @@ export function CourseDetail({
   } | null>(null);
   const { useGetAssetById } = useUpload();
 
+  // Get instructor ID - from API data in normal mode, from current user in preview mode
+  const instructorId = React.useMemo(() => {
+    if (isPreview) {
+      // In preview mode, use the current user's instructor ID
+      return user?.instructorId;
+    }
+    // In normal mode, use the instructor ID from course data
+    return apiCourseData?.instructor?.instructorId;
+  }, [isPreview, user?.instructorId, apiCourseData?.instructor?.instructorId]);
+
+  // Fetch instructor profile data (works in both preview and normal mode)
+  const { data: instructorProfile, isLoading: instructorProfileLoading } =
+    useQuery({
+      queryKey: ["instructorProfile", instructorId],
+      queryFn: () => {
+        if (!instructorId) throw new Error("Instructor ID is required");
+        return getInstructorProfile(instructorId);
+      },
+      enabled: !!instructorId && instructorId > 0,
+      staleTime: Infinity, // Never refetch instructor info
+      gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+    });
+
   // Update wishlist state when prop changes
   React.useEffect(() => {
     setIsWishlisted(isWishlistedProp);
@@ -231,6 +257,7 @@ export function CourseDetail({
           courseCount: undefined,
         },
         reviews: [], // Reviews would come from a separate API
+        updatedAt: apiCourseData.updatedAt,
       };
     }
 
@@ -255,22 +282,38 @@ export function CourseDetail({
         outline:
           curriculum?.sections?.map((section, sectionIndex) => ({
             id: String(section.id),
-            title: section.title,
+            title:
+              ("title" in section
+                ? section.title
+                : (section as { name: string }).name) ||
+              section.title ||
+              "",
             lectures: section.lectures.map((lecture, lectureIndex) => ({
               id: `${sectionIndex + 1}.${lectureIndex + 1}`,
-              title: lecture.title,
-              duration: lecture.duration || 15,
+              title:
+                ("title" in lecture
+                  ? lecture.title
+                  : (lecture as { name: string }).name) ||
+                lecture.title ||
+                "",
+              duration: lecture.duration ?? 0, // Show 0m when no video is added
             })),
           })) || [],
         promoVideo: basicInfo?.promoVideoId,
         instructor: {
-          name: "Instructor",
-          title: "Course Instructor",
-          bio: "Instructor information will be displayed here.",
-          avatar: null,
-          rating: 0,
-          studentCount: 0,
-          courseCount: 0,
+          id: user?.instructorId,
+          name: instructorProfile?.fullName || user?.name || "Instructor",
+          title: instructorProfile?.professionalTitle || "Course Instructor",
+          bio:
+            instructorProfile?.bio ||
+            "Instructor information will be displayed here.",
+          avatar:
+            instructorProfile?.profilePictureUrl ||
+            user?.profilePictureUrl ||
+            null,
+          rating: instructorProfile?.stats?.avgRating,
+          studentCount: instructorProfile?.stats?.totalStudents,
+          courseCount: instructorProfile?.stats?.totalCourses,
         },
         reviews: [],
       };
@@ -285,6 +328,10 @@ export function CourseDetail({
     basicInfo,
     curriculum,
     totalDuration,
+    user?.instructorId,
+    user?.name,
+    user?.profilePictureUrl,
+    instructorProfile,
   ]);
 
   // Calculate total number of lectures
@@ -297,9 +344,49 @@ export function CourseDetail({
     return 0;
   }, [courseData.outline]);
 
+  // Calculate total number of resources
+  const totalResources = React.useMemo(() => {
+    // In preview mode, count from curriculum store
+    if (isPreview && curriculum?.sections) {
+      return curriculum.sections.reduce((total, section) => {
+        return (
+          total +
+          section.lectures.reduce((sectionTotal, lecture) => {
+            const resources = lecture.resources || [];
+            return (
+              sectionTotal + (Array.isArray(resources) ? resources.length : 0)
+            );
+          }, 0)
+        );
+      }, 0);
+    }
+
+    // In normal mode, check if API course data has resources
+    // Note: CourseDetailLecture type doesn't include resources, but check if they exist in the actual response
+    if (apiCourseData?.sections) {
+      return apiCourseData.sections.reduce((total, section) => {
+        return (
+          total +
+          section.lectures.reduce((sectionTotal, lecture) => {
+            // Check if resources exist (even though not in type definition)
+            const resources =
+              (lecture as { resources?: unknown[] }).resources || [];
+            return (
+              sectionTotal + (Array.isArray(resources) ? resources.length : 0)
+            );
+          }, 0)
+        );
+      }, 0);
+    }
+
+    return 0;
+  }, [isPreview, curriculum, apiCourseData]);
+
   // Get course banner URL for thumbnail (separate from promo video)
   // In preview mode, fetch from store's courseBannerId
-  const courseBannerId = isPreview ? basicInfo?.courseBannerId : apiCourseData?.courseBannerId;
+  const courseBannerId = isPreview
+    ? basicInfo?.courseBannerId
+    : apiCourseData?.courseBannerId;
   const { data: bannerAsset } = useGetAssetById(courseBannerId || 0);
   const courseBannerUrl = React.useMemo(() => {
     if (apiCourseData?.courseBannerUrl) {
@@ -324,7 +411,12 @@ export function CourseDetail({
 
   // Get instructor avatar URL directly from API (no asset API call needed)
   const instructorAvatarSrc = React.useMemo(() => {
-    // Use the URL directly from API response
+    // Priority: instructorProfile > courseData.instructor.avatar > user.profilePictureUrl
+    if (instructorProfile?.profilePictureUrl) {
+      return instructorProfile.profilePictureUrl;
+    }
+
+    // Use the URL directly from API response or course data
     if (
       typeof courseData.instructor?.avatar === "string" &&
       courseData.instructor.avatar
@@ -334,7 +426,7 @@ export function CourseDetail({
 
     // Return null to show initials fallback
     return null;
-  }, [courseData.instructor?.avatar]);
+  }, [instructorProfile?.profilePictureUrl, courseData.instructor?.avatar]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -356,15 +448,22 @@ export function CourseDetail({
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem>
-                    <span className="text-default-900">
-                      Eduta
-                    </span>
+                    <span className="text-default-900">Eduta</span>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <span className="text-default-900">
-                      {courseData.category || "Category"}
-                    </span>
+                    {apiCourseData?.category?.categoryId ? (
+                      <Link
+                        href={`/topics?category=${apiCourseData.category.categoryId}`}
+                        className="text-default-900 hover:text-primary-600 transition-colors"
+                      >
+                        {courseData.category || "Category"}
+                      </Link>
+                    ) : (
+                      <span className="text-default-900">
+                        {courseData.category || "Category"}
+                      </span>
+                    )}
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
@@ -380,10 +479,6 @@ export function CourseDetail({
           {/* Border below breadcrumb */}
           {!isPreview && <Separator className="relative z-10  mb-6" />}
 
-     
-
-  
-
           {/* Main Content Grid */}
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12 max-w-container mx-auto">
             {/* Left Column - Main Content */}
@@ -393,7 +488,7 @@ export function CourseDetail({
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                   {courseData.subHeading || courseData.category || ""}
                 </p>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-default-900 leading-tight">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-default-900 leading-tight">
                   {courseData.title}
                 </h1>
                 <div className="flex flex-wrap items-center gap-4 text-sm text-default-700">
@@ -404,6 +499,25 @@ export function CourseDetail({
                       <span>
                         {totalLectures} lecture{totalLectures !== 1 ? "s" : ""}
                       </span>
+                    </>
+                  )}
+
+                  {!isPreview && courseData.updatedAt && (
+                    <>
+                       <span className="text-default-400">•</span>
+                    <div className="text-sm text-default-600">
+                      <span className="font-medium">Last updated at </span>
+                      <span>
+                        {new Date(courseData.updatedAt).toLocaleDateString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          }
+                        )}
+                      </span>
+                    </div>
                     </>
                   )}
                   {courseData.rating !== undefined && (
@@ -451,6 +565,8 @@ export function CourseDetail({
                 </div>
               )}
 
+              {/* Last Updated */}
+
               {/* Course Outline */}
               {courseData.outline && courseData.outline.length > 0 && (
                 <div className="space-y-4">
@@ -470,7 +586,7 @@ export function CourseDetail({
                         <AccordionTrigger className="text-left hover:no-underline ">
                           <div className="flex items-center gap-3 flex-1">
                             <span className="text-default-900 font-medium">
-                              Section {sectionIndex + 1}: {section.title}
+                              Module {sectionIndex + 1}: {section.title}
                             </span>
                           </div>
                         </AccordionTrigger>
@@ -725,70 +841,128 @@ export function CourseDetail({
                   <h2 className="text-2xl font-semibold text-default-900">
                     About the Instructor
                   </h2>
-                  <div className="flex flex-col md:flex-row gap-6 items-start">
-                    <Avatar className="size-20 border-2 border-default-300">
-                      {instructorAvatarSrc ? (
-                        <AvatarImage
-                          src={instructorAvatarSrc}
-                          alt={courseData.instructor.name}
-                        />
-                      ) : null}
-                      <AvatarFallback className="bg-primary-100 text-primary-700 text-2xl font-semibold">
-                        {courseData.instructor.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <h3 className="text-xl font-semibold text-default-900">
-                            {courseData.instructor.name}
-                          </h3>
-                          <p className="text-default-600">
-                            {courseData.instructor.title}
-                          </p>
-                        </div>
-                        {courseData.instructor.id && (
-                          <Link
-                            href={`/profile/instructor/${courseData.instructor.id}`}
-                          >
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2"
-                            >
-                              View Profile
-                              <ArrowRightIcon className="size-4" />
-                            </Button>
-                          </Link>
-                        )}
-                      </div>
-                      {courseData.instructor.rating !== undefined && (
-                        <div className="flex items-center gap-4 text-sm text-default-600">
-                          <div className="flex items-center gap-1">
-                            <StarIcon className="size-4 text-warning-500" />
-                            <span>{courseData.instructor.rating}</span>
+                  {instructorProfileLoading ? (
+                    <InstructorSkeleton />
+                  ) : (
+                    <div className="flex flex-col md:flex-row gap-6 items-start">
+                      <Avatar className="size-20 border-2 border-default-300">
+                        {instructorProfile?.profilePictureUrl ? (
+                          <AvatarImage
+                            src={instructorProfile.profilePictureUrl}
+                            alt={
+                              instructorProfile.fullName ||
+                              courseData.instructor.name
+                            }
+                          />
+                        ) : instructorAvatarSrc ? (
+                          <AvatarImage
+                            src={instructorAvatarSrc}
+                            alt={courseData.instructor.name}
+                          />
+                        ) : null}
+                        <AvatarFallback className="bg-primary-100 text-primary-700 text-2xl font-semibold">
+                          {instructorProfile
+                            ? `${instructorProfile.firstName.charAt(0)}${instructorProfile.lastName.charAt(0)}`.toUpperCase()
+                            : courseData.instructor.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <h3 className="text-xl font-semibold text-default-900">
+                              {instructorProfile?.fullName ||
+                                courseData.instructor.name}
+                            </h3>
+                            <p className="text-default-600">
+                              {instructorProfile?.professionalTitle ||
+                                courseData.instructor.title}
+                            </p>
                           </div>
-                          <span>•</span>
-                          <span>
-                            {courseData.instructor.studentCount?.toLocaleString() ||
-                              0}{" "}
-                            students
-                          </span>
-                          <span>•</span>
-                          <span>
-                            {courseData.instructor.courseCount || 0} courses
-                          </span>
+                          {courseData.instructor.id && (
+                            <Link
+                              href={`/profile/instructor/${courseData.instructor.id}`}
+                            >
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-2"
+                              >
+                                View Profile
+                                <ArrowRightIcon className="size-4" />
+                              </Button>
+                            </Link>
+                          )}
                         </div>
-                      )}
-                      <p className="text-default-700 leading-relaxed">
-                        {courseData.instructor.bio}
-                      </p>
+                        {(instructorProfile?.stats ||
+                          (courseData.instructor.rating !== undefined &&
+                            courseData.instructor.rating > 0) ||
+                          (courseData.instructor.studentCount !== undefined &&
+                            courseData.instructor.studentCount > 0) ||
+                          (courseData.instructor.courseCount !== undefined &&
+                            courseData.instructor.courseCount > 0)) && (
+                          <div className="flex items-center gap-4 text-sm text-default-600">
+                            {instructorProfile?.stats.avgRating !== undefined &&
+                            instructorProfile.stats.avgRating > 0 ? (
+                              <>
+                                <div className="flex items-center gap-1">
+                                  <StarIcon className="size-4 text-warning-500 fill-warning-500" />
+                                  <span>
+                                    {instructorProfile.stats.avgRating.toFixed(
+                                      1
+                                    )}
+                                  </span>
+                                </div>
+                                <span>•</span>
+                              </>
+                            ) : courseData.instructor.rating !== undefined &&
+                              courseData.instructor.rating > 0 ? (
+                              <>
+                                <div className="flex items-center gap-1">
+                                  <StarIcon className="size-4 text-warning-500" />
+                                  <span>{courseData.instructor.rating}</span>
+                                </div>
+                                <span>•</span>
+                              </>
+                            ) : null}
+                            {(instructorProfile?.stats.totalStudents !==
+                              undefined &&
+                              instructorProfile.stats.totalStudents > 0) ||
+                            (courseData.instructor.studentCount !== undefined &&
+                              courseData.instructor.studentCount > 0) ? (
+                              <>
+                                <span>
+                                  {instructorProfile?.stats.totalStudents.toLocaleString() ||
+                                    courseData.instructor.studentCount?.toLocaleString() ||
+                                    0}{" "}
+                                  students
+                                </span>
+                                <span>•</span>
+                              </>
+                            ) : null}
+                            {(instructorProfile?.stats.totalCourses !==
+                              undefined &&
+                              instructorProfile.stats.totalCourses > 0) ||
+                            (courseData.instructor.courseCount !== undefined &&
+                              courseData.instructor.courseCount > 0) ? (
+                              <span>
+                                {instructorProfile?.stats.totalCourses ||
+                                  courseData.instructor.courseCount ||
+                                  0}{" "}
+                                courses
+                              </span>
+                            ) : null}
+                          </div>
+                        )}
+                        <p className="text-default-700 leading-relaxed">
+                          {instructorProfile?.bio || courseData.instructor.bio}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -844,7 +1018,17 @@ export function CourseDetail({
                         <>
                           <span className="text-default-400">•</span>
                           <span>
-                            {totalLectures} lecture{totalLectures !== 1 ? "s" : ""}
+                            {totalLectures} lecture
+                            {totalLectures !== 1 ? "s" : ""}
+                          </span>
+                        </>
+                      )}
+                      {totalResources > 0 && (
+                        <>
+                          <span className="text-default-400">•</span>
+                          <span>
+                            {totalResources} resource
+                            {totalResources !== 1 ? "s" : ""}
                           </span>
                         </>
                       )}
@@ -936,90 +1120,32 @@ export function CourseDetail({
       </div>
 
       {/* Promo Video Dialog */}
-      <Dialog open={showPromoVideo} onOpenChange={setShowPromoVideo}>
-        <DialogContent className="max-w-7xl w-[95vw] p-0 gap-0 bg-black border-none">
-          <DialogTitle className="sr-only">
-            Course Preview: {courseData.title}
-          </DialogTitle>
-          {/* Close Button - Always visible */}
-          <button
-            onClick={() => setShowPromoVideo(false)}
-            className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full p-2.5 transition-all group"
-            aria-label="Close video"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="size-6 text-white group-hover:scale-110 transition-transform"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-
-          {/* Header with course info */}
-          <div className="bg-gradient-to-b from-black/90 to-transparent px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary-600 rounded-full p-2">
-                <PlayIcon className="size-4 text-white fill-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-semibold line-clamp-1">
-                  {courseData.title}
-                </h3>
-                <p className="text-white/70 text-xs">Course Preview</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Video Container - No overlays blocking controls */}
-          <div className="relative w-full aspect-video bg-black">
-            {promoVideoDirectUrl ? (
-              <div className="w-full h-full">
-                <VideoPlayer
-                  videoUrl={promoVideoDirectUrl}
-                  startPosition={0}
-                  onProgressUpdate={() => {}}
-                  onVideoEnd={() => {}}
-                />
-              </div>
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-white gap-4">
-                <VideoIcon className="size-16 text-white/40" />
-                <p className="text-lg font-medium">Loading video preview...</p>
-                <p className="text-sm text-white/60">Please wait a moment</p>
-              </div>
+      <VideoPreviewModal
+        open={showPromoVideo}
+        onOpenChange={setShowPromoVideo}
+        videoUrl={promoVideoDirectUrl}
+        isLoading={false}
+        title={courseData.title}
+        subtitle="Course Preview"
+        dialogTitle={`Course Preview: ${courseData.title}`}
+        className="w-[95vw] md:w-[37.5rem]"
+        bottomInfo={
+          <div className="flex items-center gap-4">
+            {courseData.duration && (
+              <span className="flex items-center gap-2">
+                <VideoIcon className="size-4" />
+                {courseData.duration}
+              </span>
+            )}
+            {courseData.rating !== undefined && (
+              <span className="flex items-center gap-2">
+                <StarIcon className="size-4 fill-warning-400 text-warning-400" />
+                {courseData.rating} ({courseData.ratingCount || 0})
+              </span>
             )}
           </div>
-
-          {/* Bottom info bar - Doesn't overlay video controls */}
-          <div className="bg-gradient-to-t from-black/90 to-transparent px-6 py-3">
-            <div className="flex items-center justify-between text-white/80 text-sm">
-              <div className="flex items-center gap-4">
-                {courseData.duration && (
-                  <span className="flex items-center gap-2">
-                    <VideoIcon className="size-4" />
-                    {courseData.duration}
-                  </span>
-                )}
-                {courseData.rating !== undefined && (
-                  <span className="flex items-center gap-2">
-                    <StarIcon className="size-4 fill-warning-400 text-warning-400" />
-                    {courseData.rating} ({courseData.ratingCount || 0})
-                  </span>
-                )}
-              </div>
-              <span className="text-white/50 text-xs">Press ESC to close</span>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        }
+      />
 
       {/* Lecture Preview Video Dialog */}
       {selectedLecture && (
@@ -1034,7 +1160,7 @@ export function CourseDetail({
   );
 }
 
-// Separate component for lecture preview dialog
+// Lecture Preview Dialog Wrapper
 interface LecturePreviewDialogProps {
   lecture: {
     lectureId: string;
@@ -1065,85 +1191,48 @@ function LecturePreviewDialog({
   }, [videoAsset]);
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl w-[95vw] p-0 gap-0 bg-black border-none">
-        <DialogTitle className="sr-only">
-          Lecture Preview: {lecture.title} - {courseTitle}
-        </DialogTitle>
-        {/* Close Button - Always visible */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full p-2.5 transition-all group"
-          aria-label="Close video"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="size-6 text-white group-hover:scale-110 transition-transform"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+    <VideoPreviewModal
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      videoUrl={videoUrl}
+      isLoading={videoAssetLoading}
+      title={lecture.title}
+      subtitle={courseTitle}
+      dialogTitle={`Lecture Preview: ${lecture.title} - ${courseTitle}`}
+      className="w-[95vw] md:w-[37.5rem]"
+      bottomInfo={<span className="text-white/50 text-xs">Lecture Preview</span>}
+    />
+  );
+}
 
-        {/* Header with course info */}
-        <div className="bg-gradient-to-b from-black/90 to-transparent px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary-600 rounded-full p-2">
-              <PlayIcon className="size-4 text-white fill-white" />
-            </div>
-            <div>
-              <h3 className="text-white font-semibold line-clamp-1">
-                {lecture.title}
-              </h3>
-              <p className="text-white/70 text-xs">{courseTitle}</p>
-            </div>
+// Instructor Skeleton Component
+function InstructorSkeleton() {
+  return (
+    <div className="flex flex-col md:flex-row gap-6 items-start">
+      <Skeleton className="size-20 rounded-full shrink-0" />
+      <div className="flex-1 space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-5 w-32" />
           </div>
+          <Skeleton className="h-9 w-28" />
         </div>
-
-        {/* Video Container - No overlays blocking controls */}
-        <div className="relative w-full aspect-video bg-black">
-          {videoAssetLoading ? (
-            <div className="w-full h-full flex flex-col items-center justify-center text-white gap-4">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary-500 border-t-transparent" />
-              <p className="text-lg font-medium">Loading video preview...</p>
-            </div>
-          ) : videoUrl ? (
-            <div className="w-full h-full">
-              <VideoPlayer
-                videoUrl={videoUrl}
-                startPosition={0}
-                onProgressUpdate={() => {}}
-                onVideoEnd={() => {}}
-              />
-            </div>
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-white gap-4">
-              <VideoIcon className="size-16 text-white/40" />
-              <p className="text-lg font-medium">Video not available</p>
-              <p className="text-sm text-white/60">
-                This preview video could not be loaded
-              </p>
-            </div>
-          )}
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-1" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-1" />
+          <Skeleton className="h-4 w-20" />
         </div>
-
-        {/* Bottom info bar - Doesn't overlay video controls */}
-        <div className="bg-gradient-to-t from-black/90 to-transparent px-6 py-3">
-          <div className="flex items-center justify-between text-white/80 text-sm">
-            <div className="flex items-center gap-4">
-              <span className="text-white/50 text-xs">Lecture Preview</span>
-            </div>
-            <span className="text-white/50 text-xs">Press ESC to close</span>
-          </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

@@ -40,7 +40,7 @@ const PUBLIC_EXACT_ROUTES = [
   "/faqs",
   "/terms",
   "/privacy",
-  "/all-courses",
+  "/topics",
 ] as const;
 
 /**
@@ -84,7 +84,7 @@ const INSTRUCTOR_PROTECTED_ROUTES = [
  * Used for redirecting users to their appropriate dashboard
  */
 const ROLE_DASHBOARDS: Record<User["role"], string> = {
-  student: "/student/courses",
+  student: "/",
   instructor: "/instructor/courses",
   admin: "/admin",
 };
@@ -281,7 +281,7 @@ export const config = {
  * PUBLIC ROUTES (No authentication required):
  * - / (Home - exact match only)
  * - /about, /contact, /faqs, /terms, /privacy (exact matches)
- * - /all-courses (exact match)
+ * - /topics (exact match)
  * - /blog/* (all blog routes)
  * - /course/* (Course detail pages)
  * - /profile/instructor/* (Instructor public profiles)

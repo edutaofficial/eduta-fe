@@ -164,7 +164,7 @@ export default function AboutPage() {
               Get Started
             </a>
             <a
-              href="/all-courses"
+              href="/topics"
               className="bg-primary-700 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-800 transition-colors border border-primary-500"
             >
               Explore Courses

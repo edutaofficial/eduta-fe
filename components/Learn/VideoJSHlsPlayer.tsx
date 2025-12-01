@@ -326,7 +326,16 @@ export function VideoJSHlsPlayer({
       });
 
       player.on("pause", () => {
+        const time = player.currentTime() || 0;
+        const dur = player.duration() || 0;
         console.log("⏸️ Video paused");
+        console.log("📍 Progress Update on pause:", {
+          currentTime: `${time.toFixed(2)}s`,
+          duration: `${dur.toFixed(2)}s`,
+          percentage: `${((time / dur) * 100).toFixed(1)}%`,
+        });
+        // Update progress API on pause
+        onProgressUpdateRef.current(time, dur);
       });
 
       player.on("ratechange", () => {

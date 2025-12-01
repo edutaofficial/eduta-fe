@@ -183,7 +183,7 @@ const CurriculumInner = (
         className="w-full gap-2"
       >
         <PlusIcon className="size-4" />
-        Add Section
+        Add Module
       </Button>
 
       {/* Preview Button */}

@@ -55,7 +55,7 @@ function ExploreDropdown({
         onClick={(e) => {
           // On direct click, navigate to all courses
           e.preventDefault();
-          router.push("/all-courses");
+          router.push("/topics");
         }}
       >
         Explore
@@ -77,7 +77,7 @@ function ExploreDropdown({
               <li key={category.categoryId}>
                 <NavigationMenuLink asChild>
                   <Link
-                    href={`/all-courses?categories=${category.categoryId}`}
+                    href={`/topics?categories=${category.categoryId}`}
                     className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-hidden transition-colors hover:bg-primary-100 hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                   >
                     <div className="text-sm font-semibold leading-none line-clamp-1">

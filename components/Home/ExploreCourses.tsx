@@ -288,7 +288,7 @@ export default function ExploreCourses() {
                   size="lg"
                   className="px-8 bg-transparent"
                 >
-                  <Link href={`/all-courses?category=${activeCategory}`}>
+                  <Link href={`/topics?category=${activeCategory}`}>
                     Show all {activeCategoryData?.name} Courses
                   </Link>
                 </Button>

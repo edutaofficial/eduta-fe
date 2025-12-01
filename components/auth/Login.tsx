@@ -152,7 +152,7 @@ export default function Login() {
           redirect ||
           (role === "instructor"
             ? "/instructor/courses"
-            : "/student/courses");
+            : "/");
         router.replace(dest);
       }
     },

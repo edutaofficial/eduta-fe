@@ -2,7 +2,6 @@ import * as React from "react";
 import { useFormik } from "formik";
 import * as z from "zod";
 import { useCourseStore } from "@/store/useCourseStore";
-import type { UICurriculum } from "@/types/course";
 import type { UploadedFile } from "@/components/Common";
 import type { CurriculumFormData, SectionFormData, LectureFormData } from "@/types/curriculum";
 import {
@@ -85,9 +84,29 @@ export function useCurriculumForm() {
   });
 
   // Sync formik values to Zustand store
+  // Transform name -> title, video -> videoId, isPreview -> isFree to match UICurriculum format
   React.useEffect(() => {
     setCurriculum({
-      sections: formik.values.sections as unknown as UICurriculum["sections"],
+      sections: formik.values.sections.map((section) => ({
+        id: String(section.id),
+        title: section.name,
+        description: section.description,
+        order: (section as { order?: number }).order || 0,
+        lectures: section.lectures.map((lecture) => ({
+          id: String(lecture.id),
+          title: lecture.name,
+          description: lecture.description,
+          order: (lecture as { order?: number }).order || 0,
+          duration: lecture.duration,
+          isFree: lecture.isPreview,
+          videoId: lecture.video && lecture.video > 0 ? lecture.video : null,
+          resources: lecture.resources.map((r) => ({
+            id: typeof r === "object" && "id" in r ? String(r.id) : String(Math.random()),
+            title: typeof r === "object" && "fileName" in r ? r.fileName : "Resource",
+            fileId: typeof r === "object" && "assetId" in r ? r.assetId : 0,
+          })),
+        })),
+      })),
     });
   }, [formik.values.sections, setCurriculum]);
 

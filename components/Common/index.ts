@@ -9,4 +9,6 @@ export { UploadMultipleFiles } from "./UploadMultipleFiles";
 export type { UploadMultipleFilesProps, UploadedFile } from "./UploadMultipleFiles";
 export { CourseDetail } from "./CourseDetail";
 export { CourseCard } from "./CourseCard";
+export { VideoPreviewModal } from "./VideoPreviewModal";
+export type { VideoPreviewModalProps } from "./VideoPreviewModal";
 

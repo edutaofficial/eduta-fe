@@ -40,7 +40,16 @@ export function RatingDialog({
   const [error, setError] = React.useState<string | null>(null);
 
   const handleSubmit = async () => {
-    if (rating === 0) return;
+    if (rating === 0) {
+      setError("Please select a rating");
+      return;
+    }
+
+    // Validate review is required
+    if (!review.trim()) {
+      setError("Please write a review");
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -50,7 +59,7 @@ export function RatingDialog({
         course_id: courseId,
         enrollment_id: enrollmentId,
         rating,
-        review_text: review,
+        review_text: review.trim(),
         is_published: true,
       });
 
@@ -123,15 +132,24 @@ export function RatingDialog({
 
           {/* Review Textarea */}
           <div className="space-y-2">
-            <Label htmlFor="review">Your Review (Optional)</Label>
+            <Label htmlFor="review">
+              Your Review <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               id="review"
               placeholder="Share your thoughts about this course..."
               value={review}
-              onChange={(e) => setReview(e.target.value)}
+              onChange={(e) => {
+                setReview(e.target.value);
+                // Clear error when user starts typing
+                if (error && e.target.value.trim()) {
+                  setError(null);
+                }
+              }}
               rows={5}
               className="resize-none max-w-[34rem]"
               maxLength={500}
+              required
             />
             <p className="text-xs text-muted-foreground">
               {review.length}/500 characters
@@ -157,7 +175,7 @@ export function RatingDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={rating === 0 || isSubmitting}
+            disabled={rating === 0 || !review.trim() || isSubmitting}
             className="bg-primary-600 hover:bg-primary-700"
           >
             {isSubmitting ? "Submitting..." : "Submit Rating"}

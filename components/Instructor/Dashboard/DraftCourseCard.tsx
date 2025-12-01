@@ -107,18 +107,14 @@ export function DraftCourseCard({ course, onPublish }: DraftCourseCardProps) {
       tabIndex={0}
     >
       {/* Course Icon and Title */}
-      <div className="flex items-start gap-4">
+      <div className="flex items-center gap-4">
         <div className="size-14 rounded-xl bg-linear-to-br from-primary-50 to-primary-100 flex items-center justify-center shrink-0 border border-primary-200 shadow-sm transition-transform group-hover:scale-110">
           <BookOpenIcon className="size-7 text-primary-600" />
         </div>
-        <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-default-900 line-clamp-2 leading-snug group-hover:text-primary-600 transition-colors">
             {course.title || "Untitled Course"}
           </h3>
-          <p className="text-sm text-muted-foreground mt-1.5">
-            {course.instructorName || "Instructor"}
-          </p>
-        </div>
+       
       </div>
 
       {/* Progress Section */}

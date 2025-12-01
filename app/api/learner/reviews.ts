@@ -34,7 +34,7 @@ export async function createReview(
   data: CreateReviewRequest
 ): Promise<CreateReviewResponse["data"]> {
   const response = await axiosInstance.post<CreateReviewResponse>(
-    `${API_CONFIG.BASE_URL}/api/v1/learner/courses/reviews`,
+    `${API_CONFIG.BASE_URL}api/v1/learner/courses/reviews`,
     data
   );
   return response.data.data;
@@ -79,7 +79,7 @@ export async function getCourseReviews(
   params: GetCourseReviewsParams = {}
 ): Promise<GetCourseReviewsResponse["data"]> {
   const response = await axiosInstance.get<GetCourseReviewsResponse>(
-    `${API_CONFIG.BASE_URL}/api/v1/learner/courses/${courseId}/reviews`,
+    `${API_CONFIG.BASE_URL}api/v1/learner/courses/${courseId}/reviews`,
     {
       params: {
         page: params.page || 1,

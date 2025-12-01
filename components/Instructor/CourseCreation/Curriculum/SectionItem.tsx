@@ -71,7 +71,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
         onClose={canRemove ? onRemove : undefined}
       >
         <span className="font-medium text-lg">
-          Section {sectionIndex + 1}
+          Module {sectionIndex + 1}
           {section.name.trim() && (
             <>
               {" | "}
@@ -90,10 +90,10 @@ export const SectionItem: React.FC<SectionItemProps> = ({
             description={section.description}
             onTitleChange={(value) => onUpdateSection("name", value)}
             onDescriptionChange={(value) => onUpdateSection("description", value)}
-            titleLabel="Section Name"
-            descriptionLabel="Section Description"
-            titlePlaceholder="Enter section name"
-            descriptionPlaceholder="Describe what students will learn in this section..."
+            titleLabel="Module Name"
+            descriptionLabel="Module Description"
+            titlePlaceholder="Enter module name"
+            descriptionPlaceholder="Describe what students will learn in this module..."
             showErrors={showErrors}
             variant="section"
           />

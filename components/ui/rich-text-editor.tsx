@@ -26,7 +26,6 @@ interface RichTextEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
-  maxLength?: number; // Maximum character count (HTML markup included)
   minWords?: number; // Minimum word count (for course details: 1000)
   maxWords?: number; // Maximum word count (for course details: 3000, others: 100)
   error?: boolean; // Show error state with red border
@@ -37,7 +36,6 @@ export function RichTextEditor({
   onChange,
   placeholder,
   className,
-  maxLength,
   minWords,
   maxWords,
   error,

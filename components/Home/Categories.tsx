@@ -66,7 +66,7 @@ function CategoryLinkCard({
   isParent: boolean;
 }) {
   // All categories (parent and sub) link using categoryId format
-  const link = `/all-courses?categories=${categoryId}`;
+  const link = `/topics?categories=${categoryId}`;
 
   return (
     <Link

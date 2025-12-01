@@ -64,10 +64,12 @@ export default function CourseDetailPage() {
   });
 
   // Fetch course detail
-  const { data: course, isLoading, isFetching } = useQuery({
+  const { data: course, isLoading } = useQuery({
     queryKey: ["courseDetail", courseSlug],
     queryFn: () => getCourseDetail(courseSlug),
     enabled: !!courseSlug,
+    refetchOnWindowFocus: false, // Prevent refetch when switching tabs
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
   });
 
   // Fetch wishlist to check if course is wishlisted
@@ -281,9 +283,9 @@ export default function CourseDetailPage() {
     queryClient.invalidateQueries({ queryKey: ["courseReviews", course?.courseId] });
   };
 
-  // Show loading skeleton immediately to prevent layout shift
-  // Check isLoading, isFetching, or if courseSlug is not available yet
-  if (isLoading || isFetching || !courseSlug) {
+  // Show loading skeleton only on initial load, not on refetch
+  // Only check isLoading (initial load) and courseSlug, not isFetching (background refetch)
+  if (isLoading || !courseSlug) {
     return (
       <main className="min-h-screen">
         <CourseDetailSkeleton />
@@ -297,7 +299,7 @@ export default function CourseDetailPage() {
       <main className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Course not found</h1>
-          <Button onClick={() => router.push("/all-courses")} className="mt-4">
+          <Button onClick={() => router.push("/topics")} className="mt-4">
             Browse Courses
           </Button>
         </div>

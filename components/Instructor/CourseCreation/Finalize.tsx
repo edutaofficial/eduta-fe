@@ -84,7 +84,6 @@ const FinalizeInner = (_: object, ref: React.Ref<FinalizeHandle>) => {
           value={formik.values.welcomeMessage}
           onChange={(v) => formik.setFieldValue("welcomeMessage", v)}
           placeholder="Welcome students to your course. This message will be displayed when they first enroll."
-          maxLength={300}
           maxWords={100}
           error={!!(formik.touched.welcomeMessage && formik.errors.welcomeMessage)}
         />
@@ -107,7 +106,6 @@ const FinalizeInner = (_: object, ref: React.Ref<FinalizeHandle>) => {
           value={formik.values.congratulationsMessage}
           onChange={(v) => formik.setFieldValue("congratulationsMessage", v)}
           placeholder="Congratulate students on completing your course. This message will be displayed when they finish."
-          maxLength={300}
           maxWords={100}
           error={!!(formik.touched.congratulationsMessage && formik.errors.congratulationsMessage)}
         />
