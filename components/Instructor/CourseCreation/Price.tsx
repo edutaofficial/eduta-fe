@@ -46,6 +46,10 @@ const PriceInner = ({ onPreview }: PriceProps, ref: React.Ref<PriceHandle>) => {
   );
   const [showErrors, setShowErrors] = React.useState(false);
 
+  // Track if we're updating the store to prevent circular updates
+  const isUpdatingStore = React.useRef(false);
+  const prevLocalValues = React.useRef({ currency, priceTier, customPrice });
+  
   // Sync from store when pricing changes (e.g., when navigating back)
   // Only sync if component just mounted or store values changed externally
   const isInitialMount = React.useRef(true);
@@ -53,6 +57,11 @@ const PriceInner = ({ onPreview }: PriceProps, ref: React.Ref<PriceHandle>) => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return; // Skip on initial mount since useState already initialized from store
+    }
+
+    // Don't sync if we're the ones updating the store (prevents circular updates)
+    if (isUpdatingStore.current) {
+      return;
     }
 
     // Only update if store values are different from current local state
@@ -96,8 +105,21 @@ const PriceInner = ({ onPreview }: PriceProps, ref: React.Ref<PriceHandle>) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pricing.currency, pricing.price, pricing.isFree, pricing.priceTier]); // Only re-sync when store values change, not on every render
 
-  // Sync to store
+  // Sync to store - only when local values actually change
   React.useEffect(() => {
+    // Check if local values actually changed
+    const localValuesChanged = 
+      prevLocalValues.current.currency !== currency ||
+      prevLocalValues.current.priceTier !== priceTier ||
+      prevLocalValues.current.customPrice !== customPrice;
+
+    if (!localValuesChanged) {
+      return;
+    }
+
+    // Update ref to track current values
+    prevLocalValues.current = { currency, priceTier, customPrice };
+
     const price =
       priceTier === "free"
         ? 0
@@ -111,12 +133,21 @@ const PriceInner = ({ onPreview }: PriceProps, ref: React.Ref<PriceHandle>) => {
                 ? parseFloat(customPrice) || 0
                 : 0;
 
+    // Mark that we're updating the store
+    isUpdatingStore.current = true;
+    
     setPricing({
       currency,
       price,
       isFree: priceTier === "free",
       discountPercent: null,
       priceTier, // Always include priceTier so sync FROM store can use it
+    });
+
+    // Reset the flag after store update completes
+    // Use requestAnimationFrame to ensure it happens after the store update
+    requestAnimationFrame(() => {
+      isUpdatingStore.current = false;
     });
   }, [currency, priceTier, customPrice, setPricing]);
 

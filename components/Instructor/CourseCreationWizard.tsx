@@ -10,6 +10,7 @@ import {
   type CourseDetailsHandle,
 } from "./CourseCreation/CourseDetails";
 import { Curriculum, type CurriculumHandle } from "./CourseCreation/Curriculum";
+import { FAQs, type FAQsHandle } from "./CourseCreation/FAQs";
 import { Price } from "./CourseCreation/Price";
 import { Finalize, type FinalizeHandle } from "./CourseCreation/Finalize";
 import { Separator } from "@radix-ui/react-separator";
@@ -19,8 +20,9 @@ import { CourseDetail } from "@/components/Common";
 const STEPS = [
   { id: 1, name: "Course Details", component: CourseDetails },
   { id: 2, name: "Curriculum", component: Curriculum },
-  { id: 3, name: "Price", component: Price },
-  { id: 4, name: "Finalize", component: Finalize },
+  { id: 3, name: "FAQs", component: FAQs },
+  { id: 4, name: "Price", component: Price },
+  { id: 5, name: "Finalize", component: Finalize },
 ] as const;
 
 export function CourseCreationWizard() {
@@ -29,6 +31,7 @@ export function CourseCreationWizard() {
     setStep,
     createCourse,
     updateCurriculum,
+    updateFAQs,
     updatePricing,
     saveDraft,
     publishCourse,
@@ -44,6 +47,9 @@ export function CourseCreationWizard() {
   );
   const curriculumRef = React.useRef<CurriculumHandle>(
     null as unknown as CurriculumHandle
+  );
+  const faqsRef = React.useRef<FAQsHandle>(
+    null as unknown as FAQsHandle
   );
   const priceRef = React.useRef<{ validateAndFocus: () => Promise<boolean> }>(
     null as unknown as { validateAndFocus: () => Promise<boolean> }
@@ -85,8 +91,10 @@ export function CourseCreationWizard() {
     if (currentStep === 2)
       ok = (await curriculumRef.current?.validateAndFocus()) ?? false;
     if (currentStep === 3)
-      ok = (await priceRef.current?.validateAndFocus()) ?? false;
+      ok = (await faqsRef.current?.validateAndFocus()) ?? false;
     if (currentStep === 4)
+      ok = (await priceRef.current?.validateAndFocus()) ?? false;
+    if (currentStep === 5)
       ok = (await finalizeRef.current?.validateAndFocus()) ?? false;
     if (!ok) return;
 
@@ -99,6 +107,9 @@ export function CourseCreationWizard() {
         await updateCurriculum();
         // Step is advanced in store after successful updateCurriculum
       } else if (currentStep === 3) {
+        await updateFAQs();
+        // Step is advanced in store after successful updateFAQs
+      } else if (currentStep === 4) {
         await updatePricing();
         // Step is advanced in store after successful updatePricing
       }
@@ -114,7 +125,7 @@ export function CourseCreationWizard() {
     if (currentStep > 1) {
       // Clear any errors when navigating back
       useCourseStore.setState({ error: null, validationErrors: null });
-      setStep((currentStep - 1) as 1 | 2 | 3 | 4);
+      setStep((currentStep - 1) as 1 | 2 | 3 | 4 | 5);
       // Scroll to top will be handled by useEffect
     }
   };
@@ -267,6 +278,8 @@ export function CourseCreationWizard() {
           ) : currentStep === 2 ? (
             <Curriculum ref={curriculumRef} onPreview={handlePreview} />
           ) : currentStep === 3 ? (
+            <FAQs ref={faqsRef} onPreview={handlePreview} />
+          ) : currentStep === 4 ? (
             <Price ref={priceRef} onPreview={handlePreview} />
           ) : (
             <Finalize ref={finalizeRef} />
@@ -310,6 +323,7 @@ export function CourseCreationWizard() {
                     disabled={
                       loading.createCourse ||
                       loading.updateCurriculum ||
+                      loading.updateFAQs ||
                       loading.updatePricing ||
                       isUploadingAssets
                     }
@@ -321,6 +335,7 @@ export function CourseCreationWizard() {
                   >
                     {loading.createCourse ||
                     loading.updateCurriculum ||
+                    loading.updateFAQs ||
                     loading.updatePricing
                       ? "Saving..."
                       : isUploadingAssets

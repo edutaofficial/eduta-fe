@@ -244,10 +244,11 @@ export interface UICurriculum {
 }
 
 export interface CourseState {
-  step: 1 | 2 | 3 | 4;
+  step: 1 | 2 | 3 | 4 | 5;
   courseId?: string;
   basicInfo: CreateCourseRequest;
   curriculum: UICurriculum; // UI format - transformed to API format on send
+  faqs?: Array<{ faqId: string; question: string; answer: string }>; // FAQs for the course
   pricing: UIPricing; // UI format - transformed to API format on send
   finalize?: {
     welcomeMessage?: string;
@@ -261,12 +262,14 @@ export interface CourseState {
     step1: boolean;
     step2: boolean;
     step3: boolean;
+    step4: boolean;
   };
 
   // Snapshots of last saved data to detect changes
   savedSnapshots: {
     basicInfo: string; // JSON stringified
     curriculum: string; // JSON stringified
+    faqs: string; // JSON stringified
     pricing: string; // JSON stringified
     finalize: string; // JSON stringified
   };
@@ -276,6 +279,7 @@ export interface CourseState {
     createCourse: boolean;
     updateCourseDetails: boolean;
     updateCurriculum: boolean;
+    updateFAQs: boolean;
     updatePricing: boolean;
     saveDraft: boolean;
     publishCourse: boolean;
@@ -293,6 +297,7 @@ export interface CourseActions {
   setStep: (step: CourseState["step"]) => void;
   setBasicInfo: (info: Partial<CreateCourseRequest>) => void;
   setCurriculum: (curriculum: Partial<UICurriculum>) => void;
+  setFAQs: (faqs: Array<{ faqId: string; question: string; answer: string }>) => void;
   setPricing: (pricing: Partial<UIPricing>) => void;
   setFinalize: (finalize: Partial<CourseState["finalize"]>) => void;
   setUploading: (uploading: Partial<CourseState["uploading"]>) => void;
@@ -302,6 +307,7 @@ export interface CourseActions {
   createCourse: (payload?: Partial<CreateCourseRequest>) => Promise<string>; // returns courseId
   updateCourseDetails: () => Promise<void>;
   updateCurriculum: () => Promise<void>;
+  updateFAQs: () => Promise<void>;
   updatePricing: () => Promise<void>;
   saveDraft: () => Promise<void>;
   publishCourse: () => Promise<void>;

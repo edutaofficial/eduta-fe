@@ -27,15 +27,11 @@ import {
   StarIcon,
   PlayIcon,
   HeartIcon,
-  UserIcon,
   ChevronDownIcon,
   ArrowRightIcon,
-  LockIcon,
-  Share2Icon,
-  GiftIcon,
+  LockIcon, 
   ClockIcon,
-  FileTextIcon,
-  DownloadIcon,
+   DownloadIcon,
   SmartphoneIcon,
   InfinityIcon,
   AwardIcon,
@@ -1074,12 +1070,11 @@ export function CourseDetail({
                       <div className="space-y-3">
                         <div className="flex items-baseline gap-3">
                           {(() => {
-                            const price = pricing.price;
-                            const originalPrice = pricing.originalPrice;
+                            const { price, originalPrice, isFree: pricingIsFree, currency, discountPercentage } = pricing;
                             // If coupon is applied, show original price with strikethrough and $0 free
                             const hasCouponApplied = appliedCoupon && appliedCoupon === "25BBPMXNVD25";
                             // If coupon is applied, make it free (100% discount)
-                            const isFree = pricing.isFree || (hasCouponApplied && price > 0);
+                            const isFree = pricingIsFree || (hasCouponApplied && price > 0);
                             const displayPrice = isFree && hasCouponApplied ? 0 : price;
                             // Show original price if: there's an original price > display price, OR if coupon applied (show current price as strikethrough)
                             const showOriginal =
@@ -1091,11 +1086,11 @@ export function CourseDetail({
                                 <span className="text-3xl font-bold text-default-900">
                                   {displayPrice === 0
                                     ? "Free ($0)"
-                                    : `${pricing.currency} ${displayPrice.toFixed(2)}`}
+                                    : `${currency} ${displayPrice.toFixed(2)}`}
                                 </span>
                                 {showOriginal && (
                                   <span className="text-lg text-default-400 line-through">
-                                    {pricing.currency}{" "}
+                                    {currency}{" "}
                                     {(originalPrice || price).toFixed(2)}
                                   </span>
                                 )}
@@ -1105,10 +1100,10 @@ export function CourseDetail({
                                   </span>
                                 )}
                                 {!hasCouponApplied &&
-                                  pricing.discountPercentage &&
-                                  pricing.discountPercentage > 0 && (
+                                  discountPercentage &&
+                                  discountPercentage > 0 && (
                                     <span className="text-sm font-semibold text-primary-600">
-                                      {Math.round(pricing.discountPercentage)}% off
+                                      {Math.round(discountPercentage)}% off
                                     </span>
                                   )}
                               </>
@@ -1351,7 +1346,7 @@ export function CourseDetail({
           </div>
 
           {/* FAQ - Hide in preview mode */}
-          {!isPreview && <FAQComponent />}
+          {!isPreview && <FAQComponent faqs={apiCourseData?.faqs} />}
         </div>
       </div>
 

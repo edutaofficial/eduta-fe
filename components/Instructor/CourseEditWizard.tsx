@@ -10,6 +10,7 @@ import {
   type CourseDetailsHandle,
 } from "./CourseCreation/CourseDetails";
 import { Curriculum } from "./CourseCreation/Curriculum";
+import { FAQs, type FAQsHandle } from "./CourseCreation/FAQs";
 import { Price } from "./CourseCreation/Price";
 import { Finalize } from "./CourseCreation/Finalize";
 import { Separator } from "@radix-ui/react-separator";
@@ -21,12 +22,14 @@ import {
 import { CourseDetail } from "@/components/Common";
 import { getCourseById } from "@/app/api/course/getCourseById";
 import { getCourseForEdit } from "@/app/api/course/getCourseForEdit";
+import { getFAQs as getFAQsApi } from "@/app/api/instructor/faqs";
 
 const STEPS = [
   { id: 1, name: "Course Details", component: CourseDetails },
   { id: 2, name: "Curriculum", component: Curriculum },
-  { id: 3, name: "Price", component: Price },
-  { id: 4, name: "Finalize", component: Finalize },
+  { id: 3, name: "FAQs", component: FAQs },
+  { id: 4, name: "Price", component: Price },
+  { id: 5, name: "Finalize", component: Finalize },
 ] as const;
 
 interface CourseEditWizardProps {
@@ -40,6 +43,7 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
     setStep,
     updateCourseDetails,
     updateCurriculum,
+    updateFAQs,
     updatePricing,
     saveDraft,
     publishCourse,
@@ -48,6 +52,7 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
     uploading,
     basicInfo,
     curriculum,
+    faqs,
     pricing,
     finalize,
     savedSnapshots,
@@ -58,6 +63,7 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
   };
   const detailsRef = React.useRef<CourseDetailsHandle>(null);
   const curriculumRef = React.useRef<Validatable>(null);
+  const faqsRef = React.useRef<FAQsHandle>(null);
   const priceRef = React.useRef<Validatable>(null);
   const finalizeRef = React.useRef<Validatable>(null);
   const router = useRouter();
@@ -168,17 +174,35 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
           const apiCurriculum = transformCurriculumToAPI(curriculumForStore);
           const apiPricing = transformPricingToAPI(pricingForStore);
 
+          // Load FAQs from API
+          let faqsForStore: Array<{ faqId: string; question: string; answer: string }> = [];
+          try {
+            const faqsData = await getFAQsApi(courseId);
+            faqsForStore = faqsData.map((f) => ({
+              faqId: f.faqId,
+              question: f.question,
+              answer: f.answer,
+            }));
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn("Failed to load FAQs:", err);
+            // Use empty array if FAQs can't be loaded
+            faqsForStore = [];
+          }
+
           // Load data into store
           useCourseStore.setState({
             courseId,
             basicInfo: basicInfoForStore,
             curriculum: curriculumForStore,
+            faqs: faqsForStore,
             pricing: pricingForStore,
             finalize: finalizeForStore,
-            step: data.currentStep as 1 | 2 | 3 | 4, // Start from currentStep
+            step: data.currentStep as 1 | 2 | 3 | 4 | 5, // Start from currentStep
             savedSnapshots: {
               basicInfo: JSON.stringify(basicInfoForStore),
               curriculum: JSON.stringify(apiCurriculum), // Store API format
+              faqs: JSON.stringify(faqsForStore),
               pricing: JSON.stringify(apiPricing), // Store API format
               finalize: JSON.stringify(finalizeForStore),
             },
@@ -248,17 +272,35 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
                 congratulationMessage: "",
               };
 
+          // Load FAQs from API
+          let faqsForStore: Array<{ faqId: string; question: string; answer: string }> = [];
+          try {
+            const faqsData = await getFAQsApi(courseId);
+            faqsForStore = faqsData.map((f) => ({
+              faqId: f.faqId,
+              question: f.question,
+              answer: f.answer,
+            }));
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn("Failed to load FAQs:", err);
+            // Use empty array if FAQs can't be loaded
+            faqsForStore = [];
+          }
+
           // Load data into store (start from step 1 for editing)
           useCourseStore.setState({
             courseId,
             basicInfo: basicInfoForStore,
             curriculum: courseData.curriculum,
+            faqs: faqsForStore,
             pricing: courseData.pricing,
             finalize: finalizeForStore,
             step: 1, // Always start from step 1 for editing
             savedSnapshots: {
               basicInfo: JSON.stringify(basicInfoForStore),
               curriculum: JSON.stringify(apiCurriculum), // Store API format
+              faqs: JSON.stringify(faqsForStore),
               pricing: JSON.stringify(apiPricing), // Store API format
               finalize: JSON.stringify(finalizeForStore),
             },
@@ -317,15 +359,17 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
     const currentSnapshot = {
       1: JSON.stringify(basicInfo),
       2: JSON.stringify(curriculum),
-      3: JSON.stringify(pricing),
-      4: JSON.stringify(finalize),
+      3: JSON.stringify(faqs),
+      4: JSON.stringify(pricing),
+      5: JSON.stringify(finalize),
     }[step];
 
     const savedSnapshot = {
       1: savedSnapshots.basicInfo,
       2: savedSnapshots.curriculum,
-      3: savedSnapshots.pricing,
-      4: savedSnapshots.finalize,
+      3: savedSnapshots.faqs,
+      4: savedSnapshots.pricing,
+      5: savedSnapshots.finalize,
     }[step];
 
     const hasChanges = currentSnapshot !== savedSnapshot;
@@ -349,8 +393,10 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
     if (currentStep === 2)
       ok = (await curriculumRef.current?.validateAndFocus()) ?? false;
     if (currentStep === 3)
-      ok = (await priceRef.current?.validateAndFocus()) ?? false;
+      ok = (await faqsRef.current?.validateAndFocus()) ?? false;
     if (currentStep === 4)
+      ok = (await priceRef.current?.validateAndFocus()) ?? false;
+    if (currentStep === 5)
       ok = (await finalizeRef.current?.validateAndFocus()) ?? false;
     if (!ok) return;
 
@@ -374,6 +420,8 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
         } else if (currentStep === 2) {
           await updateCurriculum();
         } else if (currentStep === 3) {
+          await updateFAQs();
+        } else if (currentStep === 4) {
           await updatePricing();
         }
       }
@@ -385,6 +433,8 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
         setStep(3);
       } else if (currentStep === 3) {
         setStep(4);
+      } else if (currentStep === 4) {
+        setStep(5);
       }
     } catch (err: unknown) {
       // eslint-disable-next-line no-console
@@ -397,7 +447,7 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
     if (currentStep > 1) {
       // Clear any errors when navigating back
       useCourseStore.setState({ error: null, validationErrors: null });
-      setStep((currentStep - 1) as 1 | 2 | 3 | 4);
+      setStep((currentStep - 1) as 1 | 2 | 3 | 4 | 5);
     }
   };
 
@@ -613,6 +663,8 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
               onPreview={handlePreview}
             />
           ) : currentStep === 3 ? (
+            <FAQs key={formsKey} ref={faqsRef} onPreview={handlePreview} />
+          ) : currentStep === 4 ? (
             <Price key={formsKey} ref={priceRef} onPreview={handlePreview} />
           ) : (
             <Finalize key={formsKey} ref={finalizeRef} />
@@ -687,6 +739,7 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
                     disabled={
                       loading.updateCourseDetails ||
                       loading.updateCurriculum ||
+                      loading.updateFAQs ||
                       loading.updatePricing ||
                       isUploadingAssets
                     }

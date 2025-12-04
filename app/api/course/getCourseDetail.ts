@@ -91,6 +91,12 @@ export interface CourseDetailSection {
   lectures: CourseDetailLecture[];
 }
 
+export interface CourseDetailFAQ {
+  faqId: string;
+  question: string;
+  answer: string;
+}
+
 export interface CourseDetail {
   courseId: string;
   title: string;
@@ -121,6 +127,7 @@ export interface CourseDetail {
   sections: CourseDetailSection[];
   previewLectures: CoursePreviewLecture[];
   reviews: unknown[];
+  faqs: CourseDetailFAQ[];
   publishedAt: string;
   createdAt: string;
   updatedAt: string;

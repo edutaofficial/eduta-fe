@@ -9,6 +9,13 @@ import { updateCurriculum as updateCurriculumApi } from "@/app/api/course/update
 import { updatePricing as updatePricingApi } from "@/app/api/course/updatePricing";
 import { saveDraft as saveDraftApi } from "@/app/api/course/saveDraft";
 import { publishCourse as publishCourseApi } from "@/app/api/course/publishCourse";
+import { 
+  addFAQs as addFAQsApi, 
+  updateFAQs as updateFAQsApi, 
+  getFAQs as getFAQsApi, 
+  deleteFAQ, 
+  type FAQ 
+} from "@/app/api/instructor/faqs";
 import { extractErrorMessage } from "@/lib/errorUtils";
 
 const initialBasicInfo: CreateCourseRequest = {
@@ -194,6 +201,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
   courseId: getStoredCourseId(),
   basicInfo: initialBasicInfo,
   curriculum: initialUICurriculum,
+  faqs: [],
   pricing: initialPricing,
   finalize: {
     welcomeMessage: "",
@@ -206,10 +214,12 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     step1: false,
     step2: false,
     step3: false,
+    step4: false,
   },
   savedSnapshots: {
     basicInfo: "",
     curriculum: "",
+    faqs: "",
     pricing: "",
     finalize: "",
   },
@@ -218,6 +228,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     createCourse: false,
     updateCourseDetails: false,
     updateCurriculum: false,
+    updateFAQs: false,
     updatePricing: false,
     saveDraft: false,
     publishCourse: false,
@@ -231,6 +242,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
 
   setBasicInfo: (info) => set((state) => ({ basicInfo: { ...state.basicInfo, ...info } })),
   setCurriculum: (curriculum) => set((state) => ({ curriculum: { ...state.curriculum, ...curriculum } as UICurriculum })), // UI structure - will be transformed on API call
+  setFAQs: (faqs) => set({ faqs }),
   setPricing: (pricing) => set((state) => ({ pricing: { ...state.pricing, ...pricing } as UIPricing })),
   setFinalize: (finalize) => set((state) => ({ finalize: { ...state.finalize, ...finalize } })),
   setUploading: (uploading) => set((state) => ({ uploading: { ...state.uploading, ...uploading } })),
@@ -416,7 +428,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
         saved: { ...s.saved, step2: true },
         savedSnapshots: { ...s.savedSnapshots, curriculum: currentSnapshot },
         loading: { ...state.loading, updateCurriculum: false }, 
-        step: 3 
+        step: 3 // Move to FAQs step
       }));
     } catch (error: unknown) {
       const errorMessage = extractErrorMessage(error);
@@ -424,6 +436,96 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
       const validationErrors = errorObj.validationErrors || null;
       set((_state) => ({ 
         loading: { ...state.loading, updateCurriculum: false }, 
+        error: errorMessage,
+        validationErrors 
+      }));
+      throw error;
+    }
+  },
+
+  updateFAQs: async () => {
+    const state = get();
+    
+    // Get courseId from store or localStorage
+    const { courseId: storeCourseId } = state;
+    let courseId = storeCourseId;
+    if (!courseId && typeof window !== "undefined") {
+      courseId = localStorage.getItem("course_creation_courseId") || undefined;
+    }
+    
+    // Validate courseId
+    if (!courseId || typeof courseId !== "string" || courseId.trim() === "") {
+      const errorObj = new Error("Course ID is missing. Please complete Step 1 first.");
+      set((_s) => ({ error: errorObj.message }));
+      throw errorObj;
+    }
+    
+    // Ensure courseId is in store
+    if (!state.courseId || state.courseId !== courseId) {
+      set({ courseId });
+    }
+    
+    // Get FAQs from store
+    const faqs = state.faqs || [];
+    
+    // Prepare FAQs for API - separate new FAQs from existing ones
+    const newFAQs = faqs.filter((f) => !f.faqId || f.faqId.startsWith("temp-"));
+    const existingFAQs = faqs.filter((f) => f.faqId && !f.faqId.startsWith("temp-"));
+    
+    const currentSnapshot = JSON.stringify(faqs);
+    
+    // Check if data has changed since last save
+    const hasChanged = currentSnapshot !== state.savedSnapshots.faqs;
+    
+    // If no changes, just move to next step
+    if (!hasChanged) {
+      // eslint-disable-next-line no-console
+      console.log("✓ FAQs unchanged - skipping API call");
+      set({ step: 4 }); // Move to Price step
+      return;
+    }
+
+    set((s) => ({ loading: { ...s.loading, updateFAQs: true }, error: null }));
+    try {
+      // eslint-disable-next-line no-console
+      console.log("✏️ FAQs changed - calling API to update. Sending:", faqs);
+      
+      // If there are existing FAQs, update them; otherwise add new ones
+      if (existingFAQs.length > 0) {
+        // Update existing FAQs
+        const updatePayload = existingFAQs.map((f) => ({
+          faq_id: f.faqId,
+          question: f.question,
+          answer: f.answer,
+        }));
+        await updateFAQsApi(courseId, updatePayload);
+      }
+      
+      // Add new FAQs if any
+      if (newFAQs.length > 0) {
+        const addPayload = newFAQs.map((f) => ({
+          question: f.question,
+          answer: f.answer,
+        }));
+        await addFAQsApi(courseId, addPayload);
+      }
+      
+      // Fetch updated FAQs to get the IDs
+      const updatedFAQs = await getFAQsApi(courseId);
+      
+      set((s) => ({ 
+        saved: { ...s.saved, step3: true },
+        savedSnapshots: { ...s.savedSnapshots, faqs: currentSnapshot },
+        faqs: updatedFAQs,
+        loading: { ...s.loading, updateFAQs: false }, 
+        step: 4 // Move to Price step
+      }));
+    } catch (error: unknown) {
+      const errorMessage = extractErrorMessage(error);
+      const errorObj = error as { validationErrors?: Record<string, string> };
+      const validationErrors = errorObj.validationErrors || null;
+      set((_state) => ({ 
+        loading: { ...state.loading, updateFAQs: false }, 
         error: errorMessage,
         validationErrors 
       }));
@@ -464,7 +566,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     if (!hasChanged) {
       // eslint-disable-next-line no-console
       console.log("✓ Pricing unchanged - skipping API call");
-      set({ step: 4 });
+      set({ step: 5 }); // Move to Finalize step
       return;
     }
 
@@ -475,10 +577,10 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
       
       await updatePricingApi(courseId, apiPricing);
       set((s) => ({ 
-        saved: { ...s.saved, step3: true },
+        saved: { ...s.saved, step4: true },
         savedSnapshots: { ...s.savedSnapshots, pricing: currentSnapshot },
         loading: { ...s.loading, updatePricing: false }, 
-        step: 4 
+        step: 5 // Move to Finalize step
       }));
     } catch (error: unknown) {
       const errorMessage = extractErrorMessage(error);
@@ -545,20 +647,22 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     set({
       basicInfo: initialBasicInfo,
       curriculum: initialUICurriculum,
+      faqs: [],
       pricing: initialPricing,
       finalize: {
         welcomeMessage: "",
         congratulationMessage: "",
       },
       step: 1,
-      saved: { step1: false, step2: false, step3: false },
-      savedSnapshots: { basicInfo: "", curriculum: "", pricing: "", finalize: "" },
+      saved: { step1: false, step2: false, step3: false, step4: false },
+      savedSnapshots: { basicInfo: "", curriculum: "", faqs: "", pricing: "", finalize: "" },
       courseId: undefined,
       loading: {
         categories: false,
         createCourse: false,
         updateCourseDetails: false,
         updateCurriculum: false,
+        updateFAQs: false,
         updatePricing: false,
         saveDraft: false,
         publishCourse: false,
