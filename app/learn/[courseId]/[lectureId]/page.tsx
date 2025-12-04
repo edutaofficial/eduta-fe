@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { useUpload } from "@/hooks/useUpload";
+import { RatingDialog } from "@/components/Student/RatingDialog";
 
 // Helper to find lecture by ID
 function findLectureById(sections: Section[], lectureId: string) {
@@ -100,6 +101,10 @@ export default function LecturePlayerPage() {
 
   const [showCongratulations, setShowCongratulations] = React.useState(false);
   const [certificateGenerated, setCertificateGenerated] = React.useState(false);
+  const [showReviewDialog, setShowReviewDialog] = React.useState(false);
+  const [pendingCourseCompletion, setPendingCourseCompletion] = React.useState<{
+    certificateGenerated: boolean;
+  } | null>(null);
 
   // Track if we've already shown congratulations for this course in this session
   const congratsShownKeyRef = React.useRef(`congrats-shown-${courseId}`);
@@ -207,14 +212,19 @@ export default function LecturePlayerPage() {
       // eslint-disable-next-line no-console
       console.log("✅ Lecture isCompleted from API:", data.isCompleted);
 
-      // Show congratulations if course is completed (only if not shown before)
+      // Show review dialog first if course is completed (only if not shown before)
       if (
         data.courseCompleted &&
         !showCongratulations &&
-        !hasShownCongratsRef.current
+        !hasShownCongratsRef.current &&
+        !showReviewDialog
       ) {
-        setShowCongratulations(true);
-        setCertificateGenerated(data.certificateGenerated);
+        // Store completion data for after review is submitted
+        setPendingCourseCompletion({
+          certificateGenerated: data.certificateGenerated,
+        });
+        // Show review dialog first
+        setShowReviewDialog(true);
         // Mark as shown in local storage so it won't show again
         try {
           localStorage.setItem(congratsShownKeyRef.current, "true");
@@ -260,15 +270,20 @@ export default function LecturePlayerPage() {
       // IMPORTANT: Don't invalidate queries during playback - only update on completion
       // This prevents re-renders that could affect video playback
 
-      // Show congratulations if course is completed (only from video end, not manual complete)
+      // Show review dialog first if course is completed (only from video end, not manual complete)
       // Only show if not already shown before
       if (
         data.courseCompleted &&
         !showCongratulations &&
-        !hasShownCongratsRef.current
+        !hasShownCongratsRef.current &&
+        !showReviewDialog
       ) {
-        setShowCongratulations(true);
-        setCertificateGenerated(data.certificateGenerated);
+        // Store completion data for after review is submitted
+        setPendingCourseCompletion({
+          certificateGenerated: data.certificateGenerated,
+        });
+        // Show review dialog first
+        setShowReviewDialog(true);
         // Mark as shown in local storage so it won't show again
         try {
           localStorage.setItem(congratsShownKeyRef.current, "true");
@@ -699,6 +714,35 @@ export default function LecturePlayerPage() {
           </div>
         )}
       </div>
+
+      {/* Review Dialog - Shown before congratulations */}
+      {courseContent && courseContent.enrollmentId && (
+        <RatingDialog
+          open={showReviewDialog}
+          onOpenChange={(open) => {
+            // Prevent closing the dialog - review is required for certificate
+            if (!open) {
+              // Don't allow closing without submitting
+              return;
+            }
+            setShowReviewDialog(open);
+          }}
+          courseId={courseId}
+          courseTitle={courseContent.title}
+          enrollmentId={courseContent.enrollmentId}
+          onSuccess={() => {
+            // After review is submitted, show congratulations
+            setShowReviewDialog(false);
+            if (pendingCourseCompletion) {
+              setShowCongratulations(true);
+              setCertificateGenerated(
+                pendingCourseCompletion.certificateGenerated
+              );
+              setPendingCourseCompletion(null);
+            }
+          }}
+        />
+      )}
 
       {/* Congratulations Dialog */}
       <AlertDialog

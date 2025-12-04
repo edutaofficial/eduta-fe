@@ -31,8 +31,17 @@ import {
   ChevronDownIcon,
   ArrowRightIcon,
   LockIcon,
+  Share2Icon,
+  GiftIcon,
+  ClockIcon,
+  FileTextIcon,
+  DownloadIcon,
+  SmartphoneIcon,
+  InfinityIcon,
+  AwardIcon,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import { useCourseStore } from "@/store/useCourseStore";
 import FAQComponent from "../Home/FAQ";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -155,6 +164,9 @@ export function CourseDetail({
     title: string;
     videoId: number;
   } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = React.useState<string>("25BBPMXNVD25");
+  const [couponInput, setCouponInput] = React.useState<string>("");
+  const [couponError, setCouponError] = React.useState<string>("");
   const { useGetAssetById } = useUpload();
 
   // Get instructor ID - from API data in normal mode, from current user in preview mode
@@ -1007,44 +1019,108 @@ export function CourseDetail({
 
                   {/* Card Content */}
                   <div className="p-6 space-y-4">
-                    <h3 className="text-xl font-semibold text-default-900 line-clamp-2">
-                      {courseData.title}
-                    </h3>
+                    {/* Pricing Section */}
+                    {!isPreview && apiCourseData?.pricing && (
+                      <div className="space-y-3">
+                        <div className="flex items-baseline gap-3">
+                          {(() => {
+                            const price = apiCourseData.pricing.amount;
+                            const originalPrice = apiCourseData.pricing.originalAmount;
+                            // If coupon is applied, show original price with strikethrough and $0 free
+                            const hasCouponApplied = appliedCoupon && appliedCoupon === "25BBPMXNVD25";
+                            // If coupon is applied, make it free (100% discount)
+                            const isFree = price === 0 || (hasCouponApplied && price > 0);
+                            const displayPrice = isFree && hasCouponApplied ? 0 : price;
+                            // Show original price if: there's an original price > display price, OR if coupon applied (show current price as strikethrough)
+                            const showOriginal =
+                              (originalPrice && originalPrice > displayPrice) ||
+                              (hasCouponApplied && price > 0);
 
-                    {/* Meta Info */}
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-default-700">
-                      <span>{courseData.duration || "0 hours"}</span>
-                      {totalLectures > 0 && (
-                        <>
-                          <span className="text-default-400">•</span>
-                          <span>
-                            {totalLectures} lecture
-                            {totalLectures !== 1 ? "s" : ""}
-                          </span>
-                        </>
-                      )}
-                      {totalResources > 0 && (
-                        <>
-                          <span className="text-default-400">•</span>
-                          <span>
-                            {totalResources} resource
-                            {totalResources !== 1 ? "s" : ""}
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Enrollments */}
-                    {courseData.enrollments !== undefined && (
-                      <div className="flex items-center gap-2 text-default-700">
-                        <UserIcon className="size-5 text-default-600" />
-                        <span className="font-medium">
-                          {courseData.enrollments.toLocaleString()} enrolled
-                        </span>
+                            return (
+                              <>
+                                <span className="text-3xl font-bold text-default-900">
+                                  {displayPrice === 0
+                                    ? "Free ($0)"
+                                    : `$${displayPrice.toFixed(2)}`}
+                                </span>
+                                {showOriginal && (
+                                  <span className="text-lg text-default-400 line-through">
+                                    ${(originalPrice || price).toFixed(2)}
+                                  </span>
+                                )}
+                                {hasCouponApplied && price > 0 && displayPrice === 0 && (
+                                  <span className="text-sm font-semibold text-primary-600">
+                                    100% off
+                                  </span>
+                                )}
+                                {!hasCouponApplied && apiCourseData.pricing.discountPercentage > 0 && (
+                                  <span className="text-sm font-semibold text-primary-600">
+                                    {Math.round(apiCourseData.pricing.discountPercentage)}% off
+                                  </span>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                        {/* Time Left Alert */}
+                        <div className="flex items-center gap-2 text-sm text-destructive">
+                          <ClockIcon className="size-4" />
+                          <span>5 hours left at this price!</span>
+                        </div>
                       </div>
                     )}
 
-                    <Separator />
+                    {isPreview && pricing && (
+                      <div className="space-y-3">
+                        <div className="flex items-baseline gap-3">
+                          {(() => {
+                            const price = pricing.price;
+                            const originalPrice = pricing.originalPrice;
+                            // If coupon is applied, show original price with strikethrough and $0 free
+                            const hasCouponApplied = appliedCoupon && appliedCoupon === "25BBPMXNVD25";
+                            // If coupon is applied, make it free (100% discount)
+                            const isFree = pricing.isFree || (hasCouponApplied && price > 0);
+                            const displayPrice = isFree && hasCouponApplied ? 0 : price;
+                            // Show original price if: there's an original price > display price, OR if coupon applied (show current price as strikethrough)
+                            const showOriginal =
+                              (originalPrice && originalPrice > displayPrice) ||
+                              (hasCouponApplied && price > 0);
+
+                            return (
+                              <>
+                                <span className="text-3xl font-bold text-default-900">
+                                  {displayPrice === 0
+                                    ? "Free ($0)"
+                                    : `${pricing.currency} ${displayPrice.toFixed(2)}`}
+                                </span>
+                                {showOriginal && (
+                                  <span className="text-lg text-default-400 line-through">
+                                    {pricing.currency}{" "}
+                                    {(originalPrice || price).toFixed(2)}
+                                  </span>
+                                )}
+                                {hasCouponApplied && price > 0 && displayPrice === 0 && (
+                                  <span className="text-sm font-semibold text-primary-600">
+                                    100% off
+                                  </span>
+                                )}
+                                {!hasCouponApplied &&
+                                  pricing.discountPercentage &&
+                                  pricing.discountPercentage > 0 && (
+                                    <span className="text-sm font-semibold text-primary-600">
+                                      {Math.round(pricing.discountPercentage)}% off
+                                    </span>
+                                  )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-destructive">
+                          <ClockIcon className="size-4" />
+                          <span>5 hours left at this price!</span>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Action Buttons */}
                     <div className="space-y-3">
@@ -1107,6 +1183,166 @@ export function CourseDetail({
                           </div>
                         </div>
                       )}
+                    </div>
+
+                    {/* Money-Back Guarantee */}
+                    <p className="text-sm text-center text-default-600">
+                      30-Day Money-Back Guarantee
+                    </p>
+
+                    <Separator />
+
+                    {/* This course includes */}
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-default-900">
+                        This course includes:
+                      </h4>
+                      <div className="space-y-2.5">
+                        {!isPreview && apiCourseData?.stats && (
+                          <>
+                            <div className="flex items-center gap-3 text-sm text-default-700">
+                              <VideoIcon className="size-5 text-default-600 shrink-0" />
+                              <span>
+                                {Math.round((apiCourseData.stats.totalDuration || 0) / 60)}{" "}
+                                hours on-demand video
+                              </span>
+                            </div>
+                            {apiCourseData.stats.totalResources > 0 && (
+                              <div className="flex items-center gap-3 text-sm text-default-700">
+                                <DownloadIcon className="size-5 text-default-600 shrink-0" />
+                                <span>
+                                  {apiCourseData.stats.totalResources} downloadable resource
+                                  {apiCourseData.stats.totalResources !== 1 ? "s" : ""}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {isPreview && (
+                          <>
+                            <div className="flex items-center gap-3 text-sm text-default-700">
+                              <VideoIcon className="size-5 text-default-600 shrink-0" />
+                              <span>
+                                {Math.round((totalDuration || 0) / 60)} hours on-demand video
+                              </span>
+                            </div>
+                            {totalResources > 0 && (
+                              <div className="flex items-center gap-3 text-sm text-default-700">
+                                <DownloadIcon className="size-5 text-default-600 shrink-0" />
+                                <span>
+                                  {totalResources} downloadable resource
+                                  {totalResources !== 1 ? "s" : ""}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        <div className="flex items-center gap-3 text-sm text-default-700">
+                          <SmartphoneIcon className="size-5 text-default-600 shrink-0" />
+                          <span>Access on mobile and TV</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-default-700">
+                          <InfinityIcon className="size-5 text-default-600 shrink-0" />
+                          <span>Full lifetime access</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-default-700">
+                          <AwardIcon className="size-5 text-default-600 shrink-0" />
+                          <span>Certificate of completion</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Share, Gift, and Coupon Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-4 text-sm">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (navigator.share) {
+                              navigator.share({
+                                title: courseData.title,
+                                url: window.location.href,
+                              });
+                            } else {
+                              navigator.clipboard.writeText(window.location.href);
+                              // You could add a toast notification here
+                            }
+                          }}
+                          className="text-primary-600 hover:text-primary-700 font-medium cursor-pointer"
+                        >
+                          Share
+                        </button>
+                        <button
+                          type="button"
+                          className="text-primary-600 hover:text-primary-700 font-medium cursor-pointer"
+                        >
+                          Gift this course
+                        </button>
+                        <button
+                          type="button"
+                          className="text-primary-600 hover:text-primary-700 font-medium cursor-pointer"
+                        >
+                          Apply Coupon
+                        </button>
+                      </div>
+
+                      {/* Coupon Section */}
+                      {appliedCoupon && appliedCoupon === "25BBPMXNVD25" && (
+                        <div className="bg-success-50 border border-success-200 rounded-md p-3">
+                          <p className="text-sm font-medium text-success-700">
+                            {appliedCoupon} is applied
+                          </p>
+                          <p className="text-xs text-success-600 mt-1">
+                            Eduta coupon
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Coupon Error Message */}
+                      {couponError && (
+                        <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
+                          <p className="text-sm text-destructive">
+                            {couponError}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder="Enter Coupon"
+                          value={couponInput}
+                          onChange={(e) => {
+                            setCouponInput(e.target.value);
+                            setCouponError(""); // Clear error when user types
+                          }}
+                          className="flex-1 h-12"
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            if (couponInput.trim()) {
+                              // Only allow the static coupon
+                              if (couponInput.trim() === "25BBPMXNVD25") {
+                                setAppliedCoupon(couponInput.trim());
+                                setCouponInput("");
+                                setCouponError("");
+                              } else {
+                                // Show error message for invalid coupon
+                                setCouponError(
+                                  "The coupon code entered is not valid for this course. already one coupon is applied"
+                                );
+                                setCouponInput("");
+                              }
+                            }
+                          }}
+                          className="bg-primary-400 hover:bg-primary-500 text-white h-12"
+                        >
+                          Apply
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>

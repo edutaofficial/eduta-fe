@@ -34,6 +34,7 @@ export interface CourseDetailStats {
   totalDuration: number;
   totalExercises: number;
   totalProjects: number;
+  totalResources: number;
   viewsCount: number;
 }
 

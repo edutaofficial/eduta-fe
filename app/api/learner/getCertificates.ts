@@ -13,6 +13,10 @@ export interface Certificate {
   verificationCode: string;
   certificateUrl: string | null;
   isActive: boolean;
+  hasReview: boolean;
+  enrollmentId: string;
+  courseId: string;
+  reviewId: string | null;
 }
 
 export interface CertificatesResponse {

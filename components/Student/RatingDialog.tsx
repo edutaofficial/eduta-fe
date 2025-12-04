@@ -90,11 +90,26 @@ export function RatingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent
+        className="sm:max-w-[500px]"
+        showCloseButton={false}
+        onInteractOutside={(e) => {
+          // Prevent closing by clicking outside - review is required
+          e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          // Prevent closing with Escape key - review is required
+          e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Rate this course</DialogTitle>
           <DialogDescription>
             Share your experience with &ldquo;{courseTitle}&rdquo;
+            <br />
+            <span className="text-primary-600 font-medium mt-2 block">
+              ⚠️ A review is required to assign your certificate.
+            </span>
           </DialogDescription>
         </DialogHeader>
 
