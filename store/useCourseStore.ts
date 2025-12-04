@@ -12,9 +12,8 @@ import { publishCourse as publishCourseApi } from "@/app/api/course/publishCours
 import { 
   addFAQs as addFAQsApi, 
   updateFAQs as updateFAQsApi, 
-  getFAQs as getFAQsApi, 
-  deleteFAQ, 
-  type FAQ 
+  getFAQs as getFAQsApi,  
+ 
 } from "@/app/api/instructor/faqs";
 import { extractErrorMessage } from "@/lib/errorUtils";
 
