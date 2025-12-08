@@ -31,7 +31,7 @@ export default function StudentLayout({
             </p>
 
             {/* Tabs Navigation */}
-            <div className="flex gap-8 border-b border-white/20">
+            <div className="flex gap-8 border-b border-white/20"> 
               {tabs.map((tab) => (
                 <Link
                   key={tab.href}

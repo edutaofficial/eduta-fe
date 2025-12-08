@@ -26,7 +26,6 @@ import { CONSTANTS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/context/AuthContext";
 import {
-  BellIcon,
   HeartIcon,
   LogInIcon,
   GraduationCapIcon,

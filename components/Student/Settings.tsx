@@ -556,7 +556,8 @@ export function StudentSettings() {
                   <PhoneInput
                     international
                     defaultCountry="US"
-                    limitMaxLength={15}
+                    limitMaxLength={true}
+                    maxLength={15}
                     value={accountFormik.values.phoneNumber}
                     onChange={(value) => {
                       const limited = limitPhoneLength(value);

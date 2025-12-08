@@ -564,8 +564,9 @@ export function InstructorSettings() {
                   <PhoneInput
                     international
                     defaultCountry="US"
-                    limitMaxLength={15}
+                    limitMaxLength={true}
                     value={accountFormik.values.phoneNumber}
+                    maxLength={15}
                     onChange={(value) => {
                       const limited = limitPhoneLength(value);
                       accountFormik.setFieldValue("phoneNumber", limited);
