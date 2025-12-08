@@ -20,24 +20,34 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useInstructorStore } from "@/store/useInstructorStore";
-import { useUpload } from "@/hooks/useUpload";
+import { useAuth } from "@/lib/context/AuthContext";
 
 export function InstructorHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
-  const { profile } = useInstructorStore();
-  const { useGetAssetById } = useUpload();
+  const { user: authUser } = useAuth();
+  const { profile, fetchProfile, loading } = useInstructorStore();
+
+  React.useEffect(() => {
+    if (!profile && !loading.fetchProfile) {
+      fetchProfile().catch(() => {
+        /* ignore header fetch errors */
+      });
+    }
+  }, [fetchProfile, loading.fetchProfile, profile]);
 
   const name = profile?.first_name
     ? `${profile.first_name} ${profile.last_name || ""}`
     : session?.user?.name || "Instructor";
   const email = session?.user?.email || "instructor@eduta.org";
 
-  // Fetch profile picture asset
-  const { data: profilePictureAsset } = useGetAssetById(
-    profile?.profile_picture_id || 0
-  );
+  // Prefer auth user (has signed URL), then profile URL, then session image
+  const avatarUrl =
+    (authUser as { profilePictureUrl?: string } | undefined)?.profilePictureUrl ||
+    profile?.profile_picture_url ||
+    (session?.user as { image?: string } | undefined)?.image ||
+    null;
 
   const menuItems = [
     {
@@ -102,15 +112,12 @@ export function InstructorHeader() {
                 className="relative size-10 rounded-full p-0"
               >
                 <Avatar className="size-10">
-                  {profilePictureAsset?.file_url ? (
-                    <AvatarImage
-                      src={profilePictureAsset.file_url}
-                      alt="Profile"
-                    />
-                  ) : null}
-                  <AvatarFallback className="bg-primary-100 text-primary-700 text-sm font-semibold">
-                    {getInitials()}
-                  </AvatarFallback>
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt="Profile" />
+                  ) :  <AvatarFallback className="bg-primary-100 text-primary-700 text-sm font-semibold">
+                  {getInitials()}
+                </AvatarFallback>}
+                 
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -118,11 +125,8 @@ export function InstructorHeader() {
               {/* User Info Section */}
               <div className="flex items-center gap-3 p-4">
                 <Avatar className="size-14">
-                  {profilePictureAsset?.file_url ? (
-                    <AvatarImage
-                      src={profilePictureAsset.file_url}
-                      alt="Profile"
-                    />
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt="Profile" />
                   ) : null}
                   <AvatarFallback className="bg-primary-100 text-primary-700 text-lg font-semibold">
                     {getInitials()}

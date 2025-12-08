@@ -34,7 +34,7 @@ export async function getCourseForEdit(
     const basicInfo: UIBasicInfo = {
       title: courseData.courseDetails.title || "",
       shortDescription: courseData.courseDetails.description || "",
-      description: courseData.courseDetails.description || "",
+      description: courseData.courseDetails.fullDescription || "",
       learningLevel: courseData.courseDetails.learningLevel || "",
       language: courseData.courseDetails.language || "",
       categoryId: courseData.courseDetails.categoryId || "",

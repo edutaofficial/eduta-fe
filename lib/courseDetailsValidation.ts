@@ -20,7 +20,13 @@ export const courseDetailsValidationSchema = z.object({
     .string()
     .min(1, "Learning level is required"),
   
-  description: z
+  shortDescription: z
+    .string()
+    .max(500, "Short description must be less than 500 characters")
+    .optional()
+    .or(z.literal("")),
+  
+  fullDescription: z
     .string()
     .refine(
       (val) => {

@@ -12,7 +12,8 @@ export interface CourseDetailsFormValues {
   courseTitle: string;
   selectedCategory: string;
   learningLevel: string;
-  description: string;
+  shortDescription: string;
+  fullDescription: string;
   learningPoints: LearningPoint[];
   promoVideoId: number | null;
   courseBannerId: number | null;

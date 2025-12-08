@@ -7,6 +7,7 @@
 "use client";
 
 import * as React from "react";
+import { truncateHtmlByWords } from "@/lib/textUtils";
 import { useCourseStore } from "@/store/useCourseStore";
 import { CourseDetailForm } from "./CourseDetailForm";
 import type { CourseDetailsFormValues, CourseDetailsHandle } from "@/types/courseDetails";
@@ -39,13 +40,22 @@ const CourseDetailsInner = (
   const { basicInfo, setBasicInfo, loading } = useCourseStore();
   const formRef = React.useRef<CourseDetailsHandle>(null);
 
+  const clampShortDescription = React.useCallback((value: string | undefined) => {
+    return (value || "").slice(0, 500);
+  }, []);
+
+  const clampFullDescription = React.useCallback((value: string | undefined) => {
+    return truncateHtmlByWords(value || "", 3000);
+  }, []);
+
   // Prepare initial values from store (handles prefilling for editing/drafts)
   const initialValues = React.useMemo<CourseDetailsFormValues>(() => {
     return {
       courseTitle: basicInfo.title || "",
       selectedCategory: basicInfo.categoryId || "",
       learningLevel: normalizeLearningLevel(basicInfo.learningLevel || ""),
-      description: basicInfo.description || "",
+      shortDescription: clampShortDescription(basicInfo.shortDescription),
+      fullDescription: clampFullDescription(basicInfo.fullDescription),
       learningPoints:
         basicInfo.learningPoints.length > 0
           ? basicInfo.learningPoints.map((lp, idx) => ({
@@ -61,11 +71,14 @@ const CourseDetailsInner = (
       promoVideoId: basicInfo.promoVideoId || null,
       courseBannerId: basicInfo.courseBannerId || null,
     };
-  }, [basicInfo]);
+  }, [basicInfo, clampFullDescription, clampShortDescription]);
 
   // Handle form submission - sync data to store
   const handleSubmit = React.useCallback(
     (values: CourseDetailsFormValues) => {
+      const safeShortDescription = clampShortDescription(values.shortDescription);
+      const safeFullDescription = clampFullDescription(values.fullDescription);
+
       const learningPoints = values.learningPoints.map((lp) => ({
         description: lp.text,
       }));
@@ -74,8 +87,9 @@ const CourseDetailsInner = (
         title: values.courseTitle,
         categoryId: values.selectedCategory,
         learningLevel: values.learningLevel,
-        description: values.description,
-        fullDescription: values.description,
+        description: safeShortDescription,
+        shortDescription: safeShortDescription,
+        fullDescription: safeFullDescription,
         language: "English",
         learningPoints,
         requirements: [],
@@ -85,7 +99,7 @@ const CourseDetailsInner = (
         courseBannerId: values.courseBannerId,
       });
     },
-    [setBasicInfo]
+    [clampFullDescription, clampShortDescription, setBasicInfo]
   );
 
   // Note: Removed auto-sync useEffect as it was causing data loss

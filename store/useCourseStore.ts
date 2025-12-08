@@ -22,6 +22,7 @@ const initialBasicInfo: CreateCourseRequest = {
   categoryId: "",
   learningLevel: "",
   description: "",
+  shortDescription: "",
   fullDescription: "",
   language: "",
   promoVideoId: null,

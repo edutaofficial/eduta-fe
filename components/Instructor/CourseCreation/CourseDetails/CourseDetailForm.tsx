@@ -94,7 +94,8 @@ const CourseDetailFormInner = (
     const hasStoreData =
       Boolean(initialValues.courseTitle) ||
       Boolean(initialValues.selectedCategory) ||
-      Boolean(initialValues.description) ||
+      Boolean(initialValues.shortDescription) ||
+      Boolean(initialValues.fullDescription) ||
       initialValues.learningPoints.some((lp) => lp.text.trim().length > 0);
 
     if (!hasStoreData) {
@@ -210,7 +211,8 @@ const CourseDetailFormInner = (
           courseTitle: true,
           selectedCategory: true,
           learningLevel: true,
-          description: true,
+          shortDescription: true,
+          fullDescription: true,
           promoVideoId: true,
           courseBannerId: true,
           learningPoints: true, // Mark the array itself as touched
@@ -406,27 +408,67 @@ const CourseDetailFormInner = (
         )}
       </div>
 
-      {/* Course Description */}
+      {/* Short Description */}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="shortDescription">
+          Short Description
+        </Label>
+        <Textarea
+          id="shortDescription"
+          name="shortDescription"
+          placeholder="Enter a brief description of your course (optional, max 500 characters)..."
+          value={formik.values.shortDescription}
+          onChange={(e) => {
+            formik.handleChange(e);
+            if (formik.errors.shortDescription) {
+              formik.setFieldError("shortDescription", undefined);
+            }
+          }}
+          onBlur={formik.handleBlur}
+          disabled={isSubmitting}
+          rows={3}
+          maxLength={500}
+          className={cn(
+            "resize-none",
+            formik.touched.shortDescription && formik.errors.shortDescription
+              ? "border-destructive focus-visible:ring-destructive"
+              : ""
+          )}
+          aria-invalid={
+            !!(formik.touched.shortDescription && formik.errors.shortDescription)
+          }
+        />
+        <p className="text-xs text-muted-foreground">
+          {formik.values.shortDescription.length}/500 characters
+        </p>
+        {formik.touched.shortDescription && formik.errors.shortDescription && (
+          <p className="text-sm text-destructive font-medium">
+            {formik.errors.shortDescription}
+          </p>
+        )}
+      </div>
+
+      {/* Full Course Description */}
       <div className="flex flex-col gap-2">
         <Label>
-          Course Description <span className="text-destructive">*</span>
+          Full Course Description <span className="text-destructive">*</span>
         </Label>
         <RichTextEditor
-          value={formik.values.description}
+          value={formik.values.fullDescription}
           onChange={(v) => {
-            formik.setFieldValue("description", v);
-            if (formik.errors.description) {
-              formik.setFieldError("description", undefined);
+            formik.setFieldValue("fullDescription", v);
+            if (formik.errors.fullDescription) {
+              formik.setFieldError("fullDescription", undefined);
             }
           }}
           placeholder="Describe what students will learn in this course..."
           minWords={1000}
           maxWords={3000}
-          error={!!(formik.touched.description && formik.errors.description)}
+          error={!!(formik.touched.fullDescription && formik.errors.fullDescription)}
         />
-        {formik.touched.description && formik.errors.description && (
+        {formik.touched.fullDescription && formik.errors.fullDescription && (
           <p className="text-sm text-destructive font-medium">
-            {formik.errors.description}
+            {formik.errors.fullDescription}
           </p>
         )}
       </div>

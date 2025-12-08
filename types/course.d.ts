@@ -208,6 +208,7 @@ export interface CreateCourseRequest {
   categoryId: string;
   learningLevel: string;
   description: string;
+  shortDescription?: string;
   fullDescription: string;
   language: string;
   promoVideoId?: number | null;

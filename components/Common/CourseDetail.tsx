@@ -133,6 +133,14 @@ function formatLectureDuration(duration?: string | number): string {
   return duration; // Already formatted string
 }
 
+// Clamp short description to 500 characters for display
+function truncateShortDescription(text?: string): string {
+  if (!text) return "";
+  const trimmed = text.trim();
+  if (trimmed.length <= 500) return trimmed;
+  return `${trimmed.slice(0, 500)}...`;
+}
+
 export function CourseDetail({
   courseId,
   isPreview = false,
@@ -499,6 +507,12 @@ export function CourseDetail({
                 <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-default-900 leading-tight">
                   {courseData.title}
                 </h1>
+            {apiCourseData?.shortDescription &&
+              apiCourseData.shortDescription.trim() !== "" && (
+                  <p className="text-base md:text-lg text-default-700 leading-relaxed">
+                {truncateShortDescription(apiCourseData.shortDescription)}
+                  </p>
+                )}
                 <div className="flex flex-wrap items-center gap-4 text-sm text-default-700">
                   <span>{courseData.duration || "0 hours"}</span>
                   {totalLectures > 0 && (

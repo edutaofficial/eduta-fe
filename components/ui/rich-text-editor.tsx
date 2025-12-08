@@ -41,7 +41,8 @@ export function RichTextEditor({
   error,
 }: RichTextEditorProps) {
   const [isMounted, setIsMounted] = React.useState(false);
-  const [wordCount, setWordCount] = React.useState(0);
+  // Initialize wordCount from value prop to show correct count immediately
+  const [wordCount, setWordCount] = React.useState(() => countWords(value || ""));
   const { showToast } = useToast();
   
   // Track if we've already shown toast for word limit to avoid spam
@@ -50,6 +51,12 @@ export function RichTextEditor({
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Recalculate word count whenever value prop changes (handles remounts, preview returns, etc.)
+  React.useEffect(() => {
+    const words = countWords(value || "");
+    setWordCount(words);
+  }, [value]);
 
   const editor = useEditor({
     extensions: [
@@ -164,9 +171,10 @@ export function RichTextEditor({
       }
       
       editor.commands.setContent(contentToSet);
-      // Update word count
+      // Update word count from the actual editor content
       const html = editor.getHTML();
-      setWordCount(countWords(html));
+      const words = countWords(html);
+      setWordCount(words);
     }
   }, [value, editor, maxWords]);
 
