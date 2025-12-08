@@ -57,7 +57,17 @@ const accountSettingsSchema = z.object({
     .string()
     .min(1, "Last name is required")
     .regex(nameRegex, "Name must contain only letters and spaces"),
-  phoneNumber: z.string().optional(),
+  phoneNumber: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const digits = val.replace(/\D/g, "");
+        return digits.length <= 15;
+      },
+      "Phone number must be 15 digits or fewer"
+    ),
   dateOfBirth: z
     .string()
     .optional()
@@ -71,6 +81,11 @@ type AccountSettingsFormValues = z.infer<typeof accountSettingsSchema>;
 
 export function StudentSettings() {
   const { user, updateProfilePictureUrl } = useAuth();
+  const limitPhoneLength = React.useCallback((val: string | null | undefined) => {
+    if (!val) return "";
+    const digits = val.replace(/\D/g, "").slice(0, 15);
+    return val.startsWith("+") ? `+${digits}` : digits;
+  }, []);
   const {
     profile,
     loading,
@@ -541,9 +556,11 @@ export function StudentSettings() {
                   <PhoneInput
                     international
                     defaultCountry="US"
+                    limitMaxLength={15}
                     value={accountFormik.values.phoneNumber}
                     onChange={(value) => {
-                      accountFormik.setFieldValue("phoneNumber", value || "");
+                      const limited = limitPhoneLength(value);
+                      accountFormik.setFieldValue("phoneNumber", limited);
                     }}
                     onBlur={() => accountFormik.setFieldTouched("phoneNumber")}
                     disabled={loading.updateProfile}

@@ -231,9 +231,7 @@ export default function Header() {
                     ) : (
                       // Student - Show normal navigation
                       <div className="flex items-center">
-                        <Button variant="ghost" size="icon">
-                          <BellIcon className="size-5" />
-                        </Button>
+                     
                         <Button
                           variant="ghost"
                           size="icon"
