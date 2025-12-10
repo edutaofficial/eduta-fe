@@ -46,33 +46,14 @@ export function CoursesFilters({
     }
   }, [categories.length, fetchCategories]);
 
-  // Helper to check if parent category should be checked
-  const isParentChecked = (parentId: string, subcategories: Array<{ categoryId: string }>) => {
-    // If no subcategories, check if parent itself is selected
-    if (subcategories.length === 0) {
-      return selectedCategories.includes(parentId);
-    }
-    // Parent is checked if all its subcategories are selected
-    return subcategories.every((sub) => selectedCategories.includes(sub.categoryId));
-  };
-
-  // Helper to check if parent category should be indeterminate
-  const isParentIndeterminate = (parentId: string, subcategories: Array<{ categoryId: string }>) => {
-    // If no subcategories, never indeterminate (it's either checked or unchecked)
-    if (subcategories.length === 0) {
-      return false;
-    }
-    const selectedCount = subcategories.filter((sub) =>
-      selectedCategories.includes(sub.categoryId)
-    ).length;
-    return selectedCount > 0 && selectedCount < subcategories.length;
-  };
-
   const hasActiveFilters =
     selectedLevels.length > 0 ||
     selectedCategories.length > 0 ||
     selectedDurations.length > 0 ||
     minRating > 0;
+
+  const categoriesWithSub = categories.filter((c) => c.subcategories.length > 0);
+  const categoriesWithoutSub = categories.filter((c) => c.subcategories.length === 0);
 
   return (
     <aside className="w-full lg:w-64 flex-shrink-0">
@@ -121,56 +102,59 @@ export function CoursesFilters({
                   ))}
                 </div>
               ) : (
-                categories.map((category) => {
-                  const hasSubcategories = category.subcategories.length > 0;
-                  return (
+                <>
+                  {categoriesWithSub.map((category) => (
                     <div key={category.categoryId} className="space-y-2">
-                      {/* Parent Category Checkbox */}
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`parent-${category.categoryId}`}
-                          checked={isParentChecked(category.categoryId, category.subcategories)}
-                          data-indeterminate={isParentIndeterminate(category.categoryId, category.subcategories)}
-                          onCheckedChange={() => onCategoryToggle(category.categoryId, true)}
-                          className="data-[indeterminate=true]:bg-primary-400 data-[indeterminate=true]:border-primary-400"
-                        />
-                        <Label
-                          htmlFor={`parent-${category.categoryId}`}
-                          className={`text-sm cursor-pointer ${
-                            hasSubcategories
-                              ? "font-semibold text-default-900"
-                              : "font-normal text-default-900"
-                          }`}
-                        >
-                          {category.name}
-                        </Label>
+                      {/* Parent heading (not selectable) */}
+                      <div className="text-sm font-semibold text-default-900">
+                        {category.name}
                       </div>
-                      {/* Subcategories as checkboxes - only show if they exist */}
-                      {hasSubcategories && (
-                        <div className="space-y-2 pl-6">
-                          {category.subcategories.map((subcategory) => (
-                            <div
-                              key={subcategory.categoryId}
-                              className="flex items-center space-x-2"
+                      <div className="space-y-2 pl-6">
+                        {category.subcategories.map((subcategory) => (
+                          <div
+                            key={subcategory.categoryId}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              id={`category-${subcategory.categoryId}`}
+                              checked={selectedCategories.includes(subcategory.categoryId)}
+                              onCheckedChange={() => onCategoryToggle(subcategory.categoryId, false)}
+                            />
+                            <Label
+                              htmlFor={`category-${subcategory.categoryId}`}
+                              className="text-sm font-normal cursor-pointer"
                             >
-                              <Checkbox
-                                id={`category-${subcategory.categoryId}`}
-                                checked={selectedCategories.includes(subcategory.categoryId)}
-                                onCheckedChange={() => onCategoryToggle(subcategory.categoryId, false)}
-                              />
-                              <Label
-                                htmlFor={`category-${subcategory.categoryId}`}
-                                className="text-sm font-normal cursor-pointer"
-                              >
-                                {subcategory.name}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                              {subcategory.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  );
-                })
+                  ))}
+
+                  {categoriesWithoutSub.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-default-900">Others</div>
+                      <div className="space-y-2 pl-6">
+                        {categoriesWithoutSub.map((category) => (
+                          <div key={category.categoryId} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`category-${category.categoryId}`}
+                              checked={selectedCategories.includes(category.categoryId)}
+                              onCheckedChange={() => onCategoryToggle(category.categoryId, true)}
+                            />
+                            <Label
+                              htmlFor={`category-${category.categoryId}`}
+                              className="text-sm font-normal cursor-pointer"
+                            >
+                              {category.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CollapsibleContent>
           </Collapsible>

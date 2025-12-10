@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 
 const faqCategories = [
@@ -143,96 +144,59 @@ export default function FAQsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-default-50 to-white pt-28">
-      {/* Hero Section */}
-      <section className="max-w-container mx-auto px-6 py-16">
-        <div className="text-center max-w-3xl mx-auto">
-          <h1 className="text-5xl font-bold text-default-900 mb-6">
-            Frequently Asked Questions
-          </h1>
-          <p className="text-xl text-default-700 leading-relaxed mb-8">
-            Find answers to common questions about Eduta. Can&apos;t find what you&apos;re
-            looking for? Contact our support team.
-          </p>
-
-          {/* Search Bar */}
-          <div className="relative max-w-xl mx-auto">
+      <section className="w-full mx-auto py-16 space-y-14">
+        {/* Top Badge + Heading + Search to match FAQ component styling */}
+        <div className="space-y-6 flex flex-col items-center text-center max-w-container mx-auto md:px-6 px-4">
+          <Search className="absolute left-[-9999px] hidden" aria-hidden="true" />
+          <div className="flex flex-col items-center gap-6">
+            <Badge variant="info">FAQs</Badge>
+            <h1 className="text-2xl md:text-4xl font-semibold text-default-900">
+              Frequently Asked Questions
+            </h1>
+          </div>
+          <div className="relative w-full max-w-2xl">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-default-400" />
             <Input
               type="text"
               placeholder="Search for questions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 h-14 text-lg"
+              className="pl-12 h-12 text-base"
             />
           </div>
         </div>
-      </section>
 
-      {/* FAQ Content */}
-      <section className="max-w-4xl mx-auto px-6 pb-16">
-        {filteredFAQs.length > 0 ? (
-          <div className="space-y-12">
-            {filteredFAQs.map((category, categoryIndex) => (
-              <div key={categoryIndex}>
-                <h2 className="text-2xl font-bold text-default-900 mb-6">
-                  {category.category}
-                </h2>
-                <Accordion type="single" collapsible className="space-y-4">
-                  {category.questions.map((faq, index) => (
-                    <AccordionItem
-                      key={index}
-                      value={`${categoryIndex}-${index}`}
-                      className="bg-white rounded-lg border border-default-200 px-6"
-                    >
-                      <AccordionTrigger className="text-left hover:no-underline py-5">
-                        <span className="font-semibold text-default-900 pr-4">
-                          {faq.question}
-                        </span>
-                      </AccordionTrigger>
-                      <AccordionContent className="text-default-700 leading-relaxed pb-5">
-                        {faq.answer}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <p className="text-xl text-default-600">
-              No questions found matching &quot;{searchQuery}&quot;
-            </p>
-            <p className="text-default-500 mt-2">
-              Try different keywords or contact our support team.
-            </p>
-          </div>
-        )}
-      </section>
-
-      {/* Contact CTA */}
-      <section className="bg-primary-50 border-y border-primary-200 py-12">
-        <div className="max-w-container mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-default-900 mb-4">
-            Still have questions?
-          </h2>
-          <p className="text-lg text-default-700 mb-6">
-            Our support team is here to help you with any questions or concerns.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="/contact"
-              className="inline-block bg-primary-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors text-center"
-            >
-              Contact Support
-            </a>
-            <a
-              href="mailto:info@eduta.org"
-              className="inline-block bg-white text-primary-600 border-2 border-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-primary-50 transition-colors text-center"
-            >
-              Email Us
-            </a>
-          </div>
+        {/* Main FAQS */}
+        <div className="flex flex-col max-w-container mx-auto md:px-6 px-4">
+          {filteredFAQs.length > 0 ? (
+            <Accordion type="single" collapsible className="w-full">
+              {filteredFAQs.flatMap((category, categoryIndex) =>
+                category.questions.map((faq, index) => (
+                  <AccordionItem
+                    key={`${categoryIndex}-${index}`}
+                    value={`${categoryIndex}-${index}`}
+                    className="border border-default-200 rounded-lg bg-white mb-3"
+                  >
+                    <AccordionTrigger className="text-left text-lg md:text-xl font-medium px-4 md:px-6">
+                      {faq.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-base px-4 md:px-6 pb-4">
+                      {faq.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))
+              )}
+            </Accordion>
+          ) : (
+            <div className="text-center py-16">
+              <p className="text-xl text-default-600">
+                No questions found matching &quot;{searchQuery}&quot;
+              </p>
+              <p className="text-default-500 mt-2">
+                Try different keywords or contact our support team.
+              </p>
+            </div>
+          )}
         </div>
       </section>
     </div>

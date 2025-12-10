@@ -72,24 +72,43 @@ function ExploreDropdown({
               ))}
             </>
           ) : (
-            categories.slice(0, 8).map((category) => (
-              <li key={category.categoryId}>
-                <NavigationMenuLink asChild>
-                  <Link
-                    href={`/topics?categories=${category.categoryId}`}
-                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-hidden transition-colors hover:bg-primary-100 hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                  >
-                    <div className="text-sm font-semibold leading-none line-clamp-1">
+            categories.slice(0, 8).map((category) => {
+              const hasSubcategories = category.subcategories?.length > 0;
+
+              return (
+                <li key={category.categoryId} className="rounded-md p-3">
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold leading-none line-clamp-1 text-default-900">
                       {category.name}
                     </div>
-                    <p className="text-sm leading-snug text-muted-foreground line-clamp-2 break-words">
-                      {category.description ||
-                        "Explore courses in this category"}
-                    </p>
-                  </Link>
-                </NavigationMenuLink>
-              </li>
-            ))
+
+                    {hasSubcategories ? (
+                      <div className="space-y-1">
+                        {category.subcategories.map((sub) => (
+                          <NavigationMenuLink asChild key={sub.categoryId}>
+                            <Link
+                              href={`/topics?categories=${sub.categoryId}`}
+                              className="block text-sm text-primary-700 hover:underline"
+                            >
+                              {sub.name}
+                            </Link>
+                          </NavigationMenuLink>
+                        ))}
+                      </div>
+                    ) : (
+                      <NavigationMenuLink asChild>
+                        <Link
+                          href={`/topics?categories=${category.categoryId}`}
+                          className="block text-sm text-primary-700 hover:underline"
+                        >
+                          {category.name}
+                        </Link>
+                      </NavigationMenuLink>
+                    )}
+                  </div>
+                </li>
+              );
+            })
           )}
         </ul>
       </NavMenuContentModified>

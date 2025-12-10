@@ -33,8 +33,15 @@ function decodeJWT(token: string): { exp?: number; [key: string]: unknown } | nu
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1]));
-    return payload;
+
+    // Use Buffer for Node and atob for browser
+    const base64Payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const json =
+      typeof atob === "function"
+        ? atob(base64Payload)
+        : Buffer.from(base64Payload, "base64").toString("utf-8");
+
+    return JSON.parse(json);
   } catch {
     return null;
   }
@@ -45,12 +52,13 @@ function decodeJWT(token: string): { exp?: number; [key: string]: unknown } | nu
  */
 export function isTokenExpired(token: string): boolean {
   const decoded = decodeJWT(token);
-  if (!decoded || !decoded.exp) return true;
+  // If we cannot read exp, assume not expired to avoid premature sign-outs;
+  // backend will reject truly invalid tokens.
+  if (!decoded || typeof decoded.exp !== "number") return false;
 
   const currentTime = Math.floor(Date.now() / 1000);
-  const bufferTime = 5 * 60; // 5 minutes buffer
-  
-  return decoded.exp < currentTime + bufferTime;
+  // Only expire when the backend-expiry is reached (no aggressive buffer)
+  return decoded.exp <= currentTime;
 }
 
 /**

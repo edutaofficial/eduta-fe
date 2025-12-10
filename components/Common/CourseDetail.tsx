@@ -470,7 +470,7 @@ export function CourseDetail({
                   <BreadcrumbItem>
                     {apiCourseData?.category?.categoryId ? (
                       <Link
-                        href={`/topics?category=${apiCourseData.category.categoryId}`}
+                        href={`/topics?categories=${apiCourseData.category.categoryId}`}
                         className="text-default-900 hover:text-primary-600 transition-colors"
                       >
                         {courseData.category || "Category"}
