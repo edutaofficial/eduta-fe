@@ -32,9 +32,9 @@ import {
   LockIcon, 
   ClockIcon,
    DownloadIcon,
-  SmartphoneIcon,
   InfinityIcon,
   AwardIcon,
+  Share2Icon,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -1068,6 +1068,24 @@ export function CourseDetail({
                                     {Math.round(apiCourseData.pricing.discountPercentage)}% off
                                   </span>
                                 )}
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="shrink-0 ml-auto"
+                                  onClick={() => {
+                                    if (navigator.share) {
+                                      navigator.share({
+                                        title: courseData.title,
+                                        url: window.location.href,
+                                      });
+                                    } else {
+                                      navigator.clipboard.writeText(window.location.href);
+                                      // You could add a toast notification here
+                                    }
+                                  }}
+                                >
+                                  <Share2Icon className="size-4" />
+                                </Button>
                               </>
                             );
                           })()}
@@ -1120,6 +1138,24 @@ export function CourseDetail({
                                       {Math.round(discountPercentage)}% off
                                     </span>
                                   )}
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="shrink-0 ml-auto"
+                                  onClick={() => {
+                                    if (navigator.share) {
+                                      navigator.share({
+                                        title: courseData.title,
+                                        url: window.location.href,
+                                      });
+                                    } else {
+                                      navigator.clipboard.writeText(window.location.href);
+                                      // You could add a toast notification here
+                                    }
+                                  }}
+                                >
+                                  <Share2Icon className="size-4" />
+                                </Button>
                               </>
                             );
                           })()}
@@ -1135,50 +1171,54 @@ export function CourseDetail({
                     <div className="space-y-3">
                       {!isPreview && (
                         <>
-                          {apiCourseData?.isEnrolled ? (
-                            <Button
-                              className="w-full bg-primary-400 hover:bg-primary-500 text-white"
-                              size="lg"
-                              onClick={() => {
-                                if (apiCourseData?.courseId) {
-                                  router.push(
-                                    `/learn/${apiCourseData.courseId}/lectures`
-                                  );
-                                }
-                              }}
-                            >
-                              Go to Lectures
-                              <ArrowRightIcon className="size-4 ml-2" />
-                            </Button>
-                          ) : (
-                            <Button
-                              className="w-full bg-primary-400 hover:bg-primary-500 text-white"
-                              size="lg"
-                              onClick={onEnroll}
-                              disabled={enrolling}
-                            >
-                              {enrolling ? "Enrolling..." : "Enroll Now"}
-                            </Button>
-                          )}
-                          {user?.role !== "instructor" && (
-                            <Button
-                              variant="outline"
-                              className="w-full"
-                              onClick={onWishlistToggle}
-                              disabled={wishlistLoading}
-                            >
-                              <HeartIcon
-                                className={`size-5 mr-2 ${
-                                  isWishlisted
-                                    ? "fill-destructive text-destructive"
-                                    : ""
-                                }`}
-                              />
-                              {isWishlisted
-                                ? "Remove from Wishlist"
-                                : "Add to Wishlist"}
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {apiCourseData?.isEnrolled ? (
+                              <Button
+                                className={`${
+                                  user?.role !== "instructor" ? "flex-1" : "w-full"
+                                } bg-primary-400 hover:bg-primary-500 text-white`}
+                                size="lg"
+                                onClick={() => {
+                                  if (apiCourseData?.courseId) {
+                                    router.push(
+                                      `/learn/${apiCourseData.courseId}/lectures`
+                                    );
+                                  }
+                                }}
+                              >
+                                Go to Lectures
+                                <ArrowRightIcon className="size-4 ml-2" />
+                              </Button>
+                            ) : (
+                              <Button
+                                className={`${
+                                  user?.role !== "instructor" ? "flex-1" : "w-full"
+                                } bg-primary-400 hover:bg-primary-500 text-white`}
+                                size="lg"
+                                onClick={onEnroll}
+                                disabled={enrolling}
+                              >
+                                {enrolling ? "Enrolling..." : "Enroll Now"}
+                              </Button>
+                            )}
+                            {user?.role !== "instructor" && (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="shrink-0 h-11 w-11"
+                                onClick={onWishlistToggle}
+                                disabled={wishlistLoading}
+                              >
+                                <HeartIcon
+                                  className={`size-4 ${
+                                    isWishlisted
+                                      ? "fill-destructive text-destructive"
+                                      : ""
+                                  }`}
+                                />
+                              </Button>
+                            )}
+                          </div>
                         </>
                       )}
                       {isPreview && pricing && (
@@ -1247,10 +1287,6 @@ export function CourseDetail({
                           </>
                         )}
                         <div className="flex items-center gap-3 text-sm text-default-700">
-                          <SmartphoneIcon className="size-5 text-default-600 shrink-0" />
-                          <span>Access on mobile and TV</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-default-700">
                           <InfinityIcon className="size-5 text-default-600 shrink-0" />
                           <span>Full lifetime access</span>
                         </div>
@@ -1263,41 +1299,8 @@ export function CourseDetail({
 
                     <Separator />
 
-                    {/* Share, Gift, and Coupon Section */}
+                    {/* Coupon Section */}
                     <div className="space-y-3">
-                      <div className="flex items-center gap-4 text-sm">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (navigator.share) {
-                              navigator.share({
-                                title: courseData.title,
-                                url: window.location.href,
-                              });
-                            } else {
-                              navigator.clipboard.writeText(window.location.href);
-                              // You could add a toast notification here
-                            }
-                          }}
-                          className="text-primary-600 hover:text-primary-700 font-medium cursor-pointer"
-                        >
-                          Share
-                        </button>
-                        <button
-                          type="button"
-                          className="text-primary-600 hover:text-primary-700 font-medium cursor-pointer"
-                        >
-                          Gift this course
-                        </button>
-                        <button
-                          type="button"
-                          className="text-primary-600 hover:text-primary-700 font-medium cursor-pointer"
-                        >
-                          Apply Coupon
-                        </button>
-                      </div>
-
-                      {/* Coupon Section */}
                       {appliedCoupon && appliedCoupon === "25BBPMXNVD25" && (
                         <div className="bg-success-50 border border-success-200 rounded-md p-3">
                           <p className="text-sm font-medium text-success-700">
