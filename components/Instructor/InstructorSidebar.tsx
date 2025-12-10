@@ -10,6 +10,7 @@ import {
   ChartBarIcon,
   CreditCardIcon,
   SettingsIcon,
+  MessageCircleIcon,
 } from "lucide-react";
 
 interface InstructorSidebarProps {
@@ -35,6 +36,12 @@ export function InstructorSidebar({
       name: "Announcement",
       icon: MegaphoneIcon,
       href: "/instructor/announcements",
+    },
+    {
+      id: "questions",
+      name: "Questions",
+      icon: MessageCircleIcon,
+      href: "/instructor/questions",
     },
     {
       id: "analytics",

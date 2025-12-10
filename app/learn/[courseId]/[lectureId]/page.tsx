@@ -12,6 +12,11 @@ import {
   updateProgress,
   type UpdateProgressRequest,
 } from "@/app/api/learner/updateProgress";
+import {
+  createLectureQuestion,
+  getLectureQuestions,
+  type LectureQuestion,
+} from "@/app/api/learner/lectureQuestions";
 import { LectureHeader } from "@/components/Learn/LectureHeader";
 import { LectureSidebar } from "@/components/Learn/LectureSidebar";
 import { VideoJSHlsPlayer } from "@/components/Learn/VideoJSHlsPlayer";
@@ -26,6 +31,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { X, FileText, MessageCircle, StickyNote, Download } from "lucide-react";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { useUpload } from "@/hooks/useUpload";
 import { RatingDialog } from "@/components/Student/RatingDialog";
@@ -113,6 +122,98 @@ export default function LecturePlayerPage() {
   const [progressToast, setProgressToast] = React.useState<string | null>(null);
   const [currentVideoPosition, setCurrentVideoPosition] =
     React.useState<number>(0);
+  const [isToolsOpen, setIsToolsOpen] = React.useState(false);
+  const [activeToolTab, setActiveToolTab] =
+    React.useState<ToolTab | null>(null);
+  const [drawerPosition, setDrawerPosition] = React.useState({ x: 16, y: 120 });
+  const [drawerSize, setDrawerSize] = React.useState({ width: 320, height: 520 });
+  const dragStateRef = React.useRef<{
+    dragging: boolean;
+    startX: number;
+    startY: number;
+    origX: number;
+    origY: number;
+  }>({ dragging: false, startX: 0, startY: 0, origX: 0, origY: 0 });
+  const resizeStateRef = React.useRef<{
+    resizing: boolean;
+    startX: number;
+    startY: number;
+    origW: number;
+    origH: number;
+  }>({ resizing: false, startX: 0, startY: 0, origW: 0, origH: 0 });
+
+  // Drag handlers
+  const handleDragStart = React.useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      dragStateRef.current = {
+        dragging: true,
+        startX: e.clientX,
+        startY: e.clientY,
+        origX: drawerPosition.x,
+        origY: drawerPosition.y,
+      };
+    },
+    [drawerPosition.x, drawerPosition.y]
+  );
+
+  const handleResizeStart = React.useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      resizeStateRef.current = {
+        resizing: true,
+        startX: e.clientX,
+        startY: e.clientY,
+        origW: drawerSize.width,
+        origH: drawerSize.height,
+      };
+    },
+    [drawerSize.height, drawerSize.width]
+  );
+
+  React.useEffect(() => {
+    function onMouseMove(ev: MouseEvent) {
+      if (dragStateRef.current.dragging) {
+        const dx = ev.clientX - dragStateRef.current.startX;
+        const dy = ev.clientY - dragStateRef.current.startY;
+        setDrawerPosition({
+          x: Math.max(8, dragStateRef.current.origX + dx),
+          y: Math.max(80, dragStateRef.current.origY + dy),
+        });
+      } else if (resizeStateRef.current.resizing) {
+        const dx = ev.clientX - resizeStateRef.current.startX;
+        const dy = ev.clientY - resizeStateRef.current.startY;
+        setDrawerSize({
+          width: Math.min(
+            Math.max(260, resizeStateRef.current.origW + dx),
+            window.innerWidth - 40
+          ),
+          height: Math.min(
+            Math.max(320, resizeStateRef.current.origH + dy),
+            window.innerHeight - 160
+          ),
+        });
+      }
+    }
+
+    function onMouseUp() {
+      dragStateRef.current.dragging = false;
+      resizeStateRef.current.resizing = false;
+    }
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+  const [questionContent, setQuestionContent] = React.useState("");
+  const [qaError, setQaError] = React.useState<string | null>(null);
+  const [notesValue, setNotesValue] = React.useState("");
+  const [notesStatus, setNotesStatus] =
+    React.useState<"idle" | "saving" | "saved">("idle");
+  const notesSaveTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Track if component is mounted to prevent updates after unmount
   const isMountedRef = React.useRef(true);
@@ -183,6 +284,69 @@ export default function LecturePlayerPage() {
   }, [courseContent, lectureIdParam]);
 
   const currentLecture = currentLectureData?.lecture;
+
+  // Notes storage key (per course & lecture)
+  const notesStorageKey = React.useMemo(() => {
+    if (!courseId || !lectureIdParam || lectureIdParam === "0") return "";
+    return `lecture-notes-${courseId}-${lectureIdParam}`;
+  }, [courseId, lectureIdParam]);
+
+  // Load saved notes
+  React.useEffect(() => {
+    if (!notesStorageKey) {
+      setNotesValue("");
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(notesStorageKey);
+      setNotesValue(saved || "");
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn("Unable to load notes from localStorage:", e);
+    }
+  }, [notesStorageKey]);
+
+  // Persist notes with debounce
+  React.useEffect(() => {
+    if (!notesStorageKey) return;
+
+    setNotesStatus("saving");
+    if (notesSaveTimerRef.current) {
+      clearTimeout(notesSaveTimerRef.current);
+    }
+
+    notesSaveTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(notesStorageKey, notesValue);
+        setNotesStatus("saved");
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("Unable to save notes to localStorage:", e);
+        setNotesStatus("idle");
+      }
+    }, 500);
+  }, [notesValue, notesStorageKey]);
+
+  // Q&A queries
+  const {
+    data: lectureQuestions = [],
+    isLoading: questionsLoading,
+    error: questionsError,
+  } = useQuery<LectureQuestion[]>({
+    queryKey: ["lectureQuestions", lectureIdParam],
+    queryFn: () => getLectureQuestions(lectureIdParam),
+    enabled:
+      !!lectureIdParam &&
+      lectureIdParam !== "0" &&
+      lectureIdParam !== "lectures",
+    staleTime: 1000 * 30,
+  });
+
+  React.useEffect(() => {
+    if (questionsError) {
+      setQaError(extractErrorMessage(questionsError));
+    }
+  }, [questionsError]);
 
   // Find adjacent lectures
   const nextLecture = React.useMemo(() => {
@@ -350,6 +514,21 @@ export default function LecturePlayerPage() {
     retryDelay: 0,
   });
 
+  const createQuestionMutation = useMutation({
+    mutationFn: createLectureQuestion,
+    onSuccess: () => {
+      setQuestionContent("");
+      setQaError(null);
+      queryClient.invalidateQueries({
+        queryKey: ["lectureQuestions", lectureIdParam],
+        refetchType: "active",
+      });
+    },
+    onError: (err: unknown) => {
+      setQaError(extractErrorMessage(err));
+    },
+  });
+
   // Debounced progress update
   const pendingProgressRef = React.useRef<UpdateProgressRequest | null>(null);
   const progressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -495,6 +674,32 @@ export default function LecturePlayerPage() {
     completeLectureMutation.mutate(payload);
   }, [courseContent, currentLecture, completeLectureMutation]);
 
+  const handleQuestionSubmit = React.useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!courseContent || !currentLecture) {
+        setQaError("Unable to post question. Please reload and try again.");
+        return;
+      }
+      if (!questionContent.trim()) {
+        setQaError("Please enter your question before submitting.");
+        return;
+      }
+
+      createQuestionMutation.mutate({
+        lectureId: currentLecture.lectureId,
+        courseId: courseContent.courseId,
+        content: questionContent.trim(),
+      });
+    },
+    [
+      courseContent,
+      currentLecture,
+      createQuestionMutation,
+      questionContent,
+    ]
+  );
+
   // Navigation handlers
   const handleBack = () => {
     router.push("/student/courses");
@@ -528,6 +733,10 @@ export default function LecturePlayerPage() {
       if (progressTimerRef.current) {
         clearTimeout(progressTimerRef.current);
         progressTimerRef.current = null;
+      }
+      if (notesSaveTimerRef.current) {
+        clearTimeout(notesSaveTimerRef.current);
+        notesSaveTimerRef.current = null;
       }
       if (progressErrorTimeoutRef.current) {
         clearTimeout(progressErrorTimeoutRef.current);
@@ -706,14 +915,100 @@ export default function LecturePlayerPage() {
             />
           )}
         </div>
-
-        {/* Resources Drawer */}
-        {currentLecture && currentLecture.resources && (
-          <div className="border-t border-gray-200 bg-white px-6 py-4">
-            <LectureResources resources={currentLecture.resources} />
-          </div>
-        )}
       </div>
+
+      {/* Inline tools bar under video */}
+      <div className="px-6 py-3 border-t border-default-200 bg-white">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-default-200 bg-default-50 px-3 py-1 text-xs font-semibold text-default-700">
+            Learning tools
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant={activeToolTab === "description" ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setActiveToolTab("description");
+                setIsToolsOpen(true);
+              }}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Description
+            </Button>
+            <Button
+              variant={activeToolTab === "qa" ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setActiveToolTab("qa");
+                setIsToolsOpen(true);
+              }}
+              className="gap-2"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Q&amp;A
+            </Button>
+            <Button
+              variant={activeToolTab === "notes" ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setActiveToolTab("notes");
+                setIsToolsOpen(true);
+              }}
+              className="gap-2"
+            >
+              <StickyNote className="h-4 w-4" />
+              Notes
+            </Button>
+            <Button
+              variant={activeToolTab === "resources" ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setActiveToolTab("resources");
+                setIsToolsOpen(true);
+              }}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Resources
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Left slide-in panel */}
+      <LearningToolsDrawer
+        open={isToolsOpen}
+        activeTab={activeToolTab}
+        onClose={() => {
+          setIsToolsOpen(false);
+          setActiveToolTab(null);
+        }}
+        onTabChange={(tab) => {
+          setActiveToolTab(tab);
+          setIsToolsOpen(true);
+        }}
+        currentLecture={currentLecture}
+        questionsLoading={questionsLoading}
+        lectureQuestions={lectureQuestions}
+        qaError={qaError}
+        questionContent={questionContent}
+        onQuestionContentChange={setQuestionContent}
+        onRefreshQuestions={() =>
+          queryClient.invalidateQueries({
+            queryKey: ["lectureQuestions", lectureIdParam],
+            refetchType: "active",
+          })
+        }
+        onSubmitQuestion={handleQuestionSubmit}
+        notesValue={notesValue}
+        onNotesChange={setNotesValue}
+        notesStatus={notesStatus}
+        position={drawerPosition}
+        size={drawerSize}
+        onDragStart={handleDragStart}
+        onResizeStart={handleResizeStart}
+      />
 
       {/* Review Dialog - Shown before congratulations */}
       {courseContent && courseContent.enrollmentId && (
@@ -786,6 +1081,250 @@ export default function LecturePlayerPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+type ToolTab = "description" | "qa" | "notes" | "resources";
+
+interface LearningToolsDrawerProps {
+  open: boolean;
+  activeTab: ToolTab | null;
+  onClose: () => void;
+  onTabChange: (tab: ToolTab) => void;
+  currentLecture: Lecture | undefined;
+  questionsLoading: boolean;
+  lectureQuestions: LectureQuestion[];
+  qaError: string | null;
+  questionContent: string;
+  onQuestionContentChange: (val: string) => void;
+  onRefreshQuestions: () => void;
+  onSubmitQuestion: (e: React.FormEvent<HTMLFormElement>) => void;
+  notesValue: string;
+  onNotesChange: (val: string) => void;
+  notesStatus: "idle" | "saving" | "saved";
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  onDragStart: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onResizeStart: (e: React.MouseEvent<HTMLDivElement>) => void;
+}
+
+function LearningToolsDrawer({
+  open,
+  activeTab,
+  onClose,
+  onTabChange,
+  currentLecture,
+  questionsLoading,
+  lectureQuestions,
+  qaError,
+  questionContent,
+  onQuestionContentChange,
+  onRefreshQuestions,
+  onSubmitQuestion,
+  notesValue,
+  onNotesChange,
+  notesStatus,
+  position,
+  size,
+  onDragStart,
+  onResizeStart,
+}: LearningToolsDrawerProps) {
+  if (!open) return null;
+
+  const handleKeyActivate = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+    handler: (e: React.MouseEvent<HTMLDivElement>) => void
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handler(event as unknown as React.MouseEvent<HTMLDivElement>);
+    }
+  };
+
+  const label =
+    activeTab === "description"
+      ? "Description"
+      : activeTab === "qa"
+        ? "Q&A"
+        : activeTab === "notes"
+          ? "Notes"
+          : activeTab === "resources"
+            ? "Resources"
+            : "Learning tools";
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-40">
+      <div
+        className="pointer-events-auto absolute overflow-auto rounded-2xl border border-default-200 bg-background shadow-2xl"
+        style={{
+          width: size.width,
+          height: size.height,
+          minWidth: 260,
+          minHeight: 320,
+          top: position.y,
+          left: position.x,
+        }}
+      >
+        <div
+          className="flex items-center justify-between gap-2 border-b border-default-200 px-4 py-3 cursor-move select-none"
+          onMouseDown={onDragStart}
+        role="button"
+        tabIndex={0}
+        aria-label="Drag learning tools panel"
+        onKeyDown={(e) => handleKeyActivate(e, onDragStart)}
+        >
+          <div>
+            <p className="text-sm font-semibold text-default-900">{label}</p>
+            <p className="text-xs text-default-500">
+              Description, Q&A, notes, and resources
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-full border text-default-600 transition hover:text-default-900"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="max-h-[calc(100vh-200px)] overflow-auto px-4 pb-4 pt-3">
+          <Tabs
+            value={activeTab || undefined}
+            onValueChange={(val) => onTabChange(val as ToolTab)}
+            className="flex flex-col gap-3"
+          >
+            <TabsContent value="description" className="space-y-3">
+              {currentLecture?.description ? (
+                <div className="prose max-w-none text-sm text-default-800 dark:prose-invert prose-p:leading-relaxed prose-li:leading-relaxed">
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: currentLecture.description,
+                    }}
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-default-500">
+                  No description provided for this lecture.
+                </p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="qa" className="space-y-4">
+              <div className="rounded-xl border border-default-200 bg-default-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-default-900">
+                      Ask a question
+                    </p>
+                    <p className="text-xs text-default-500">
+                      Instructors and peers can reply here.
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={onRefreshQuestions}>
+                    Refresh
+                  </Button>
+                </div>
+                <form onSubmit={onSubmitQuestion} className="mt-3 space-y-3">
+                  <Textarea
+                    placeholder="What would you like to ask?"
+                    value={questionContent}
+                    onChange={(e) => onQuestionContentChange(e.target.value)}
+                    className="min-h-[96px]"
+                  />
+                  {qaError && (
+                    <p className="text-xs text-warning-600">{qaError}</p>
+                  )}
+                  <div className="flex justify-end">
+                    <Button type="submit">Post question</Button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-default-900">
+                  Recent questions
+                </p>
+                {questionsLoading ? (
+                  <p className="text-sm text-default-500">Loading questions...</p>
+                ) : lectureQuestions.length === 0 ? (
+                  <p className="text-sm text-default-500">
+                    No questions yet. Be the first to ask!
+                  </p>
+                ) : (
+                  <div className="grid gap-3">
+                    {lectureQuestions.map((question) => (
+                      <div
+                        key={question.questionId}
+                        className="rounded-lg border border-default-200 bg-white p-3 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-medium text-default-900">
+                            {question.content}
+                          </p>
+                          <span className="text-xs text-default-500">
+                            {new Date(question.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="mt-2 rounded-md bg-default-50 p-2">
+                          <p className="text-xs font-semibold text-default-700">
+                            Answer
+                          </p>
+                          <p className="text-sm text-default-700">
+                            {question.answer ? question.answer : "Not answered yet"}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="notes" className="space-y-3">
+              <div className="rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs text-warning-800">
+                Please copy/paste your notes elsewhere when done. These notes are only saved locally for your convenience.
+              </div>
+              <Textarea
+                placeholder="Jot down quick reminders while you watch..."
+                value={notesValue}
+                onChange={(e) => onNotesChange(e.target.value)}
+                className="min-h-[160px]"
+              />
+              <div className="flex items-center justify-between text-xs text-default-500">
+                <span>
+                  {notesStatus === "saving"
+                    ? "Saving..."
+                    : notesStatus === "saved"
+                      ? "Saved locally"
+                      : ""}
+                </span>
+                <span>Auto-saves to this device for this lecture only.</span>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="resources" className="space-y-3">
+              {currentLecture?.resources?.length ? (
+                <LectureResources resources={currentLecture.resources} />
+              ) : (
+                <p className="text-sm text-default-500">
+                  No downloadable resources for this lecture.
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+        <div
+          className="absolute bottom-1 right-1 h-4 w-4 cursor-se-resize rounded-md bg-default-200"
+          onMouseDown={onResizeStart}
+          role="button"
+          tabIndex={0}
+          aria-label="Resize learning tools panel"
+          onKeyDown={(e) => handleKeyActivate(e, onResizeStart)}
+        />
+      </div>
     </div>
   );
 }

@@ -16,6 +16,7 @@ export default function StudentLayout({
     { label: "Courses", href: "/student/courses" },
     { label: "Wishlist", href: "/student/wishlist" },
     { label: "Certificates", href: "/student/certificates" },
+    { label: "Asked Questions", href: "/student/questions" },
     { label: "Settings", href: "/student/settings" },
   ];
 
