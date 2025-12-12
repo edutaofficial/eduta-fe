@@ -238,8 +238,8 @@ export default function Header() {
                           ref={avatarTriggerRef}
                           className="ml-2 p-0 hover:bg-transparent"
                         >
-                          <Avatar className="size-10">
-                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} />
+                          <Avatar className="size-10" key={user?.profilePictureUrl || "no-avatar-instructor"}>
+                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} key={user?.profilePictureUrl} />
                             <AvatarFallback>
                               {user?.name?.charAt(0).toUpperCase() || "U"}
                             </AvatarFallback>
@@ -261,8 +261,8 @@ export default function Header() {
                           ref={avatarTriggerRef}
                           className="ml-2 p-0 hover:bg-transparent"
                         >
-                          <Avatar className="size-10">
-                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} />
+                          <Avatar className="size-10" key={user?.profilePictureUrl || "no-avatar-instructor"}>
+                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} key={user?.profilePictureUrl} />
                             <AvatarFallback>
                               {user?.name?.charAt(0).toUpperCase() || "U"}
                             </AvatarFallback>
@@ -274,8 +274,8 @@ export default function Header() {
                       <div className="w-[18.75rem]">
                         {/* User Info Section */}
                         <div className="flex items-center gap-3 p-4">
-                          <Avatar className="size-14">
-                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} />
+                          <Avatar className="size-14" key={user?.profilePictureUrl || "no-avatar-dropdown"}>
+                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} key={user?.profilePictureUrl} />
                             <AvatarFallback>
                               {user?.name?.charAt(0).toUpperCase() || "U"}
                             </AvatarFallback>

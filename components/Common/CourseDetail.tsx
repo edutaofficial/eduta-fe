@@ -8,7 +8,6 @@ import {
   Breadcrumb,
   BreadcrumbList,
   BreadcrumbItem,
-  BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
@@ -69,6 +68,7 @@ interface CourseDetailProps {
 interface CourseData {
   id?: string;
   category?: string;
+  parentCategory?: string;
   subCategory?: string;
   title: string;
   subHeading?: string;
@@ -131,6 +131,18 @@ function formatLectureDuration(duration?: string | number): string {
     return `${duration}m`;
   }
   return duration; // Already formatted string
+}
+
+// Helper to format total minutes into "X hours" label for side card
+function formatHoursLabel(totalMinutes: number): string {
+  if (!totalMinutes || totalMinutes <= 0) return "Video length coming soon";
+  if (totalMinutes < 60) {
+    const mins = Math.max(1, Math.round(totalMinutes));
+    return `${mins} min video lectures`;
+  }
+  const hours = totalMinutes / 60;
+  const value = hours >= 1 ? hours.toFixed(1).replace(/\.0$/, "") : hours.toFixed(1);
+  return `${value} hours video lectures`;
 }
 
 // Clamp short description to 500 characters for display
@@ -224,16 +236,34 @@ export function CourseDetail({
     }, 0);
   }, [curriculum]);
 
+  // Fallback total duration from API sections (in minutes)
+  const apiSectionsDuration = React.useMemo(() => {
+    if (!apiCourseData?.sections) return 0;
+    return apiCourseData.sections.reduce((total, section) => {
+      return (
+        total +
+        section.lectures.reduce((sectionTotal, lecture) => {
+          return sectionTotal + (lecture.duration || 0);
+        }, 0)
+      );
+    }, 0);
+  }, [apiCourseData?.sections]);
+
   // Transform store data to course data format
   const courseData: CourseData = React.useMemo(() => {
     // If we have API course data, transform it
     if (apiCourseData) {
+      const parentCategoryName =
+        (apiCourseData.category as unknown as { parentName?: string | null })?.parentName ||
+        (apiCourseData.category as unknown as { parent?: { name?: string | null } })?.parent?.name ||
+        null;
       return {
         id: apiCourseData.courseId,
-        category: apiCourseData.category.name,
-        subCategory: apiCourseData.learningLevel,
+        category: parentCategoryName || apiCourseData.category.name,
+        parentCategory: parentCategoryName || undefined,
+        subCategory: apiCourseData.category.name,
         title: apiCourseData.title,
-        subHeading: apiCourseData.category.name,
+        subHeading: undefined,
         duration: formatDuration(apiCourseData.stats.totalDuration),
         viewsCount: apiCourseData.stats.viewsCount || 0,
         rating: apiCourseData.stats.avgRating ?? undefined,
@@ -464,28 +494,20 @@ export function CourseDetail({
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem>
-                    <span className="text-default-900">Eduta</span>
+                    <span className="text-default-900 font-semibold">
+                      {courseData.category || "Category"}
+                    </span>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    {apiCourseData?.category?.categoryId ? (
-                      <Link
-                        href={`/topics?categories=${apiCourseData.category.categoryId}`}
-                        className="text-default-900 hover:text-primary-600 transition-colors"
-                      >
-                        {courseData.category || "Category"}
-                      </Link>
-                    ) : (
-                      <span className="text-default-900">
-                        {courseData.category || "Category"}
-                      </span>
-                    )}
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="text-default-900">
-                      {courseData.subCategory || "Course"}
-                    </BreadcrumbPage>
+                    <Link
+                      href={`/topics?subcategory=${encodeURIComponent(
+                        courseData.subCategory || courseData.category || "Category"
+                      )}`}
+                      className="text-default-600 hover:text-primary-600 transition-colors"
+                    >
+                      {courseData.subCategory || courseData.category || "Category"}
+                    </Link>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
@@ -501,9 +523,6 @@ export function CourseDetail({
             <div className="lg:col-span-2 space-y-8">
               {/* Category and Title Section */}
               <div className="space-y-4">
-                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  {courseData.subHeading || courseData.category || ""}
-                </p>
                 <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-default-900 leading-tight">
                   {courseData.title}
                 </h1>
@@ -514,7 +533,11 @@ export function CourseDetail({
                   </p>
                 )}
                 <div className="flex flex-wrap items-center gap-4 text-sm text-default-700">
-                  <span>{courseData.duration || "0 hours"}</span>
+                  <span>
+                    {courseData.enrollments
+                      ? `${courseData.enrollments.toLocaleString()} students`
+                      : "0 students"}
+                  </span>
                   {totalLectures > 0 && (
                     <>
                       <span className="text-default-400">•</span>
@@ -1032,63 +1055,62 @@ export function CourseDetail({
                     {/* Pricing Section */}
                     {!isPreview && apiCourseData?.pricing && (
                       <div className="space-y-3">
-                        <div className="flex items-baseline gap-3">
-                          {(() => {
-                            const price = apiCourseData.pricing.amount;
-                            const originalPrice = apiCourseData.pricing.originalAmount;
-                            // If coupon is applied, show original price with strikethrough and $0 free
-                            const hasCouponApplied = appliedCoupon && appliedCoupon === "25BBPMXNVD25";
-                            // If coupon is applied, make it free (100% discount)
-                            const isFree = price === 0 || (hasCouponApplied && price > 0);
-                            const displayPrice = isFree && hasCouponApplied ? 0 : price;
-                            // Show original price if: there's an original price > display price, OR if coupon applied (show current price as strikethrough)
-                            const showOriginal =
-                              (originalPrice && originalPrice > displayPrice) ||
-                              (hasCouponApplied && price > 0);
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {(() => {
+                              const price = apiCourseData.pricing.amount;
+                              const originalPrice = apiCourseData.pricing.originalAmount;
+                              // If coupon is applied, show original price with strikethrough and $0 free
+                              const hasCouponApplied = appliedCoupon && appliedCoupon === "25BBPMXNVD25";
+                              // If coupon is applied, make it free (100% discount)
+                              const isFree = price === 0 || (hasCouponApplied && price > 0);
+                              const displayPrice = isFree && hasCouponApplied ? 0 : price;
+                              // Show original price if: there's an original price > display price, OR if coupon applied (show current price as strikethrough)
+                              const showOriginal =
+                                (originalPrice && originalPrice > displayPrice) ||
+                                (hasCouponApplied && price > 0);
+                              const originalPriceToShow = originalPrice || price;
+                              const discountPercentage = hasCouponApplied && price > 0 && displayPrice === 0
+                                ? 100
+                                : apiCourseData.pricing.discountPercentage;
 
-                            return (
-                              <>
-                                <span className="text-3xl font-bold text-default-900">
-                                  {displayPrice === 0
-                                    ? "Free ($0)"
-                                    : `$${displayPrice.toFixed(2)}`}
-                                </span>
-                                {showOriginal && (
-                                  <span className="text-lg text-default-400 line-through">
-                                    ${(originalPrice || price).toFixed(2)}
+                              return (
+                                <>
+                                  <span className="text-3xl font-bold text-default-900">
+                                    {displayPrice === 0 ? "Free" : `$${displayPrice.toFixed(2)}`}
                                   </span>
-                                )}
-                                {hasCouponApplied && price > 0 && displayPrice === 0 && (
-                                  <span className="text-sm font-semibold text-primary-600">
-                                    100% off
-                                  </span>
-                                )}
-                                {!hasCouponApplied && apiCourseData.pricing.discountPercentage > 0 && (
-                                  <span className="text-sm font-semibold text-primary-600">
-                                    {Math.round(apiCourseData.pricing.discountPercentage)}% off
-                                  </span>
-                                )}
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="shrink-0 ml-auto"
-                                  onClick={() => {
-                                    if (navigator.share) {
-                                      navigator.share({
-                                        title: courseData.title,
-                                        url: window.location.href,
-                                      });
-                                    } else {
-                                      navigator.clipboard.writeText(window.location.href);
-                                      // You could add a toast notification here
-                                    }
-                                  }}
-                                >
-                                  <Share2Icon className="size-4" />
-                                </Button>
-                              </>
-                            );
-                          })()}
+                                  {showOriginal && (
+                                    <span className="text-lg text-default-400 line-through">
+                                      ${originalPriceToShow.toFixed(2)}
+                                    </span>
+                                  )}
+                                  {discountPercentage > 0 && (
+                                    <span className="text-sm font-semibold text-primary-600">
+                                      {Math.round(discountPercentage)}% off
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="shrink-0"
+                            onClick={() => {
+                              if (navigator.share) {
+                                navigator.share({
+                                  title: courseData.title,
+                                  url: window.location.href,
+                                });
+                              } else {
+                                navigator.clipboard.writeText(window.location.href);
+                                // You could add a toast notification here
+                              }
+                            }}
+                          >
+                            <Share2Icon className="size-4" />
+                          </Button>
                         </div>
                         {/* Time Left Alert */}
                         <div className="flex items-center gap-2 text-sm text-destructive">
@@ -1100,65 +1122,61 @@ export function CourseDetail({
 
                     {isPreview && pricing && (
                       <div className="space-y-3">
-                        <div className="flex items-baseline gap-3">
-                          {(() => {
-                            const { price, originalPrice, isFree: pricingIsFree, currency, discountPercentage } = pricing;
-                            // If coupon is applied, show original price with strikethrough and $0 free
-                            const hasCouponApplied = appliedCoupon && appliedCoupon === "25BBPMXNVD25";
-                            // If coupon is applied, make it free (100% discount)
-                            const isFree = pricingIsFree || (hasCouponApplied && price > 0);
-                            const displayPrice = isFree && hasCouponApplied ? 0 : price;
-                            // Show original price if: there's an original price > display price, OR if coupon applied (show current price as strikethrough)
-                            const showOriginal =
-                              (originalPrice && originalPrice > displayPrice) ||
-                              (hasCouponApplied && price > 0);
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {(() => {
+                              const { price, originalPrice, isFree: pricingIsFree, currency, discountPercentage } = pricing;
+                              // If coupon is applied, show original price with strikethrough and $0 free
+                              const hasCouponApplied = appliedCoupon && appliedCoupon === "25BBPMXNVD25";
+                              // If coupon is applied, make it free (100% discount)
+                              const isFree = pricingIsFree || (hasCouponApplied && price > 0);
+                              const displayPrice = isFree && hasCouponApplied ? 0 : price;
+                              // Show original price if: there's an original price > display price, OR if coupon applied (show current price as strikethrough)
+                              const showOriginal =
+                                (originalPrice && originalPrice > displayPrice) ||
+                                (hasCouponApplied && price > 0);
+                              const originalPriceToShow = originalPrice || price;
+                              const finalDiscountPercentage = hasCouponApplied && price > 0 && displayPrice === 0
+                                ? 100
+                                : discountPercentage || 0;
 
-                            return (
-                              <>
-                                <span className="text-3xl font-bold text-default-900">
-                                  {displayPrice === 0
-                                    ? "Free ($0)"
-                                    : `${currency} ${displayPrice.toFixed(2)}`}
-                                </span>
-                                {showOriginal && (
-                                  <span className="text-lg text-default-400 line-through">
-                                    {currency}{" "}
-                                    {(originalPrice || price).toFixed(2)}
+                              return (
+                                <>
+                                  <span className="text-3xl font-bold text-default-900">
+                                    {displayPrice === 0 ? "Free" : `${currency} ${displayPrice.toFixed(2)}`}
                                   </span>
-                                )}
-                                {hasCouponApplied && price > 0 && displayPrice === 0 && (
-                                  <span className="text-sm font-semibold text-primary-600">
-                                    100% off
-                                  </span>
-                                )}
-                                {!hasCouponApplied &&
-                                  discountPercentage &&
-                                  discountPercentage > 0 && (
-                                    <span className="text-sm font-semibold text-primary-600">
-                                      {Math.round(discountPercentage)}% off
+                                  {showOriginal && (
+                                    <span className="text-lg text-default-400 line-through">
+                                      {currency} {originalPriceToShow.toFixed(2)}
                                     </span>
                                   )}
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="shrink-0 ml-auto"
-                                  onClick={() => {
-                                    if (navigator.share) {
-                                      navigator.share({
-                                        title: courseData.title,
-                                        url: window.location.href,
-                                      });
-                                    } else {
-                                      navigator.clipboard.writeText(window.location.href);
-                                      // You could add a toast notification here
-                                    }
-                                  }}
-                                >
-                                  <Share2Icon className="size-4" />
-                                </Button>
-                              </>
-                            );
-                          })()}
+                                  {finalDiscountPercentage > 0 && (
+                                    <span className="text-sm font-semibold text-primary-600">
+                                      {Math.round(finalDiscountPercentage)}% off
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="shrink-0"
+                            onClick={() => {
+                              if (navigator.share) {
+                                navigator.share({
+                                  title: courseData.title,
+                                  url: window.location.href,
+                                });
+                              } else {
+                                navigator.clipboard.writeText(window.location.href);
+                                // You could add a toast notification here
+                              }
+                            }}
+                          >
+                            <Share2Icon className="size-4" />
+                          </Button>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-destructive">
                           <ClockIcon className="size-4" />
@@ -1252,8 +1270,9 @@ export function CourseDetail({
                             <div className="flex items-center gap-3 text-sm text-default-700">
                               <VideoIcon className="size-5 text-default-600 shrink-0" />
                               <span>
-                                {Math.round((apiCourseData.stats.totalDuration || 0) / 60)}{" "}
-                                hours on-demand video
+                                {formatHoursLabel(
+                                  (apiCourseData.stats.totalDuration || 0) || apiSectionsDuration
+                                )}
                               </span>
                             </div>
                             {apiCourseData.stats.totalResources > 0 && (
@@ -1272,7 +1291,7 @@ export function CourseDetail({
                             <div className="flex items-center gap-3 text-sm text-default-700">
                               <VideoIcon className="size-5 text-default-600 shrink-0" />
                               <span>
-                                {Math.round((totalDuration || 0) / 60)} hours on-demand video
+                                {formatHoursLabel(totalDuration || 0)}
                               </span>
                             </div>
                             {totalResources > 0 && (

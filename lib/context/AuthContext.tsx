@@ -1,7 +1,7 @@
 // lib/contexts/AuthContext.tsx
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import {
   useSession,
   signIn as nextAuthSignIn,
@@ -46,6 +46,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Base URL
 const API_BASE_URL = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
 
+// LocalStorage key for profile picture override
+const PROFILE_PICTURE_STORAGE_KEY = "eduta_profile_picture_override";
+
 
 // Decode JWT to extract instructor_id, learner_id, and profile_picture_url
 function decodeJwt(token: string): {
@@ -65,31 +68,74 @@ function decodeJwt(token: string): {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const [isLoading] = useState(false);
   const [profilePictureOverride, setProfilePictureOverride] = useState<string | null>(null);
+  const [profilePictureVersion, setProfilePictureVersion] = useState<number>(0);
 
-  // Extract user data from session
-  const user: User | null = session?.user
-    ? (() => {
-        const token = (session as unknown as { accessToken?: string })
-          .accessToken;
-        const decoded = token ? decodeJwt(token) : null;
+  // Load profile picture override from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && session?.user) {
+      const stored = localStorage.getItem(PROFILE_PICTURE_STORAGE_KEY);
+      const token = (session as unknown as { accessToken?: string }).accessToken;
+      const decoded = token ? decodeJwt(token) : null;
+      const sessionProfilePic = decoded?.profile_picture_url as string | undefined;
 
-        return {
-          id: (session.user as unknown as { id?: string })?.id,
-          email: session.user.email || "",
-          name: session.user.name || "User",
-          role: ((session as unknown as { role?: UserRole }).role ||
-            "student") as UserRole,
-          token,
-          instructorId: decoded?.instructor_id,
-          learnerId: decoded?.learner_id,
-          // Use override if available, otherwise use token value
-          profilePictureUrl: profilePictureOverride || (decoded?.profile_picture_url as string | undefined),
-        };
-      })()
-    : null;
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          // Only use stored value if it's a valid string
+          if (typeof parsed === "string" && parsed.length > 0) {
+            // If session has a profile picture and it's different from stored,
+            // it means the backend was updated (e.g., user logged in again),
+            // so we should use the session value and clear localStorage
+            if (sessionProfilePic && sessionProfilePic !== parsed) {
+              localStorage.removeItem(PROFILE_PICTURE_STORAGE_KEY);
+            }
+            // Compute value to set: null if session pic differs, otherwise parsed value
+            const valueToSet = (sessionProfilePic && sessionProfilePic !== parsed) ? null : parsed;
+            // Set state once after computing the value
+            // This is a legitimate use case: syncing React state with localStorage (external system)
+            setProfilePictureOverride(valueToSet); // eslint-disable-line react-hooks/set-state-in-effect
+          }
+        } catch {
+          // Invalid JSON, clear it
+          localStorage.removeItem(PROFILE_PICTURE_STORAGE_KEY);
+        }
+      }
+    }
+  }, [session]);
+
+  // Extract user data from session - use useMemo to ensure proper reactivity
+  const user: User | null = React.useMemo(() => {
+    if (!session?.user) return null;
+    
+    const token = (session as unknown as { accessToken?: string })
+      .accessToken;
+    const decoded = token ? decodeJwt(token) : null;
+
+    // Priority: override (from state/localStorage) > decoded token > undefined
+    let profilePicUrl = profilePictureOverride || (decoded?.profile_picture_url as string | undefined);
+    
+    // Add cache-busting parameter to force browser to reload image when URL changes
+    // Use version number instead of timestamp to avoid regenerating on every render
+    if (profilePicUrl && profilePictureVersion > 0) {
+      const separator = profilePicUrl.includes("?") ? "&" : "?";
+      profilePicUrl = `${profilePicUrl}${separator}_v=${profilePictureVersion}`;
+    }
+
+    return {
+      id: (session.user as unknown as { id?: string })?.id,
+      email: session.user.email || "",
+      name: session.user.name || "User",
+      role: ((session as unknown as { role?: UserRole }).role ||
+        "student") as UserRole,
+      token,
+      instructorId: decoded?.instructor_id,
+      learnerId: decoded?.learner_id,
+      profilePictureUrl: profilePicUrl,
+    };
+  }, [session, profilePictureOverride, profilePictureVersion]);
 
   // (jwt decode not needed; next-auth provides data via session callbacks)
 
@@ -282,11 +328,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const logout = () => {
     setProfilePictureOverride(null); // Clear override on logout
+    // Clear localStorage on logout
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(PROFILE_PICTURE_STORAGE_KEY);
+    }
     nextAuthSignOut({ redirect: true, callbackUrl: "/login" });
   };
 
-  const updateProfilePictureUrl = (url: string) => {
+  const updateProfilePictureUrl = async (url: string) => {
+    // Increment version to force cache busting
+    setProfilePictureVersion((prev) => prev + 1);
+    
+    // Update state immediately for instant UI feedback
     setProfilePictureOverride(url);
+    
+    // Persist to localStorage so it survives page reloads
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(PROFILE_PICTURE_STORAGE_KEY, JSON.stringify(url));
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("Failed to save profile picture to localStorage:", error);
+      }
+    }
+
+    // Try to update the session (this will trigger a session refresh)
+    // Note: The JWT token itself won't be updated until next login,
+    // but we can update the session object
+    try {
+      await updateSession({
+        profilePictureUrl: url,
+      });
+    } catch (error) {
+      // Session update is optional - localStorage will handle persistence
+      // eslint-disable-next-line no-console
+      console.warn("Failed to update session with new profile picture:", error);
+    }
   };
 
   return (

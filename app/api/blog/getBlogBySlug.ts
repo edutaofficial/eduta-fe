@@ -9,7 +9,8 @@ export async function getBlogBySlug(slug: string): Promise<BlogDetailResponse> {
     headers: {
       "Content-Type": "application/json",
     },
-    cache: "no-store",
+    cache: "force-cache",
+    next: { revalidate: 3600 }, // Revalidate every hour for ISR
   });
 
   if (!response.ok) {

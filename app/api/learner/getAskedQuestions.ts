@@ -5,9 +5,6 @@ export interface AskedQuestion {
   questionId: string;
   lectureId: string;
   courseId: string;
-  courseTitle?: string;
-  lectureTitle?: string;
-  instructorName?: string;
   userId: number;
   content: string;
   status: string | null;
@@ -15,6 +12,8 @@ export interface AskedQuestion {
   answeredBy: number | null;
   answeredAt: string | null;
   createdAt: string;
+  courseTitle?: string;
+  lectureTitle?: string;
 }
 
 interface GetAskedQuestionsResponse {

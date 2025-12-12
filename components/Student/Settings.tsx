@@ -177,7 +177,7 @@ export function StudentSettings() {
       clearError();
 
       try {
-        const oldProfilePictureId = profile?.profile_picture;
+        const _oldProfilePictureId = profile?.profile_picture;
 
         const payload = {
           first_name: values.firstName,
@@ -189,13 +189,16 @@ export function StudentSettings() {
 
         const updatedProfile = await updateProfile(payload);
 
-        // If profile picture was updated, update the header avatar
-        if (
-          oldProfilePictureId !== updatedProfile.profile_picture &&
-          updatedProfile.profile_picture_url
-        ) {
-          updateProfilePictureUrl(updatedProfile.profile_picture_url);
+        // Always update the profile picture URL if it exists (backend might return updated URL)
+        if (updatedProfile.profile_picture_url) {
+          // Update auth context (for header) - this will update headers immediately
+          await updateProfilePictureUrl(updatedProfile.profile_picture_url);
+          // Update local state
+          setProfilePictureUrl(updatedProfile.profile_picture_url);
         }
+        
+        // Refetch profile to update store (for header fallback and other data)
+        await fetchProfile();
 
         setAccountSuccess("Profile updated successfully!");
 
@@ -443,6 +446,14 @@ export function StudentSettings() {
                     currentAssetId={profilePictureId}
                     fallbackText={getInitials()}
                     onAssetIdChange={setProfilePictureId}
+                    onImageUrlChange={async (url) => {
+                      // Update local state immediately
+                      setProfilePictureUrl(url);
+                      // Update auth context immediately so headers update
+                      if (url) {
+                        await updateProfilePictureUrl(url);
+                      }
+                    }}
                     size="lg"
                   />
                   {/* Debug display */}

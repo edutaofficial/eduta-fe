@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   ExploreCourses,
   Hero,
@@ -6,6 +7,66 @@ import {
   Testimonials,
   FAQ as FAQComponent,
 } from "@/components/Home";
+import { SITE_BASE_URL } from "@/lib/constants";
+
+// Enable ISR - revalidate every hour
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: "Home",
+  description:
+    "Discover world-class online courses, expert instructors, and flexible learning paths. Transform your skills and advance your career with Eduta's comprehensive e-learning platform.",
+  keywords: [
+    "online courses",
+    "e-learning",
+    "education platform",
+    "skill development",
+    "online learning",
+    "professional development",
+    "certification courses",
+    "learn online",
+    "online education",
+  ],
+  alternates: {
+    canonical: SITE_BASE_URL,
+  },
+  openGraph: {
+    title: "Eduta - Learn, Grow, Succeed",
+    description:
+      "Discover world-class online courses and expert instructors. Transform your skills with Eduta's comprehensive e-learning platform.",
+    url: SITE_BASE_URL,
+    siteName: "Eduta",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: `${SITE_BASE_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: "Eduta - Online Learning Platform",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Eduta - Learn, Grow, Succeed",
+    description:
+      "Discover world-class online courses and expert instructors. Transform your skills with Eduta.",
+    creator: "@eduta",
+    images: [`${SITE_BASE_URL}/og-image.jpg`],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
 
 export default function Page() {
   const data = {

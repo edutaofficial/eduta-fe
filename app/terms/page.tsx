@@ -1,5 +1,61 @@
+import type { Metadata } from "next";
 import * as React from "react";
 import { FileText, Scale, UserX, AlertTriangle, Gavel } from "lucide-react";
+import { SITE_BASE_URL } from "@/lib/constants";
+
+// Enable ISR - revalidate every hour
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: "Terms and Conditions",
+  description:
+    "Read Eduta's Terms and Conditions to understand the rules and guidelines for using our platform. Learn about user accounts, course content licenses, payments, refunds, and prohibited conduct.",
+  keywords: [
+    "terms and conditions",
+    "terms of service",
+    "user agreement",
+    "platform rules",
+    "service terms",
+    "legal terms",
+  ],
+  alternates: {
+    canonical: `${SITE_BASE_URL}/terms`,
+  },
+  openGraph: {
+    title: "Eduta Terms and Conditions",
+    description:
+      "Read Eduta's Terms and Conditions to understand the rules and guidelines for using our platform.",
+    url: `${SITE_BASE_URL}/terms`,
+    siteName: "Eduta",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: `${SITE_BASE_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: "Eduta Terms and Conditions",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Eduta Terms and Conditions",
+    description: "Read our Terms and Conditions to understand the rules for using Eduta.",
+    creator: "@eduta",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
 
 export default function TermsAndConditionsPage() {
   return (

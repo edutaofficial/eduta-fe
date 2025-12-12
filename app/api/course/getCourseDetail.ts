@@ -14,6 +14,13 @@ export interface CourseDetailCategory {
   categoryId: string;
   name: string;
   slug: string;
+  parentId?: string | null;
+  parent?: {
+    categoryId: string;
+    name: string;
+    slug?: string | null;
+  } | null;
+  parentName?: string | null;
 }
 
 export interface CourseDetailPricing {

@@ -115,7 +115,9 @@ export function AskedQuestions() {
                     </div>
 
                     <div className="mt-3 space-y-3">
-                      {qs.map((q) => (
+                      {qs.map((q) => {
+                        const badgeVariant: "default" | "secondary" = q.answer ? "default" : "secondary";
+                        return (
                         <div
                           key={q.questionId}
                           className="rounded-lg border border-default-200 bg-white p-3"
@@ -125,7 +127,7 @@ export function AskedQuestions() {
                               {q.content}
                             </p>
                             <Badge
-                              variant={q.answer ? "default" : "secondary"}
+                              variant={badgeVariant}
                               className={cn(
                                 "text-xs",
                                 q.answer ? "bg-success-100 text-success-700" : ""
@@ -143,7 +145,8 @@ export function AskedQuestions() {
                             </p>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

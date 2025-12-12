@@ -111,22 +111,22 @@ export function InstructorHeader() {
                 variant="ghost"
                 className="relative size-10 rounded-full p-0"
               >
-                <Avatar className="size-10">
+                <Avatar className="size-10" key={avatarUrl || "no-avatar"}>
                   {avatarUrl ? (
-                    <AvatarImage src={avatarUrl} alt="Profile" />
-                  ) :  <AvatarFallback className="bg-primary-100 text-primary-700 text-sm font-semibold">
-                  {getInitials()}
-                </AvatarFallback>}
-                 
+                    <AvatarImage src={avatarUrl} alt="Profile" key={avatarUrl} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary-100 text-primary-700 text-sm font-semibold">
+                    {getInitials()}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-75" align="end">
               {/* User Info Section */}
               <div className="flex items-center gap-3 p-4">
-                <Avatar className="size-14">
+                <Avatar className="size-14" key={avatarUrl || "no-avatar-dropdown"}>
                   {avatarUrl ? (
-                    <AvatarImage src={avatarUrl} alt="Profile" />
+                    <AvatarImage src={avatarUrl} alt="Profile" key={avatarUrl} />
                   ) : null}
                   <AvatarFallback className="bg-primary-100 text-primary-700 text-lg font-semibold">
                     {getInitials()}

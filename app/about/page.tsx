@@ -1,5 +1,62 @@
+import type { Metadata } from "next";
 import * as React from "react";
 import { CheckCircle, Target, Users, Lightbulb } from "lucide-react";
+import { SITE_BASE_URL } from "@/lib/constants";
+
+// Enable ISR - revalidate every hour
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: "About Us",
+  description:
+    "Learn about Eduta's mission to make quality education accessible to everyone. Discover our values, story, and commitment to transforming the way people learn through innovative online courses.",
+  keywords: [
+    "about eduta",
+    "education platform",
+    "online learning mission",
+    "educational values",
+    "learning community",
+    "online education company",
+  ],
+  alternates: {
+    canonical: `${SITE_BASE_URL}/about`,
+  },
+  openGraph: {
+    title: "About Eduta - Making Education Accessible to Everyone",
+    description:
+      "Learn about Eduta's mission to democratize learning and provide quality education to learners worldwide through innovative online courses.",
+    url: `${SITE_BASE_URL}/about`,
+    siteName: "Eduta",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: `${SITE_BASE_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: "About Eduta",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About Eduta - Making Education Accessible",
+    description:
+      "Learn about Eduta's mission to democratize learning and provide quality education worldwide.",
+    creator: "@eduta",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
 
 export default function AboutPage() {
   return (

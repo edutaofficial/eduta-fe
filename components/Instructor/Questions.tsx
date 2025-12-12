@@ -99,10 +99,7 @@ export function InstructorQuestions() {
     enabled: !!instructorId,
   });
 
-  const courses = React.useMemo(
-    () => coursesResponse?.data ?? [],
-    [coursesResponse]
-  );
+  const courses = React.useMemo(() => coursesResponse?.data ?? [], [coursesResponse?.data]);
 
   React.useEffect(() => {
     if (!selectedCourseId && courses.length > 0) {

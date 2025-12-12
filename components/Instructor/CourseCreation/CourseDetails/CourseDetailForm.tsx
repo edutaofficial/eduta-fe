@@ -416,7 +416,7 @@ const CourseDetailFormInner = (
         <Textarea
           id="shortDescription"
           name="shortDescription"
-          placeholder="Enter a brief description of your course (optional, max 500 characters)..."
+          placeholder="Enter a brief description of your course (optional, max 140 characters)..."
           value={formik.values.shortDescription}
           onChange={(e) => {
             formik.handleChange(e);
@@ -427,7 +427,7 @@ const CourseDetailFormInner = (
           onBlur={formik.handleBlur}
           disabled={isSubmitting}
           rows={3}
-          maxLength={500}
+          maxLength={140}
           className={cn(
             "resize-none",
             formik.touched.shortDescription && formik.errors.shortDescription
@@ -438,8 +438,15 @@ const CourseDetailFormInner = (
             !!(formik.touched.shortDescription && formik.errors.shortDescription)
           }
         />
-        <p className="text-xs text-muted-foreground">
-          {formik.values.shortDescription.length}/500 characters
+        <p
+          className={cn(
+            "text-xs",
+            formik.touched.shortDescription && formik.errors.shortDescription
+              ? "text-destructive"
+              : "text-muted-foreground"
+          )}
+        >
+          {formik.values.shortDescription.length}/140 characters
         </p>
         {formik.touched.shortDescription && formik.errors.shortDescription && (
           <p className="text-sm text-destructive font-medium">

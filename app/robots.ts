@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SITE_BASE_URL } from "@/lib/constants";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -9,7 +10,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/api/", "/student/", "/instructor/"],
       },
     ],
-    sitemap: "https://eduta.org/sitemap.xml", // Replace with your actual domain
+    sitemap: `${SITE_BASE_URL}/sitemap.xml`,
   };
 }
-

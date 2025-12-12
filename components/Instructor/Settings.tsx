@@ -72,7 +72,16 @@ const accountSettingsSchema = z.object({
       "Phone number must be 15 digits or fewer"
     ),
   specialization: z.string().optional(),
-  bio: z.string().optional(),
+  bio: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val) return true; // Optional field
+        return val.length >= 500 && val.length <= 1000;
+      },
+      "Bio must be between 500 and 1000 characters"
+    ),
 });
 
 type AccountSettingsFormValues = z.infer<typeof accountSettingsSchema>;
@@ -175,7 +184,7 @@ export function InstructorSettings() {
       clearError();
 
       try {
-        const oldProfilePictureId = profile?.profile_picture_id;
+        const _oldProfilePictureId = profile?.profile_picture_id;
 
         const payload = {
           first_name: values.firstName,
@@ -188,13 +197,16 @@ export function InstructorSettings() {
 
         const updatedProfile = await updateProfile(payload);
 
-        // If profile picture was updated, update the header avatar
-        if (
-          oldProfilePictureId !== updatedProfile.profile_picture_id &&
-          updatedProfile.profile_picture_url
-        ) {
-          updateProfilePictureUrl(updatedProfile.profile_picture_url);
+        // Always update the profile picture URL if it exists (backend might return updated URL)
+        if (updatedProfile.profile_picture_url) {
+          // Update auth context (for header) - this will update headers immediately
+          await updateProfilePictureUrl(updatedProfile.profile_picture_url);
+          // Update local state
+          setProfilePictureUrl(updatedProfile.profile_picture_url);
         }
+        
+        // Refetch profile to update store (for header fallback and other data)
+        await fetchProfile();
 
         setAccountSuccess("Profile updated successfully!");
 
@@ -448,18 +460,14 @@ export function InstructorSettings() {
                     currentImageUrl={profilePictureUrl}
                     currentAssetId={profilePictureId}
                     fallbackText={getInitials()}
-                    onAssetIdChange={(assetId) => {
-                      // eslint-disable-next-line no-console
-                      console.log(
-                        "📸 Settings: onAssetIdChange called with ID:",
-                        assetId
-                      );
-                      setProfilePictureId(assetId);
-                      // eslint-disable-next-line no-console
-                      console.log(
-                        "📸 Settings: profilePictureId state updated to:",
-                        assetId
-                      );
+                    onAssetIdChange={setProfilePictureId}
+                    onImageUrlChange={async (url) => {
+                      // Update local state immediately
+                      setProfilePictureUrl(url);
+                      // Update auth context immediately so headers update
+                      if (url) {
+                        await updateProfilePictureUrl(url);
+                      }
                     }}
                     size="lg"
                   />
@@ -612,9 +620,20 @@ export function InstructorSettings() {
 
                 {/* Bio */}
                 <div className="space-y-2">
-                  <Label htmlFor="bio" className="text-default-700">
-                    Bio (Optional)
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="bio" className="text-default-700">
+                      Bio (Optional)
+                    </Label>
+                    {accountFormik.values.bio && (
+                      <span className={`text-sm ${
+                        accountFormik.values.bio.length < 500 || accountFormik.values.bio.length > 1000
+                          ? "text-error-600"
+                          : "text-default-600"
+                      }`}>
+                        {accountFormik.values.bio.length} / 1000 characters
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <FileTextIcon className="absolute left-3 top-3 size-5 text-default-400" />
                     <Textarea
@@ -623,11 +642,28 @@ export function InstructorSettings() {
                       value={accountFormik.values.bio}
                       onChange={accountFormik.handleChange}
                       onBlur={accountFormik.handleBlur}
-                      className="pl-10 min-h-[120px]"
-                      placeholder="Tell us about your experience and expertise..."
+                      className={`pl-10 min-h-[200px] ${
+                        accountFormik.touched.bio && accountFormik.errors.bio
+                          ? "border-error-500"
+                          : ""
+                      }`}
+                      placeholder="Tell us about your experience and expertise... (500-1000 characters if provided)"
                       disabled={loading.updateProfile}
+                      maxLength={1000}
                     />
                   </div>
+                  {accountFormik.touched.bio && accountFormik.errors.bio && (
+                    <p className="text-sm text-error-600 flex items-center gap-1">
+                      <AlertCircleIcon className="size-3" />
+                      {accountFormik.errors.bio}
+                    </p>
+                  )}
+                  {accountFormik.values.bio && accountFormik.values.bio.length > 0 && accountFormik.values.bio.length < 500 && (
+                    <p className="text-sm text-warning-600 flex items-center gap-1">
+                      <AlertCircleIcon className="size-3" />
+                      Bio must be at least 500 characters if provided ({500 - accountFormik.values.bio.length} more needed)
+                    </p>
+                  )}
                 </div>
 
                 {/* Social Links - Disabled with Notice */}

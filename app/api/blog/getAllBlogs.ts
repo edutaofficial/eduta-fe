@@ -29,7 +29,9 @@ export async function getAllBlogs(
     headers: {
       "Content-Type": "application/json",
     },
-    cache: "no-store",
+    // Use force-cache for SSG, but allow override via filters
+    cache: filters.search || filters.tag ? "no-store" : "force-cache",
+    next: { revalidate: 3600 }, // Revalidate every hour
   });
 
   if (!response.ok) {

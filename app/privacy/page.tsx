@@ -1,5 +1,61 @@
+import type { Metadata } from "next";
 import * as React from "react";
 import { Shield, Lock, Eye, UserCheck, AlertCircle } from "lucide-react";
+import { SITE_BASE_URL } from "@/lib/constants";
+
+// Enable ISR - revalidate every hour
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "Read Eduta's Privacy Policy to understand how we collect, use, disclose, and safeguard your information when you use our platform. Your privacy matters to us.",
+  keywords: [
+    "privacy policy",
+    "data protection",
+    "privacy rights",
+    "data security",
+    "user privacy",
+    "information security",
+  ],
+  alternates: {
+    canonical: `${SITE_BASE_URL}/privacy`,
+  },
+  openGraph: {
+    title: "Eduta Privacy Policy - Your Privacy Matters",
+    description:
+      "Read Eduta's Privacy Policy to understand how we collect, use, and protect your information.",
+    url: `${SITE_BASE_URL}/privacy`,
+    siteName: "Eduta",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: `${SITE_BASE_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: "Eduta Privacy Policy",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Eduta Privacy Policy",
+    description: "Your privacy matters. Read our Privacy Policy.",
+    creator: "@eduta",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
 
 export default function PrivacyPolicyPage() {
   return (

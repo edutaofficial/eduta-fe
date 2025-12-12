@@ -359,36 +359,32 @@ export function RichTextEditor({
 
       {/* Word Counter */}
       {(minWords || maxWords) && (
-        <div className="border-t bg-muted/30 px-4 py-2 flex justify-end">
+        <div className="border-t bg-muted/30 px-4 py-2 flex justify-between">
           <span
             className={cn(
               "text-xs font-medium",
-              (minWords && wordCount < minWords) || (maxWords && wordCount > maxWords)
+              error
                 ? "text-destructive"
-                : (maxWords && wordCount > maxWords * 0.9) || (minWords && wordCount < minWords * 1.1)
-                  ? "text-warning-600"
-                  : "text-muted-foreground"
+                : "text-muted-foreground"
             )}
           >
-            {wordCount.toLocaleString()}
             {minWords && maxWords
-              ? `/${minWords.toLocaleString()}-${maxWords.toLocaleString()}`
+              ? `${minWords.toLocaleString()} - ${maxWords.toLocaleString()} words`
               : minWords
-                ? `/${minWords.toLocaleString()}+`
+                ? `${minWords.toLocaleString()}+ words`
                 : maxWords
-                  ? `/${maxWords.toLocaleString()}`
-                  : ""}{" "}
-            words
-            {minWords && wordCount < minWords && (
-              <span className="ml-1 text-destructive">
-                (At least {minWords.toLocaleString()} words required)
-              </span>
+                  ? `Up to ${maxWords.toLocaleString()} words`
+                  : "Words"}
+          </span>
+          <span
+            className={cn(
+              "text-xs font-medium",
+              error
+                ? "text-destructive"
+                : "text-muted-foreground"
             )}
-            {maxWords && wordCount > maxWords && (
-              <span className="ml-1 text-destructive">
-                (Maximum {maxWords.toLocaleString()} words allowed)
-              </span>
-            )}
+          >
+            {wordCount.toLocaleString()} words
           </span>
         </div>
       )}

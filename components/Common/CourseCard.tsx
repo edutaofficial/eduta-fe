@@ -88,7 +88,7 @@ export function CourseCard({
             <BookOpenIcon className="size-16 text-white opacity-40" />
           </div>
         )}
-        <div className="absolute top-4 right-4 bg-white rounded-md">
+        <div className="absolute top-4 right-4 rounded-md">
           {featured ? (
             <Badge variant="secondary">Featured</Badge>
           ) : (
