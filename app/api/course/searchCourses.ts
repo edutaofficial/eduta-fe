@@ -68,7 +68,7 @@ export interface PublicCourse {
 export interface SearchCoursesResponse {
   success: boolean;
   message: string;
-  data: PublicCourse[];
+  data:{courses: PublicCourse[]};
   meta: {
     currentPage: number;
     pageSize: number;

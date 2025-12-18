@@ -492,7 +492,7 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
     refetchOnWindowFocus: false, // Prevent refetch on window focus
   });
 
-  const courses = data?.data || [];
+  const courses = data?.data.courses || [];
   const meta = data?.meta || {
     totalItems: 0,
     totalPages: 0,

@@ -18,7 +18,7 @@ export async function generateStaticParams() {
       sortBy: "created_at",
       order: "desc"
     });
-    const courses = coursesData?.data || [];
+    const courses = coursesData?.data?.courses || [];
 
     // Extract unique instructor IDs
     const instructorIds = new Set<number>();

@@ -76,7 +76,7 @@ export default function ExploreCourses() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  const courses = coursesData?.data || [];
+  const courses = coursesData?.data.courses || [];
 
   const activeCategoryData = categories.find(
     (c) => c.categoryId === activeCategory
