@@ -202,7 +202,7 @@ export default function Footer() {
                     {category.subcategories.slice(0, 5).map((subcategory) => (
                       <li key={subcategory.categoryId}>
                         <Link
-                          href={`/topics?categories=${subcategory.categoryId}`}
+                          href={`/topics/${category.slug}/${subcategory.slug}`}
                           className="text-default-200 text-sm hover:text-default-50 transition-colors inline-block"
                         >
                           {subcategory.name}
@@ -212,7 +212,7 @@ export default function Footer() {
                     {category.subcategories.length > 5 && (
                       <li>
                         <Link
-                          href={`/topics?categories=${category.categoryId}`}
+                          href={`/topics/${category.slug}/${category.slug}`}
                           className="text-primary-300 text-sm hover:text-primary-200 transition-colors inline-block font-medium"
                         >
                           View all →

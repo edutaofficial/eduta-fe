@@ -44,17 +44,35 @@ export default function ExploreCourses() {
     return categories.length > 0 ? categories[0].categoryId : "";
   }, [selectedCategory, categories]);
 
+  // Get category slugs for API call
+  const activeCategorySlug = useMemo(() => {
+    const category = categories.find((c) => c.categoryId === activeCategory);
+    return category?.slug || "";
+  }, [activeCategory, categories]);
+
+  const activeSubcategorySlug = useMemo(() => {
+    if (!activeSubcategory) return null;
+    
+    for (const category of categories) {
+      const subcategory = category.subcategories.find(
+        (sub) => sub.categoryId === activeSubcategory
+      );
+      if (subcategory) return subcategory.slug;
+    }
+    return null;
+  }, [activeSubcategory, categories]);
+
   // Use TanStack Query for courses
   const { data: coursesData, isLoading: loadingCourses } = useQuery({
-    queryKey: ["exploreCourses", activeSubcategory || activeCategory],
+    queryKey: ["exploreCourses", activeSubcategorySlug || activeCategorySlug],
     queryFn: () =>
       searchCourses({
-        categoryId: activeSubcategory || activeCategory,
+        categorySlug: activeSubcategorySlug || activeCategorySlug,
         pageSize: 12,
         sortBy: "created_at",
         order: "desc",
       }),
-    enabled: !!activeCategory,
+    enabled: !!activeCategorySlug,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
@@ -288,7 +306,7 @@ export default function ExploreCourses() {
                   size="lg"
                   className="px-8 bg-transparent"
                 >
-                  <Link href={`/topics?category=${activeCategory}`}>
+                  <Link href={`/topics/${activeCategorySlug}/${activeCategorySlug}`}>
                     Show all {activeCategoryData?.name} Courses
                   </Link>
                 </Button>

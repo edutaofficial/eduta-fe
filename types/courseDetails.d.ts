@@ -8,6 +8,11 @@ export interface LearningPoint {
   text: string;
 }
 
+export interface BulletPoint {
+  id: number;
+  text: string;
+}
+
 export interface CourseDetailsFormValues {
   courseTitle: string;
   selectedCategory: string;
@@ -15,6 +20,9 @@ export interface CourseDetailsFormValues {
   shortDescription: string;
   fullDescription: string;
   learningPoints: LearningPoint[];
+  requirements: BulletPoint[];
+  whoThisCourseIsFor: BulletPoint[];
+  certificateDescription: string;
   promoVideoId: number | null;
   courseBannerId: number | null;
 }

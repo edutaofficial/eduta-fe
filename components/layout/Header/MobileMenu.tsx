@@ -158,7 +158,7 @@ export default function MobileMenu() {
               {categories.slice(0, 8).map((category) => (
                 <Link
                   key={category.categoryId}
-                  href={`/topics?categories=${category.categoryId}`}
+                  href={`/topics/${category.slug}/${category.slug}`}
                   onClick={() => setOpen(false)}
                   className="rounded-md px-3 py-2 hover:bg-primary-100 transition-colors"
                 >

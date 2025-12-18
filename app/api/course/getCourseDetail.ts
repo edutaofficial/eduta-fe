@@ -130,6 +130,8 @@ export interface CourseDetail {
   learningPoints: CourseLearningPoint[];
   requirements: CourseRequirement[];
   targetAudience: CourseTargetAudience[];
+  whoThisCourseIsFor?: string[];
+  certificateDescription?: string;
   tags: CourseTag[];
   sections: CourseDetailSection[];
   previewLectures: CoursePreviewLecture[];

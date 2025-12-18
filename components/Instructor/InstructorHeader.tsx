@@ -29,13 +29,16 @@ export function InstructorHeader() {
   const { user: authUser } = useAuth();
   const { profile, fetchProfile, loading } = useInstructorStore();
 
+  const [hasAttemptedFetch, setHasAttemptedFetch] = React.useState(false);
+
   React.useEffect(() => {
-    if (!profile && !loading.fetchProfile) {
+    if (!profile && !loading.fetchProfile && !hasAttemptedFetch) {
+      setHasAttemptedFetch(true);
       fetchProfile().catch(() => {
-        /* ignore header fetch errors */
+        // Silently fail - header is not critical
       });
     }
-  }, [fetchProfile, loading.fetchProfile, profile]);
+  }, [fetchProfile, loading.fetchProfile, profile, hasAttemptedFetch]);
 
   const name = profile?.first_name
     ? `${profile.first_name} ${profile.last_name || ""}`

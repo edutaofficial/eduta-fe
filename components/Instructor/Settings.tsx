@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useInstructorStore } from "@/store/useInstructorStore";
 import { getBaseUrl } from "@/lib/config/api";
+import { useToast } from "@/components/ui/toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Card,
@@ -88,6 +89,7 @@ type AccountSettingsFormValues = z.infer<typeof accountSettingsSchema>;
 
 export function InstructorSettings() {
   const { user, updateProfilePictureUrl } = useAuth();
+  const { showToast } = useToast();
   const limitPhoneLength = React.useCallback((val: string | null | undefined) => {
     if (!val) return "";
     const digits = val.replace(/\D/g, "").slice(0, 15);
@@ -101,6 +103,8 @@ export function InstructorSettings() {
     updateProfile,
     clearError,
   } = useInstructorStore();
+  
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
   const [activeTab, setActiveTab] = useState("account");
   const [profilePictureId, setProfilePictureId] = useState<number | null>(null);
@@ -126,10 +130,19 @@ export function InstructorSettings() {
   const [isPasswordResetLoading, setIsPasswordResetLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
-  // Fetch profile on mount
+  // Fetch profile on mount - only once
   useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+    if (!hasAttemptedFetch) {
+      setHasAttemptedFetch(true);
+      fetchProfile().catch((error) => {
+        // Show toast notification for error
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : "Failed to load instructor profile. Please refresh the page.";
+        showToast(errorMessage, "error", 8000);
+      });
+    }
+  }, [fetchProfile, hasAttemptedFetch, showToast]);
 
   // Update form when profile is loaded
   useEffect(() => {

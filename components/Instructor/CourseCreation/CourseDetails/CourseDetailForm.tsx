@@ -20,11 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PlusIcon, XIcon, EyeIcon } from "lucide-react";
+import { EyeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UploadFile } from "@/components/Common";
 import { useCourseStore } from "@/store/useCourseStore";
 import { useCategoryStore } from "@/store/useCategoryStore";
+import { BulletPointInput } from "./BulletPointInput";
 
 import { courseDetailsValidationSchema } from "@/lib/courseDetailsValidation";
 import type {
@@ -153,44 +154,26 @@ const CourseDetailFormInner = (
     [setUploading]
   );
 
-  // Learning points management
-  const addLearningPoint = React.useCallback(() => {
-    const currentPoints = formik.values.learningPoints;
-    const newPoints = [...currentPoints, { id: Date.now(), text: "" }];
-    formik.setFieldValue("learningPoints", newPoints);
-
-    const filledPoints = newPoints.filter((p) => p.text.trim().length > 0);
-    if (filledPoints.length >= 4 && formik.errors.learningPoints) {
-      formik.setFieldError("learningPoints", undefined);
-    }
-  }, [formik]);
-
-  const removeLearningPoint = React.useCallback(
-    (id: number) => {
-      const currentPoints = formik.values.learningPoints;
-      if (currentPoints.length > 4) {
-        const newPoints = currentPoints.filter((p) => p.id !== id);
-        formik.setFieldValue("learningPoints", newPoints);
-      }
+  // Bullet point management helpers
+  const handleBulletPointChange = React.useCallback(
+    (field: "learningPoints" | "requirements" | "whoThisCourseIsFor", points: Array<{ id: number; text: string }>) => {
+      formik.setFieldValue(field, points);
+      
+      // Clear error if minimum requirement is met
+      setTimeout(() => {
+        const minRequired = field === "learningPoints" ? 4 : 2;
+        const filledPoints = points.filter((p) => p.text.trim().length > 0);
+        if (filledPoints.length >= minRequired && typeof formik.errors[field] === "string") {
+          formik.setFieldError(field, undefined);
+        }
+      }, 0);
     },
     [formik]
   );
 
-  const handleLearningPointChange = React.useCallback(
-    (index: number, value: string) => {
-      formik.setFieldValue(`learningPoints.${index}.text`, value);
-
-      setTimeout(() => {
-        const filledPoints = formik.values.learningPoints.filter(
-          (p) => p.text.trim().length > 0
-        );
-        if (
-          filledPoints.length >= 4 &&
-          typeof formik.errors.learningPoints === "string"
-        ) {
-          formik.setFieldError("learningPoints", undefined);
-        }
-      }, 0);
+  const handleBulletPointBlur = React.useCallback(
+    (field: "learningPoints" | "requirements" | "whoThisCourseIsFor", index: number) => {
+      formik.setFieldTouched(`${field}.${index}.text`);
     },
     [formik]
   );
@@ -206,7 +189,7 @@ const CourseDetailFormInner = (
         // CRITICAL: Set errors explicitly
         await formik.setErrors(errs);
 
-        // Mark ALL fields as touched - including learningPoints
+        // Mark ALL fields as touched
         const touchedFields: Record<string, unknown> = {
           courseTitle: true,
           selectedCategory: true,
@@ -215,16 +198,21 @@ const CourseDetailFormInner = (
           fullDescription: true,
           promoVideoId: true,
           courseBannerId: true,
-          learningPoints: true, // Mark the array itself as touched
+          learningPoints: true,
+          requirements: true,
+          whoThisCourseIsFor: true,
+          certificateDescription: true,
         };
 
-        // Also mark individual learning point fields
+        // Mark individual bullet point fields
         if (Array.isArray(formik.values.learningPoints)) {
-          touchedFields.learningPoints = formik.values.learningPoints.map(
-            () => ({
-              text: true,
-            })
-          );
+          touchedFields.learningPoints = formik.values.learningPoints.map(() => ({ text: true }));
+        }
+        if (Array.isArray(formik.values.requirements)) {
+          touchedFields.requirements = formik.values.requirements.map(() => ({ text: true }));
+        }
+        if (Array.isArray(formik.values.whoThisCourseIsFor)) {
+          touchedFields.whoThisCourseIsFor = formik.values.whoThisCourseIsFor.map(() => ({ text: true }));
         }
 
         await formik.setTouched(touchedFields, false);
@@ -514,132 +502,89 @@ const CourseDetailFormInner = (
         />
       </div>
 
+      {/* Course Requirements */}
+      <BulletPointInput
+        label="Course Requirements"
+        description="At least 2 requirements are required (max 120 characters each)"
+        value={formik.values.requirements}
+        onChange={(points) => handleBulletPointChange("requirements", points)}
+        onBlur={(index) => handleBulletPointBlur("requirements", index)}
+        error={formik.errors.requirements as string | Array<{ text?: string }> | undefined}
+        touched={formik.touched.requirements as boolean | Array<{ text?: boolean }> | undefined}
+        minItems={2}
+        maxItems={10}
+        maxLength={120}
+        placeholder="Enter a requirement"
+        disabled={isSubmitting}
+        required
+      />
+
       {/* Learning Points */}
-      <div className="space-y-4">
-        <Label>
-          Learning Points <span className="text-destructive">*</span>
+      <BulletPointInput
+        label="Learning Points"
+        description="At least 4 learning points are required (max 120 characters each)"
+        value={formik.values.learningPoints}
+        onChange={(points) => handleBulletPointChange("learningPoints", points)}
+        onBlur={(index) => handleBulletPointBlur("learningPoints", index)}
+        error={formik.errors.learningPoints as string | Array<{ text?: string }> | undefined}
+        touched={formik.touched.learningPoints as boolean | Array<{ text?: boolean }> | undefined}
+        minItems={4}
+        maxItems={10}
+        maxLength={120}
+        placeholder="Enter a learning point"
+        disabled={isSubmitting}
+        required
+      />
+
+      {/* Who This Course Is For */}
+      <BulletPointInput
+        label="Who This Course Is For"
+        description="At least 2 points are required (max 120 characters each)"
+        value={formik.values.whoThisCourseIsFor}
+        onChange={(points) => handleBulletPointChange("whoThisCourseIsFor", points)}
+        onBlur={(index) => handleBulletPointBlur("whoThisCourseIsFor", index)}
+        error={formik.errors.whoThisCourseIsFor as string | Array<{ text?: string }> | undefined}
+        touched={formik.touched.whoThisCourseIsFor as boolean | Array<{ text?: boolean }> | undefined}
+        minItems={2}
+        maxItems={10}
+        maxLength={120}
+        placeholder="Enter target audience"
+        disabled={isSubmitting}
+        required
+      />
+
+      {/* Certificate Description */}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="certificateDescription">
+          Certificate of Completion Description
         </Label>
-        <p
+        <Textarea
+          id="certificateDescription"
+          name="certificateDescription"
+          placeholder="Describe what students will achieve upon completion (max 500 characters)"
+          value={formik.values.certificateDescription}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          disabled={isSubmitting}
+          maxLength={500}
+          rows={3}
           className={cn(
-            "text-xs font-medium",
-            typeof formik.errors.learningPoints === "string" &&
-              formik.touched.learningPoints
-              ? "text-destructive"
-              : "text-muted-foreground"
+            formik.touched.certificateDescription && formik.errors.certificateDescription
+              ? "border-destructive focus-visible:ring-destructive"
+              : ""
           )}
-        >
-          At least 4 learning points are required (max 120 characters each)
+          aria-invalid={
+            !!(formik.touched.certificateDescription && formik.errors.certificateDescription)
+          }
+        />
+        <p className="text-xs text-muted-foreground">
+          {formik.values.certificateDescription.length}/500 characters
         </p>
-
-        <div
-          className={cn(
-            "rounded-lg border-2 p-4 transition-all duration-200",
-            typeof formik.errors.learningPoints === "string" &&
-              formik.touched.learningPoints
-              ? "border-destructive "
-              : "border-none"
-          )}
-        >
-          <div className="space-y-3">
-            {formik.values.learningPoints.map((point, index) => (
-              <div key={point.id} className="flex items-start gap-3">
-                <span className="mt-2.5 text-sm font-medium text-muted-foreground">
-                  {index + 1}.
-                </span>
-                <div className="flex-1">
-                  <Textarea
-                    name={`learningPoints.${index}.text`}
-                    placeholder="Enter a learning point (max 120 characters)"
-                    value={point.text}
-                    onChange={(e) =>
-                      handleLearningPointChange(index, e.target.value)
-                    }
-                    onBlur={() =>
-                      formik.setFieldTouched(`learningPoints.${index}.text`)
-                    }
-                    maxLength={120}
-                    rows={1}
-                    disabled={isSubmitting}
-                    className={cn(
-                      "resize-none",
-                      formik.touched.learningPoints?.[index]?.text &&
-                        Array.isArray(formik.errors.learningPoints) &&
-                        (
-                          formik.errors.learningPoints as unknown as Array<{
-                            text?: string;
-                          }>
-                        )[index]?.text
-                        ? "border-destructive focus-visible:ring-destructive"
-                        : ""
-                    )}
-                    aria-invalid={
-                      !!(
-                        formik.touched.learningPoints?.[index]?.text &&
-                        Array.isArray(formik.errors.learningPoints) &&
-                        (
-                          formik.errors.learningPoints as unknown as Array<{
-                            text?: string;
-                          }>
-                        )[index]?.text
-                      )
-                    }
-                  />
-                  {formik.touched.learningPoints?.[index]?.text &&
-                    Array.isArray(formik.errors.learningPoints) &&
-                    (
-                      formik.errors.learningPoints as unknown as Array<{
-                        text?: string;
-                      }>
-                    )[index]?.text && (
-                      <p className="text-sm text-destructive font-medium mt-1">
-                        {
-                          (
-                            formik.errors.learningPoints as unknown as Array<{
-                              text?: string;
-                            }>
-                          )[index].text
-                        }
-                      </p>
-                    )}
-                </div>
-                {formik.values.learningPoints.length > 4 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeLearningPoint(point.id)}
-                    disabled={isSubmitting}
-                    className="mt-1.5 hover:bg-destructive/10 hover:text-destructive"
-                    aria-label={`Remove learning point ${index + 1}`}
-                  >
-                    <XIcon className="size-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Learning points array error - ALWAYS CHECK AND DISPLAY */}
-        {typeof formik.errors.learningPoints === "string" &&
-          formik.touched.learningPoints && (
-            <div className="bg-destructive/10 border border-destructive rounded-md p-3 -mt-2">
-              <p className="text-sm text-destructive font-semibold">
-                ⚠️ {String(formik.errors.learningPoints)}
-              </p>
-            </div>
-          )}
-
-        <Button
-          type="button"
-          variant="outline"
-          onClick={addLearningPoint}
-          disabled={formik.values.learningPoints.length >= 10 || isSubmitting}
-          className="gap-2"
-        >
-          <PlusIcon className="size-4" />
-          Add Learning Point
-        </Button>
+        {formik.touched.certificateDescription && formik.errors.certificateDescription && (
+          <p className="text-sm text-destructive font-medium">
+            {formik.errors.certificateDescription}
+          </p>
+        )}
       </div>
 
       {/* Preview Button */}

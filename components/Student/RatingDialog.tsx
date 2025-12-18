@@ -162,12 +162,12 @@ export function RatingDialog({
                 }
               }}
               rows={5}
-              className="resize-none max-w-[34rem]"
-              maxLength={500}
+              className="resize-none max-w-[34rem] overflow-auto h-32"
+              maxLength={1500}
               required
             />
             <p className="text-xs text-muted-foreground">
-              {review.length}/500 characters
+              {review.length}/1500 characters
             </p>
           </div>
 

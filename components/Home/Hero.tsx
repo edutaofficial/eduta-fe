@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { StarIcon } from "lucide-react";
@@ -96,7 +97,7 @@ export default function Hero({ slides }: HeroProps) {
                       className="text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all"
                       asChild
                     >
-                      <a href="/topics">{slide.buttonText}</a>
+                      <Link href="/topics">{slide.buttonText}</Link>
                     </Button>
                   </div>
                 )}

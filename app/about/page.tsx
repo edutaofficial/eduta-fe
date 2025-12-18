@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import * as React from "react";
+import Link from "next/link";
 import { CheckCircle, Target, Users, Lightbulb } from "lucide-react";
 import { SITE_BASE_URL } from "@/lib/constants";
 
@@ -220,12 +221,12 @@ export default function AboutPage() {
             >
               Get Started
             </a>
-            <a
+            <Link
               href="/topics"
               className="bg-primary-700 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-800 transition-colors border border-primary-500"
             >
               Explore Courses
-            </a>
+            </Link>
           </div>
         </div>
       </section>

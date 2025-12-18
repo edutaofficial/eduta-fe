@@ -217,6 +217,8 @@ export interface CreateCourseRequest {
   learningPoints: { description: string }[];
   requirements: string[];
   targetAudience: string[];
+  whoThisCourseIsFor?: string[];
+  certificateDescription?: string;
   tags: string[];
 }
 

@@ -68,6 +68,27 @@ const CourseDetailsInner = (
               { id: 3, text: "" },
               { id: 4, text: "" },
             ],
+      requirements:
+        basicInfo.requirements && basicInfo.requirements.length > 0
+          ? basicInfo.requirements.map((req, idx) => ({
+              id: idx + 1,
+              text: req,
+            }))
+          : [
+              { id: 1, text: "" },
+              { id: 2, text: "" },
+            ],
+      whoThisCourseIsFor:
+        basicInfo.whoThisCourseIsFor && basicInfo.whoThisCourseIsFor.length > 0
+          ? basicInfo.whoThisCourseIsFor.map((item, idx) => ({
+              id: idx + 1,
+              text: item,
+            }))
+          : [
+              { id: 1, text: "" },
+              { id: 2, text: "" },
+            ],
+      certificateDescription: basicInfo.certificateDescription || "",
       promoVideoId: basicInfo.promoVideoId || null,
       courseBannerId: basicInfo.courseBannerId || null,
     };
@@ -79,11 +100,21 @@ const CourseDetailsInner = (
       const safeShortDescription = clampShortDescription(values.shortDescription);
       const safeFullDescription = clampFullDescription(values.fullDescription);
 
-      const learningPoints = values.learningPoints.map((lp) => ({
-        description: lp.text,
-      }));
+      const learningPoints = values.learningPoints
+        .filter((lp) => lp.text.trim().length > 0)
+        .map((lp) => ({
+          description: lp.text,
+        }));
 
-      setBasicInfo({
+      const requirements = values.requirements
+        .filter((req) => req.text.trim().length > 0)
+        .map((req) => req.text);
+
+      const whoThisCourseIsFor = values.whoThisCourseIsFor
+        .filter((item) => item.text.trim().length > 0)
+        .map((item) => item.text);
+
+      const dataToSave = {
         title: values.courseTitle,
         categoryId: values.selectedCategory,
         learningLevel: values.learningLevel,
@@ -92,12 +123,16 @@ const CourseDetailsInner = (
         fullDescription: safeFullDescription,
         language: "English",
         learningPoints,
-        requirements: [],
+        requirements,
+        whoThisCourseIsFor,
         targetAudience: [],
         tags: [],
+        certificateDescription: values.certificateDescription || "",
         promoVideoId: values.promoVideoId,
         courseBannerId: values.courseBannerId,
-      });
+      };
+      
+      setBasicInfo(dataToSave);
     },
     [clampFullDescription, clampShortDescription, setBasicInfo]
   );

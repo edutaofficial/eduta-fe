@@ -38,6 +38,7 @@ import { X, FileText, MessageCircle, StickyNote, Download } from "lucide-react";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { useUpload } from "@/hooks/useUpload";
 import { RatingDialog } from "@/components/Student/RatingDialog";
+import Footer from "@/components/layout/Footer";
 
 // Helper to find lecture by ID
 function findLectureById(sections: Section[], lectureId: string) {
@@ -805,7 +806,9 @@ export default function LecturePlayerPage() {
     videoAssetLoading;
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden relative">
+    <div className="min-h-screen flex flex-col relative">
+      {/* Main Content Wrapper - Fixed height for video player */}
+      <div className="h-screen flex flex-col overflow-hidden">
       {/* Progress Error Toast - Non-intrusive notification */}
       {progressToast && (
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -1081,6 +1084,10 @@ export default function LecturePlayerPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
+
+      {/* Footer - Visible when scrolling down */}
+      <Footer />
     </div>
   );
 }

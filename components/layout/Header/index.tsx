@@ -87,7 +87,7 @@ function ExploreDropdown({
                         {category.subcategories.map((sub) => (
                           <NavigationMenuLink asChild key={sub.categoryId}>
                             <Link
-                              href={`/topics?categories=${sub.categoryId}`}
+                              href={`/topics/${category.slug}/${sub.slug}`}
                               className="block text-sm text-primary-700 hover:underline"
                             >
                               {sub.name}
@@ -98,7 +98,7 @@ function ExploreDropdown({
                     ) : (
                       <NavigationMenuLink asChild>
                         <Link
-                          href={`/topics?categories=${category.categoryId}`}
+                          href={`/topics/${category.slug}/${category.slug}`}
                           className="block text-sm text-primary-700 hover:underline"
                         >
                           {category.name}

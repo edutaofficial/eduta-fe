@@ -31,11 +31,19 @@ function Categories() {
 
   // Flatten categories to include both parent categories and subcategories
   const allCategories = categories.flatMap((category) => [
-    { id: category.categoryId, name: category.name, isParent: true },
+    { 
+      id: category.categoryId, 
+      name: category.name, 
+      isParent: true,
+      slug: category.slug,
+      parentSlug: undefined,
+    },
     ...category.subcategories.map((sub) => ({
       id: sub.categoryId,
       name: sub.name,
       isParent: false,
+      slug: sub.slug,
+      parentSlug: category.slug,
     })),
   ]);
 
@@ -48,6 +56,8 @@ function Categories() {
             name={category.name}
             categoryId={category.id}
             isParent={category.isParent}
+            slug={category.slug}
+            parentSlug={category.parentSlug}
           />
         ))}
       </div>
@@ -59,14 +69,21 @@ export default Categories;
 
 function CategoryLinkCard({
   name,
-  categoryId,
+  categoryId: _categoryId,
+  isParent,
+  slug,
+  parentSlug,
 }: {
   name: string;
   categoryId: string;
   isParent: boolean;
+  slug: string;
+  parentSlug?: string;
 }) {
-  // All categories (parent and sub) link using categoryId format
-  const link = `/topics?categories=${categoryId}`;
+  // Use slug-based URLs: topics/{category-slug}/{category-slug} or topics/{parent-slug}/{sub-slug}
+  const link = isParent 
+    ? `/topics/${slug}/${slug}`
+    : `/topics/${parentSlug}/${slug}`;
 
   return (
     <Link

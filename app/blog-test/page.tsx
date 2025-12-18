@@ -1,208 +1,202 @@
 "use client";
 
 import * as React from "react";
-import { BlogCard } from "@/components/Blog";
-import type { BlogPost } from "@/types/blog";
-
-// Dummy data for testing
-const dummyPosts: BlogPost[] = [
-  {
-    blogId: "1",
-    title: "Getting Started with Next.js 14 and App Router",
-    slug: "getting-started-nextjs-14",
-    excerpt:
-      "Learn how to build modern web applications with Next.js 14's powerful App Router and Server Components.",
-    featuredImageId: 1,
-    featuredImageUrl: "https://placehold.co/800x450/3b82f6/ffffff?text=Next.js+14",
-    category: {
-      categoryId: "cat-1",
-      name: "Web Development",
-      slug: "web-development",
-    },
-    isFeatured: true,
-    viewsCount: 1523,
-    tags: [
-      { tagId: "tag-1", tagName: "Next.js" },
-      { tagId: "tag-2", tagName: "React" },
-      { tagId: "tag-3", tagName: "JavaScript" },
-    ],
-    publishedAt: "2024-01-15T10:00:00Z",
-    createdAt: "2024-01-15T10:00:00Z",
-  },
-  {
-    blogId: "2",
-    title: "Mastering TypeScript: Advanced Types and Patterns",
-    slug: "mastering-typescript-advanced-types",
-    excerpt:
-      "Dive deep into TypeScript's advanced type system and learn powerful patterns for building type-safe applications.",
-    featuredImageId: 2,
-    featuredImageUrl:
-      "https://placehold.co/800x450/8b5cf6/ffffff?text=TypeScript",
-    category: {
-      categoryId: "cat-2",
-      name: "Programming",
-      slug: "programming",
-    },
-    isFeatured: true,
-    viewsCount: 2341,
-    tags: [
-      { tagId: "tag-4", tagName: "TypeScript" },
-      { tagId: "tag-5", tagName: "Programming" },
-      { tagId: "tag-6", tagName: "Types" },
-    ],
-    publishedAt: "2024-01-20T14:30:00Z",
-    createdAt: "2024-01-20T14:30:00Z",
-  },
-  {
-    blogId: "3",
-    title: "Building Responsive UIs with Tailwind CSS",
-    slug: "building-responsive-uis-tailwind",
-    excerpt:
-      "Discover best practices for creating beautiful, responsive user interfaces using Tailwind CSS utility classes.",
-    featuredImageId: 3,
-    featuredImageUrl:
-      "https://placehold.co/800x450/06b6d4/ffffff?text=Tailwind+CSS",
-    category: {
-      categoryId: "cat-3",
-      name: "Design",
-      slug: "design",
-    },
-    isFeatured: false,
-    viewsCount: 987,
-    tags: [
-      { tagId: "tag-7", tagName: "Tailwind" },
-      { tagId: "tag-8", tagName: "CSS" },
-      { tagId: "tag-9", tagName: "Design" },
-    ],
-    publishedAt: "2024-01-25T09:15:00Z",
-    createdAt: "2024-01-25T09:15:00Z",
-  },
-  {
-    blogId: "4",
-    title: "State Management in React: Zustand vs Redux",
-    slug: "state-management-react-zustand-redux",
-    excerpt:
-      "Compare popular state management solutions for React applications and learn when to use each one.",
-    featuredImageId: 4,
-    featuredImageUrl:
-      "https://placehold.co/800x450/ec4899/ffffff?text=State+Management",
-    category: {
-      categoryId: "cat-1",
-      name: "Web Development",
-      slug: "web-development",
-    },
-    isFeatured: false,
-    viewsCount: 1756,
-    tags: [
-      { tagId: "tag-2", tagName: "React" },
-      { tagId: "tag-10", tagName: "State Management" },
-      { tagId: "tag-11", tagName: "Zustand" },
-    ],
-    publishedAt: "2024-02-01T11:45:00Z",
-    createdAt: "2024-02-01T11:45:00Z",
-  },
-  {
-    blogId: "5",
-    title: "API Design Best Practices: REST vs GraphQL",
-    slug: "api-design-rest-vs-graphql",
-    excerpt:
-      "Learn the fundamentals of API design and understand when to choose REST or GraphQL for your project.",
-    featuredImageId: 5,
-    featuredImageUrl:
-      "https://placehold.co/800x450/10b981/ffffff?text=API+Design",
-    category: {
-      categoryId: "cat-4",
-      name: "Backend",
-      slug: "backend",
-    },
-    isFeatured: true,
-    viewsCount: 3201,
-    tags: [
-      { tagId: "tag-12", tagName: "API" },
-      { tagId: "tag-13", tagName: "REST" },
-      { tagId: "tag-14", tagName: "GraphQL" },
-    ],
-    publishedAt: "2024-02-05T16:20:00Z",
-    createdAt: "2024-02-05T16:20:00Z",
-  },
-  {
-    blogId: "6",
-    title: "Introduction to Server-Side Rendering with Next.js",
-    slug: "intro-server-side-rendering-nextjs",
-    excerpt:
-      "Understand the benefits of Server-Side Rendering and how to implement it effectively in your Next.js applications.",
-    featuredImageId: 6,
-    featuredImageUrl: "https://placehold.co/800x450/f59e0b/ffffff?text=SSR",
-    category: {
-      categoryId: "cat-1",
-      name: "Web Development",
-      slug: "web-development",
-    },
-    isFeatured: false,
-    viewsCount: 1432,
-    tags: [
-      { tagId: "tag-1", tagName: "Next.js" },
-      { tagId: "tag-15", tagName: "SSR" },
-      { tagId: "tag-16", tagName: "Performance" },
-    ],
-    publishedAt: "2024-02-10T13:00:00Z",
-    createdAt: "2024-02-10T13:00:00Z",
-  },
-];
+import { Button } from "@/components/ui/button";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { useToast } from "@/components/ui/toast";
 
 export default function BlogTestPage() {
+  const certificateRef = React.useRef<HTMLDivElement>(null);
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const { showToast } = useToast();
+
+  // Format date with ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
+  const formatDate = (date: Date): string => {
+    const day = date.getDate();
+    const month = date.toLocaleString("en-US", { month: "short" });
+    const year = date.getFullYear();
+
+    const getOrdinalSuffix = (day: number): string => {
+      if (day > 3 && day < 21) return "th";
+      switch (day % 10) {
+        case 1:
+          return "st";
+        case 2:
+          return "nd";
+        case 3:
+          return "rd";
+        default:
+          return "th";
+      }
+    };
+
+    return `${day}${getOrdinalSuffix(day)} ${month} ${year}`;
+  };
+
+  const currentDate = formatDate(new Date());
+
+  const handleDownloadCertificate = async () => {
+    if (!certificateRef.current) return;
+
+    setIsGenerating(true);
+
+    try {
+      // Wait a bit to ensure all images are fully loaded
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Capture the certificate as canvas with specific dimensions
+      const canvas = await html2canvas(certificateRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        imageTimeout: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+
+      // Convert canvas to image
+      const imgData = canvas.toDataURL("image/png");
+
+      // Create PDF with proper dimensions
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "px",
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save("Certificate_Abdullah_Khan_Master_AI.pdf");
+      
+      showToast("Certificate downloaded successfully!", "success");
+    } catch {
+      showToast("Failed to generate certificate. Please try again.", "error");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full mb-4">
-          🧪 Test Mode - Dummy Data
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-12 px-4">
+      <div className="container mx-auto max-w-6xl">
+        {/* Certificate Test Section */}
+        <div className="p-8 bg-white border-2 border-blue-200 rounded-xl shadow-2xl">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-default-900 mb-2">
+              🎓 Certificate Generator Test
+            </h2>
+            <p className="text-default-600">
+              Generate a certificate for Abdullah Khan - Master AI Course
+            </p>
+          </div>
+          <Button
+            onClick={handleDownloadCertificate}
+            disabled={isGenerating}
+            size="lg"
+            className="bg-primary-600 hover:bg-primary-700 text-white shadow-lg"
+          >
+            {isGenerating ? "Generating..." : "Download Certificate"}
+          </Button>
         </div>
-        <h1 className="text-4xl font-bold text-default-900 mb-2">Blog</h1>
-        <p className="text-lg text-default-600">
-          Discover articles, tutorials, and insights (Demo with dummy data)
-        </p>
-      </div>
 
-      {/* Featured Posts */}
-      <div className="mb-12">
-        <h2 className="text-2xl font-bold text-default-900 mb-6">
-          Featured Articles
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dummyPosts
-            .filter((post) => post.isFeatured)
-            .map((post) => (
-              <BlogCard key={post.blogId} {...post} />
-            ))}
+        {/* Certificate Preview */}
+        <div className="bg-white p-4 rounded-lg shadow-xl">
+          <div
+            ref={certificateRef}
+            className="relative w-full mx-auto"
+            style={{ 
+              maxWidth: "1200px",
+              width: "100%"
+            }}
+          >
+            {/* Certificate Background Image - Using standard img for consistent html2canvas rendering */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/certificate-final.png"
+              alt="Certificate"
+              className="w-full h-auto block"
+              style={{ display: "block" }}
+            />
+
+            {/* Student Name Overlay */}
+            <div
+              className="absolute"
+              style={{
+                top: "15%",
+                left: "60%",
+                transform: "translateX(-50%)",
+                width: "80%",
+              }}
+            >
+              <p
+                className="font-bold text-primary-600"
+                style={{
+                  fontSize: "36px",
+                  letterSpacing: "0.05em",
+                  margin: 0,
+                  padding: 0,
+                  lineHeight: 1,
+                }}
+              >
+                Abdullah Khan
+              </p>
+            </div>
+
+            {/* Course Name Overlay */}
+            <div
+              className="absolute"
+              style={{
+                top: "30%",
+                left: "60%",
+                transform: "translateX(-50%)",
+                width: "80%",
+              }}
+            >
+              <p
+                className="font-bold text-primary-600"
+                style={{
+                  fontSize: "24px",
+                  letterSpacing: "0.03em",
+                  margin: 0,
+                  padding: 0,
+                  lineHeight: 1,
+                }}
+              >
+                Master AI
+              </p>
+            </div>
+
+            {/* Date Overlay */}
+            <div
+              className="absolute"
+              style={{
+                top: "65%",
+                left: "26%",
+                transform: "translateX(-50%)",
+              }}
+            >
+              <p
+                className="font-medium text-default-800"
+                style={{
+                  fontSize: "16px",
+                  letterSpacing: "0.02em",
+                  margin: 0,
+                  padding: 0,
+                  lineHeight: 1,
+                }}
+              >
+                {currentDate}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* All Posts */}
-      <div>
-        <h2 className="text-2xl font-bold text-default-900 mb-6">
-          All Articles
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dummyPosts.map((post) => (
-            <BlogCard key={post.blogId} {...post} />
-          ))}
+        <p className="text-sm text-default-500 mt-4 text-center">
+          This certificate will be downloaded as a high-quality PDF file
+        </p>
         </div>
-      </div>
-
-      {/* Info Box */}
-      <div className="mt-12 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="text-lg font-semibold text-blue-900 mb-2">
-          📝 Test Route Information
-        </h3>
-        <p className="text-blue-800 mb-2">
-          This is a test route displaying dummy blog data for demonstration
-          purposes.
-        </p>
-        <p className="text-sm text-blue-700">
-          <strong>Note:</strong> Click on any blog card to see the detail page
-          with dummy content.
-        </p>
       </div>
     </div>
   );

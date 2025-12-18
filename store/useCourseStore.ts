@@ -31,6 +31,8 @@ const initialBasicInfo: CreateCourseRequest = {
   learningPoints: [],
   requirements: [],
   targetAudience: [],
+  whoThisCourseIsFor: [],
+  certificateDescription: "",
   tags: [],
 };
 

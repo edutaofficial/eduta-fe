@@ -70,6 +70,58 @@ export const courseDetailsValidationSchema = z.object({
       }
     ),
   
+  requirements: z
+    .array(
+      z.object({
+        id: z.number(),
+        text: z.string().max(120, "Requirement must be 120 characters or less"),
+      })
+    )
+    .refine(
+      (points) => {
+        const filledPoints = points.filter((p) => p.text.trim().length > 0);
+        return filledPoints.length >= 2;
+      },
+      {
+        message: "At least 2 requirements are required",
+      }
+    )
+    .refine(
+      (points) => points.length <= 10,
+      {
+        message: "Maximum 10 requirements allowed",
+      }
+    ),
+  
+  whoThisCourseIsFor: z
+    .array(
+      z.object({
+        id: z.number(),
+        text: z.string().max(120, "Point must be 120 characters or less"),
+      })
+    )
+    .refine(
+      (points) => {
+        const filledPoints = points.filter((p) => p.text.trim().length > 0);
+        return filledPoints.length >= 2;
+      },
+      {
+        message: "At least 2 points are required for who this course is for",
+      }
+    )
+    .refine(
+      (points) => points.length <= 10,
+      {
+        message: "Maximum 10 points allowed",
+      }
+    ),
+  
+  certificateDescription: z
+    .string()
+    .max(500, "Certificate description must be less than 500 characters")
+    .optional()
+    .or(z.literal("")),
+  
   promoVideoId: z.union([z.number(), z.null()]).nullable(),
   
   courseBannerId: z

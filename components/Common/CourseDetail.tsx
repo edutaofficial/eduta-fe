@@ -77,7 +77,10 @@ interface CourseData {
   rating?: number;
   ratingCount?: number;
   enrollments?: number;
+  requirements?: string[];
   learningPoints: string[];
+  whoThisCourseIsFor?: string[];
+  certificateDescription?: string;
   description: string;
   updatedAt?: string;
   outline?: Array<{
@@ -153,6 +156,71 @@ function truncateShortDescription(text?: string): string {
   return `${trimmed.slice(0, 500)}...`;
 }
 
+// ReviewCard component with show more/less functionality
+function ReviewCard({ review }: { review: CourseReview }) {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  
+  // Calculate if review text is long (more than approximately 4-5 lines)
+  // Assuming average line length of ~80 characters, 4-5 lines ≈ 320-400 characters
+  const CHARACTER_LIMIT = 350;
+  const isLongReview = review.reviewText && review.reviewText.length > CHARACTER_LIMIT;
+  
+  const displayText = React.useMemo(() => {
+    if (!review.reviewText) return "";
+    if (!isLongReview || isExpanded) {
+      return review.reviewText;
+    }
+    // Truncate at character limit and find the last space to avoid cutting words
+    const truncated = review.reviewText.slice(0, CHARACTER_LIMIT);
+    const lastSpaceIndex = truncated.lastIndexOf(" ");
+    return lastSpaceIndex > 0 ? `${truncated.slice(0, lastSpaceIndex)}...` : `${truncated}...`;
+  }, [review.reviewText, isLongReview, isExpanded]);
+
+  return (
+    <div className="bg-default-50 border border-default-200 rounded-lg p-6 h-full">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-1">
+          {[...Array(5)].map((_, i) => (
+            <StarIcon
+              key={i}
+              className={`size-4 ${
+                i < Math.floor(review.rating)
+                  ? "fill-warning-500 text-warning-500"
+                  : "text-default-300"
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-sm font-semibold text-default-900 wrap-break-word">
+          {review.userName || `User ${review.userId}`}
+        </span>
+      </div>
+      {review.reviewText && (
+        <div>
+          <p className="text-default-700 leading-relaxed wrap-break-word whitespace-pre-wrap">
+            {displayText}
+          </p>
+          {isLongReview && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-primary-600 hover:text-primary-700 text-sm font-medium mt-2 transition-colors"
+            >
+              {isExpanded ? "Show less" : "Show more"}
+            </button>
+          )}
+        </div>
+      )}
+      <p className="text-xs text-default-500 mt-3">
+        {new Date(review.createdAt).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })}
+      </p>
+    </div>
+  );
+}
+
 export function CourseDetail({
   courseId,
   isPreview = false,
@@ -183,6 +251,7 @@ export function CourseDetail({
   const [appliedCoupon, setAppliedCoupon] = React.useState<string>("25BBPMXNVD25");
   const [couponInput, setCouponInput] = React.useState<string>("");
   const [couponError, setCouponError] = React.useState<string>("");
+  const [timeLeft, setTimeLeft] = React.useState<string>("");
   const { useGetAssetById } = useUpload();
 
   // Get instructor ID - from API data in normal mode, from current user in preview mode
@@ -212,6 +281,80 @@ export function CourseDetail({
   React.useEffect(() => {
     setIsWishlisted(isWishlistedProp);
   }, [isWishlistedProp]);
+
+  // Timer logic - 24 hour countdown with localStorage persistence
+  React.useEffect(() => {
+    const TIMER_KEY = `course_price_timer_${courseId || "preview"}`;
+    const TIMER_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+    // Initialize or get existing timer
+    const initializeTimer = () => {
+      const storedExpiry = localStorage.getItem(TIMER_KEY);
+      const now = Date.now();
+
+      if (storedExpiry) {
+        const expiryTime = parseInt(storedExpiry, 10);
+        
+        // If timer has expired, create a new one
+        if (now >= expiryTime) {
+          const newExpiry = now + TIMER_DURATION;
+          localStorage.setItem(TIMER_KEY, newExpiry.toString());
+          return newExpiry;
+        }
+        
+        return expiryTime;
+      } else {
+        // No timer exists, create a new one
+        const newExpiry = now + TIMER_DURATION;
+        localStorage.setItem(TIMER_KEY, newExpiry.toString());
+        return newExpiry;
+      }
+    };
+
+    // Format time remaining as readable string
+    const formatTimeLeft = (milliseconds: number): string => {
+      const totalSeconds = Math.floor(milliseconds / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (hours > 0) {
+        return `${hours} hour${hours !== 1 ? "s" : ""} ${minutes} minute${minutes !== 1 ? "s" : ""} left at this price!`;
+      } else if (minutes > 0) {
+        return `${minutes} minute${minutes !== 1 ? "s" : ""} ${seconds} second${seconds !== 1 ? "s" : ""} left at this price!`;
+      } else {
+        return `${seconds} second${seconds !== 1 ? "s" : ""} left at this price!`;
+      }
+    };
+
+    const expiryTime = initializeTimer();
+
+    // Update timer every second
+    const updateTimer = () => {
+      const now = Date.now();
+      const remaining = expiryTime - now;
+
+      if (remaining <= 0) {
+        // Timer expired, reinitialize
+        const newExpiry = now + TIMER_DURATION;
+        localStorage.setItem(TIMER_KEY, newExpiry.toString());
+        setTimeLeft(formatTimeLeft(TIMER_DURATION));
+        // Force re-run of effect
+        window.location.reload();
+      } else {
+        setTimeLeft(formatTimeLeft(remaining));
+      }
+    };
+
+    // Initial update
+    updateTimer();
+
+    // Set interval to update every second
+    const intervalId = setInterval(updateTimer, 1000);
+
+    // Cleanup
+    return () => clearInterval(intervalId);
+  }, [courseId]);
 
   // Get promo video URL directly from API response (no asset API call needed)
   const promoVideoDirectUrl = React.useMemo(() => {
@@ -257,6 +400,7 @@ export function CourseDetail({
         (apiCourseData.category as unknown as { parentName?: string | null })?.parentName ||
         (apiCourseData.category as unknown as { parent?: { name?: string | null } })?.parent?.name ||
         null;
+      
       return {
         id: apiCourseData.courseId,
         category: parentCategoryName || apiCourseData.category.name,
@@ -269,9 +413,12 @@ export function CourseDetail({
         rating: apiCourseData.stats.avgRating ?? undefined,
         ratingCount: apiCourseData.stats.totalReviews,
         enrollments: apiCourseData.stats.totalStudents,
+        requirements: apiCourseData.requirements?.map((req) => req.description) || [],
         learningPoints: apiCourseData.learningPoints.map(
           (lp) => lp.description
         ),
+        whoThisCourseIsFor: apiCourseData.whoThisCourseIsFor || [],
+        certificateDescription: apiCourseData.certificateDescription || undefined,
         description: apiCourseData.fullDescription,
         outline:
           apiCourseData.sections && apiCourseData.sections.length > 0
@@ -322,9 +469,12 @@ export function CourseDetail({
         rating: 0,
         ratingCount: 0,
         enrollments: 0,
+        requirements: basicInfo?.requirements || [],
         learningPoints:
           basicInfo?.learningPoints?.map((lp) => lp.description) || [],
-        description: basicInfo?.description || "",
+        whoThisCourseIsFor: basicInfo?.whoThisCourseIsFor || [],
+        certificateDescription: basicInfo?.certificateDescription || undefined,
+        description: basicInfo?.fullDescription || basicInfo?.description || "",
         outline:
           curriculum?.sections?.map((section, sectionIndex) => ({
             id: String(section.id),
@@ -532,66 +682,83 @@ export function CourseDetail({
                 {truncateShortDescription(apiCourseData.shortDescription)}
                   </p>
                 )}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-default-700">
-                  <span>
-                    {courseData.enrollments
-                      ? `${courseData.enrollments.toLocaleString()} students`
-                      : "0 students"}
-                  </span>
-                  {totalLectures > 0 && (
-                    <>
-                      <span className="text-default-400">•</span>
-                      <span>
-                        {totalLectures} lecture{totalLectures !== 1 ? "s" : ""}
+                <div className="space-y-2">
+                  {/* Rating Line */}
+                  {courseData.rating !== undefined && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-warning-500 font-bold text-base">
+                        {typeof courseData.rating === "number" ? courseData.rating.toFixed(1) : courseData.rating}
                       </span>
-                    </>
+                      <div className="flex items-center gap-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <StarIcon
+                            key={i}
+                            className={`size-4 ${
+                              i < Math.floor(courseData.rating || 0)
+                                ? "fill-warning-500 text-warning-500"
+                                : "text-default-300"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-default-600">
+                        ({courseData.ratingCount || 0} {courseData.ratingCount === 1 ? "review" : "reviews"})
+                      </span>
+                    </div>
                   )}
 
+                  {/* Last Updated Line */}
                   {!isPreview && courseData.updatedAt && (
-                    <>
-                       <span className="text-default-400">•</span>
                     <div className="text-sm text-default-600">
-                      <span className="font-medium">Last updated at </span>
+                      <span>Last updated </span>
                       <span>
                         {new Date(courseData.updatedAt).toLocaleDateString(
                           "en-US",
                           {
                             year: "numeric",
-                            month: "long",
+                            month: "short",
                             day: "numeric",
                           }
                         )}
                       </span>
                     </div>
-                    </>
                   )}
-                  {courseData.rating !== undefined && (
-                    <>
-                      <span className="text-default-400">•</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-warning-500 font-semibold">
-                          {courseData.rating}
+
+                  {/* Students and Lectures Line */}
+                  <div className="flex items-center gap-3 text-sm text-default-600">
+                    <span>
+                      {courseData.enrollments
+                        ? `${courseData.enrollments.toLocaleString()} students`
+                        : "0 students"}
+                    </span>
+                    {totalLectures > 0 && (
+                      <>
+                        <span className="text-default-400">•</span>
+                        <span>
+                          {totalLectures} lecture{totalLectures !== 1 ? "s" : ""}
                         </span>
-                        <div className="flex items-center gap-0.5">
-                          {[...Array(5)].map((_, i) => (
-                            <StarIcon
-                              key={i}
-                              className={`size-4 ${
-                                i < Math.floor(courseData.rating || 0)
-                                  ? "fill-warning-500 text-warning-500"
-                                  : "text-default-300"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="ml-1">
-                          ({courseData.ratingCount || 0})
-                        </span>
-                      </div>
-                    </>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Course Requirements */}
+              {courseData.requirements && courseData.requirements.length > 0 && (
+                <div className="bg-default-100 rounded-md p-6 space-y-4">
+                  <h2 className="text-xl font-semibold text-default-900">
+                    Requirements
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {courseData.requirements.map((requirement, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <CheckIcon className="size-5 text-primary-600 shrink-0 mt-0.5" />
+                        <p className="text-default-700">{requirement}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Learning Points */}
               {courseData.learningPoints.length > 0 && (
@@ -760,6 +927,35 @@ export function CourseDetail({
                 </div>
               )}
 
+              {/* Who This Course Is For */}
+              {courseData.whoThisCourseIsFor && courseData.whoThisCourseIsFor.length > 0 && (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-semibold text-default-900">
+                    Who This Course Is For
+                  </h2>
+                  <ul className="space-y-3">
+                    {courseData.whoThisCourseIsFor.map((item, index) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <span className="text-primary-600 mt-1">•</span>
+                        <p className="text-default-700 leading-relaxed">{item}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Certificate of Completion */}
+              {courseData.certificateDescription && (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-semibold text-default-900">
+                    Certificate of Completion
+                  </h2>
+                  <p className="text-default-700 leading-relaxed">
+                    {courseData.certificateDescription}
+                  </p>
+                </div>
+              )}
+
               {/* Student Reviews */}
               {!isPreview && apiReviews.length > 0 && (
                 <div className="space-y-6 pb-8">
@@ -813,43 +1009,7 @@ export function CourseDetail({
                     }}
                   >
                     {apiReviews.map((review) => (
-                      <div
-                        key={review.reviewId}
-                        className="bg-default-50 border border-default-200 rounded-lg p-6 h-full"
-                      >
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <StarIcon
-                                key={i}
-                                className={`size-4 ${
-                                  i < Math.floor(review.rating)
-                                    ? "fill-warning-500 text-warning-500"
-                                    : "text-default-300"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-sm font-semibold text-default-900 wrap-break-word">
-                            {review.userName || `User ${review.userId}`}
-                          </span>
-                        </div>
-                        {review.reviewText && (
-                          <p className="text-default-700 leading-relaxed wrap-break-word">
-                            {review.reviewText}
-                          </p>
-                        )}
-                        <p className="text-xs text-default-500 mt-3">
-                          {new Date(review.createdAt).toLocaleDateString(
-                            "en-US",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            }
-                          )}
-                        </p>
-                      </div>
+                      <ReviewCard key={review.reviewId} review={review} />
                     ))}
                   </Slider>
                 </div>
@@ -1113,10 +1273,12 @@ export function CourseDetail({
                           </Button>
                         </div>
                         {/* Time Left Alert */}
-                        <div className="flex items-center gap-2 text-sm text-destructive">
-                          <ClockIcon className="size-4" />
-                          <span>5 hours left at this price!</span>
-                        </div>
+                        {timeLeft && (
+                          <div className="flex items-center gap-2 text-sm text-destructive">
+                            <ClockIcon className="size-4" />
+                            <span>{timeLeft}</span>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1178,10 +1340,12 @@ export function CourseDetail({
                             <Share2Icon className="size-4" />
                           </Button>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-destructive">
-                          <ClockIcon className="size-4" />
-                          <span>5 hours left at this price!</span>
-                        </div>
+                        {timeLeft && (
+                          <div className="flex items-center gap-2 text-sm text-destructive">
+                            <ClockIcon className="size-4" />
+                            <span>{timeLeft}</span>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1471,6 +1635,42 @@ function LecturePreviewDialog({
       className="w-[95vw] md:w-[37.5rem]"
       bottomInfo={<span className="text-white/50 text-xs">Lecture Preview</span>}
     />
+  );
+}
+
+// Course Metadata Skeleton Component
+export function CourseMetadataSkeleton() {
+  return (
+    <div className="space-y-4">
+      {/* Title */}
+      <Skeleton className="h-10 w-3/4" />
+      
+      {/* Short Description */}
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-full" />
+        <Skeleton className="h-5 w-5/6" />
+      </div>
+      
+      {/* Metadata - New vertical layout */}
+      <div className="space-y-2">
+        {/* Rating Line */}
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-8" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+        
+        {/* Last Updated Line */}
+        <Skeleton className="h-4 w-40" />
+        
+        {/* Students and Lectures Line */}
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-1" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+      </div>
+    </div>
   );
 }
 
