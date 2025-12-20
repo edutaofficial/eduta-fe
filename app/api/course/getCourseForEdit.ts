@@ -41,6 +41,7 @@ export async function getCourseForEdit(
       courseLogoId: courseData.courseDetails.courseLogoId,
       courseBannerId: courseData.courseDetails.courseBannerId,
       promoVideoId: courseData.courseDetails.promoVideoId,
+      certificateDescription: courseData.courseDetails.certificateDescription || "",
       learningPoints: courseData.courseDetails.learningPoints.map((lp, index) => ({
         id: lp.learningPointId || `lp-${index}`,
         text: lp.description,

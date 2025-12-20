@@ -30,6 +30,8 @@ export function AskedQuestions() {
     queryKey: ["askedQuestions"],
     queryFn: getAskedQuestions,
     staleTime: 1000 * 60,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const filtered = React.useMemo(() => {

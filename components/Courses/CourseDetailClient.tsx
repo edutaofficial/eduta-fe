@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { createLectureUrl } from "@/lib/slugify";
 
 export function CourseDetailClient({ courseSlug }: { courseSlug: string }) {
   const router = useRouter();
@@ -66,6 +67,7 @@ export function CourseDetailClient({ courseSlug }: { courseSlug: string }) {
     queryFn: () => getCourseDetail(courseSlug),
     enabled: !!courseSlug,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -74,6 +76,8 @@ export function CourseDetailClient({ courseSlug }: { courseSlug: string }) {
     queryKey: ["wishlist"],
     queryFn: getWishlist,
     enabled: !!user && user.role !== "instructor",
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const isWishlisted = React.useMemo(() => {
@@ -91,6 +95,8 @@ export function CourseDetailClient({ courseSlug }: { courseSlug: string }) {
     },
     enabled: !!course?.courseId,
     staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const reviews = reviewsData?.reviews || [];
@@ -256,7 +262,16 @@ export function CourseDetailClient({ courseSlug }: { courseSlug: string }) {
             <AlertDialogAction
               onClick={() => {
                 setShowWelcomeDialog(false);
-                router.push(`/learn/${course.courseId}/${course.sections[0]?.lectures[0]?.lectureId}`);
+                const firstLecture = course.sections[0]?.lectures[0];
+                if (firstLecture) {
+                  const url = createLectureUrl(
+                    course.title,
+                    course.courseId,
+                    firstLecture.title,
+                    firstLecture.lectureId
+                  );
+                  router.push(url);
+                }
               }}
             >
               Start Learning
@@ -281,7 +296,16 @@ export function CourseDetailClient({ courseSlug }: { courseSlug: string }) {
             <AlertDialogAction
               onClick={() => {
                 setShowAlreadyEnrolledDialog(false);
-                router.push(`/learn/${course.courseId}/${course.sections[0]?.lectures[0]?.lectureId}`);
+                const firstLecture = course.sections[0]?.lectures[0];
+                if (firstLecture) {
+                  const url = createLectureUrl(
+                    course.title,
+                    course.courseId,
+                    firstLecture.title,
+                    firstLecture.lectureId
+                  );
+                  router.push(url);
+                }
               }}
             >
               Continue Learning

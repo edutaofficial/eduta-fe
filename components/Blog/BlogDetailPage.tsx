@@ -45,6 +45,8 @@ export function BlogDetailPage({ slug }: BlogDetailPageProps) {
     queryKey: ["blog", slug],
     queryFn: () => getBlogBySlug(slug),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const post = blogData?.data;

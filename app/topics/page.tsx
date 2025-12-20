@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { AllCoursesPage } from "@/components/Courses";
 import { SITE_BASE_URL } from "@/lib/constants";
 
@@ -58,6 +59,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AllCoursesPageRoute() {
+interface AllCoursesPageRouteProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function AllCoursesPageRoute({ searchParams }: AllCoursesPageRouteProps) {
+  const params = await searchParams;
+  
+  // If category or categories query params exist, redirect to slug-based route
+  // This enforces the new routing structure
+  if (params.category || params.categories) {
+    redirect("/topics");
+  }
+  
   return <AllCoursesPage />;
 }

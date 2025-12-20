@@ -74,6 +74,7 @@ export interface SliderProps {
   };
   onSlideChange?: (swiper: SwiperType) => void;
   onSwiper?: (swiper: SwiperType) => void;
+  customStyle?: React.CSSProperties;
 }
 
 const defaultNavigationConfig: NavigationConfig = {
@@ -112,6 +113,7 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
       breakpoints,
       onSlideChange,
       onSwiper,
+      customStyle,
     },
     ref
   ) => {
@@ -215,7 +217,7 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
       <div
         ref={ref}
         className={cn(
-          "relative",
+          "relative py-2",
           showNavigation && navigation.spacing,
           className
         )}
@@ -227,6 +229,7 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
           loop={loop}
           speed={speed}
           effect={effect}
+          autoHeight={false}
           autoplay={
             autoplay.enabled
               ? {
@@ -249,10 +252,12 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
           breakpoints={breakpoints}
           onSwiper={handleSwiper}
           onSlideChange={onSlideChange}
+          wrapperClass="!flex !items-stretch"
           className="w-full"
+          style={customStyle}
         >
           {slides.map((slide, index) => (
-            <SwiperSlide key={index} className={slideClassName}>
+            <SwiperSlide key={index} className={cn("!h-auto", slideClassName)}>
               {slide}
             </SwiperSlide>
           ))}

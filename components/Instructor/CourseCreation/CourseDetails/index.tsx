@@ -125,7 +125,7 @@ const CourseDetailsInner = (
         learningPoints,
         requirements,
         whoThisCourseIsFor,
-        targetAudience: [],
+        targetAudience: whoThisCourseIsFor, // Keep in sync with whoThisCourseIsFor
         tags: [],
         certificateDescription: values.certificateDescription || "",
         promoVideoId: values.promoVideoId,

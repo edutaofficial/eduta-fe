@@ -40,6 +40,10 @@ export default function Hero({ slides }: HeroProps) {
       <div className="relative w-full max-w-container mx-auto">
         {/* Slider Component */}
         <Slider
+          slidesPerView={1}
+          spaceBetween={0}
+          customStyle={{           
+          }}
           loop={true}
           autoplay={{
             enabled: false,
@@ -62,7 +66,7 @@ export default function Hero({ slides }: HeroProps) {
           {slides.map((slide) => (
             <div
               key={slide.id}
-              className="flex md:flex-row flex-col-reverse gap-12 items-center bg-white w-full"
+              className="flex mr-1 md:flex-row flex-col-reverse gap-12 items-center bg-white w-full"
             >
               {/* Left Side - Content */}
               <div className="space-y-8 animate-in fade-in-0 slide-in-from-left-5 duration-700 md:w-[60%] w-full px-10">

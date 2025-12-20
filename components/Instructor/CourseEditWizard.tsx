@@ -23,6 +23,7 @@ import { CourseDetail } from "@/components/Common";
 import { getCourseById } from "@/app/api/course/getCourseById";
 import { getCourseForEdit } from "@/app/api/course/getCourseForEdit";
 import { getFAQs as getFAQsApi } from "@/app/api/instructor/faqs";
+import { normalizeForComparison } from "@/lib/normalizeForComparison";
 
 const STEPS = [
   { id: 1, name: "Course Details", component: CourseDetails },
@@ -50,12 +51,12 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
     loading,
     error,
     uploading,
-    basicInfo,
-    curriculum,
-    faqs,
-    pricing,
-    finalize,
-    savedSnapshots,
+    basicInfo: _basicInfo,
+    curriculum: _curriculum,
+    faqs: _faqs,
+    pricing: _pricing,
+    finalize: _finalize,
+    savedSnapshots: _savedSnapshots,
   } = useCourseStore();
 
   type Validatable = {
@@ -107,11 +108,15 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
             promoVideoId: data.courseDetails.promoVideoId,
             courseBannerId: data.courseDetails.courseBannerId,
             courseLogoId: data.courseDetails.courseLogoId,
+            certificateDescription: data.courseDetails.certificateDescription || "",
             learningPoints: data.courseDetails.learningPoints.map((lp) => ({
               description: lp.description,
             })),
             requirements: data.courseDetails.requirements.map(
               (r) => r.description
+            ),
+            whoThisCourseIsFor: data.courseDetails.targetAudience.map(
+              (ta) => ta.description
             ),
             targetAudience: data.courseDetails.targetAudience.map(
               (ta) => ta.description
@@ -201,11 +206,11 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
             finalize: finalizeForStore,
             step: data.currentStep as 1 | 2 | 3 | 4 | 5, // Start from currentStep
             savedSnapshots: {
-              basicInfo: JSON.stringify(basicInfoForStore),
-              curriculum: JSON.stringify(apiCurriculum), // Store API format
-              faqs: JSON.stringify(faqsForStore),
-              pricing: JSON.stringify(apiPricing), // Store API format
-              finalize: JSON.stringify(finalizeForStore),
+              basicInfo: normalizeForComparison(basicInfoForStore),
+              curriculum: normalizeForComparison(apiCurriculum), // Store API format
+              faqs: normalizeForComparison(faqsForStore),
+              pricing: normalizeForComparison(apiPricing), // Store API format
+              finalize: normalizeForComparison(finalizeForStore),
             },
           });
 
@@ -235,10 +240,14 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
             promoVideoId: courseData.basicInfo.promoVideoId,
             courseBannerId: courseData.basicInfo.courseBannerId,
             courseLogoId: courseData.basicInfo.courseLogoId,
+            certificateDescription: courseData.basicInfo.certificateDescription || "",
             learningPoints: courseData.basicInfo.learningPoints.map((lp) => ({
               description: lp.text,
             })),
             requirements: courseData.basicInfo.prerequisites.map((p) => p.text),
+            whoThisCourseIsFor: courseData.basicInfo.targetAudiences.map(
+              (ta) => ta.text
+            ),
             targetAudience: courseData.basicInfo.targetAudiences.map(
               (ta) => ta.text
             ),
@@ -300,11 +309,11 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
             finalize: finalizeForStore,
             step: 1, // Always start from step 1 for editing
             savedSnapshots: {
-              basicInfo: JSON.stringify(basicInfoForStore),
-              curriculum: JSON.stringify(apiCurriculum), // Store API format
-              faqs: JSON.stringify(faqsForStore),
-              pricing: JSON.stringify(apiPricing), // Store API format
-              finalize: JSON.stringify(finalizeForStore),
+              basicInfo: normalizeForComparison(basicInfoForStore),
+              curriculum: normalizeForComparison(apiCurriculum), // Store API format
+              faqs: normalizeForComparison(faqsForStore),
+              pricing: normalizeForComparison(apiPricing), // Store API format
+              finalize: normalizeForComparison(finalizeForStore),
             },
           });
 
@@ -357,21 +366,24 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
   }, [currentStep]);
 
   // Check if current step has changes by comparing with saved snapshots
+  // IMPORTANT: Read fresh state directly from store to avoid stale closure values
   const hasStepChanges = (step: number): boolean => {
+    const state = useCourseStore.getState(); // Get fresh state
+    
     const currentSnapshot = {
-      1: JSON.stringify(basicInfo),
-      2: JSON.stringify(curriculum),
-      3: JSON.stringify(faqs),
-      4: JSON.stringify(pricing),
-      5: JSON.stringify(finalize),
+      1: normalizeForComparison(state.basicInfo),
+      2: normalizeForComparison(state.curriculum),
+      3: normalizeForComparison(state.faqs),
+      4: normalizeForComparison(state.pricing),
+      5: normalizeForComparison(state.finalize),
     }[step];
 
     const savedSnapshot = {
-      1: savedSnapshots.basicInfo,
-      2: savedSnapshots.curriculum,
-      3: savedSnapshots.faqs,
-      4: savedSnapshots.pricing,
-      5: savedSnapshots.finalize,
+      1: state.savedSnapshots.basicInfo,
+      2: state.savedSnapshots.curriculum,
+      3: state.savedSnapshots.faqs,
+      4: state.savedSnapshots.pricing,
+      5: state.savedSnapshots.finalize,
     }[step];
 
     const hasChanges = currentSnapshot !== savedSnapshot;
@@ -380,6 +392,10 @@ export function CourseEditWizard({ courseId, isDraft }: CourseEditWizardProps) {
     if (hasChanges) {
       // eslint-disable-next-line no-console
       console.log(`Step ${step} has changes detected`);
+      // eslint-disable-next-line no-console
+      console.log("Current:", currentSnapshot);
+      // eslint-disable-next-line no-console
+      console.log("Saved:", savedSnapshot);
     }
 
     return hasChanges;

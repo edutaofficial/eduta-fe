@@ -11,7 +11,7 @@ interface LectureSidebarProps {
   sections: Section[];
   currentLectureId: string;
   currentVideoPosition: number;
-  onLectureClick: (lectureId: string) => void;
+  onLectureClick: (lectureId: string, lectureTitle: string) => void;
   overallProgress: number;
   completedLectures: number;
   totalLectures: number;
@@ -103,7 +103,7 @@ export function LectureSidebar({
                     lectureNumber={lectureIndex + 1}
                     isActive={lecture.lectureId === currentLectureId}
                     currentVideoPosition={currentVideoPosition}
-                    onClick={() => onLectureClick(lecture.lectureId)}
+                    onClick={() => onLectureClick(lecture.lectureId, lecture.title)}
                   />
                 ))}
               </div>

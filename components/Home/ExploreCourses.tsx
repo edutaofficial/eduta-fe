@@ -74,6 +74,8 @@ export default function ExploreCourses() {
       }),
     enabled: !!activeCategorySlug,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const courses = coursesData?.data.courses || [];
@@ -118,6 +120,9 @@ export default function ExploreCourses() {
             <Slider
               slidesPerView="auto"
               spaceBetween={24}
+              customStyle={{
+                padding: "10px",
+              }}
               className="subcategories-slider"
               slideClassName="!w-auto"
               navigation={{
@@ -258,6 +263,7 @@ export default function ExploreCourses() {
                     clickable: true,
                     className: "hero-pagination",
                   }}
+                 
                 >
                   {courses.map((course) => (
                     <CourseCard

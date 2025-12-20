@@ -16,6 +16,7 @@ import {
  
 } from "@/app/api/instructor/faqs";
 import { extractErrorMessage } from "@/lib/errorUtils";
+import { normalizeForComparison } from "@/lib/normalizeForComparison";
 
 const initialBasicInfo: CreateCourseRequest = {
   title: "",
@@ -266,7 +267,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
   createCourse: async (payload) => {
     const state = get();
     const body: CreateCourseRequest = { ...state.basicInfo, ...(payload ?? {}) } as CreateCourseRequest;
-    const currentSnapshot = JSON.stringify(body);
+    const currentSnapshot = normalizeForComparison(body);
     
     // Check if data has changed since last save
     const hasChanged = currentSnapshot !== state.savedSnapshots.basicInfo;
@@ -350,7 +351,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     }
     
     const body: CreateCourseRequest = state.basicInfo;
-    const currentSnapshot = JSON.stringify(body);
+    const currentSnapshot = normalizeForComparison(body);
     
     // Check if data has changed since last save
     const hasChanged = currentSnapshot !== state.savedSnapshots.basicInfo;
@@ -407,7 +408,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     
     // Transform UI curriculum to API format
     const apiPayload = transformCurriculumToAPI(state.curriculum);
-    const currentSnapshot = JSON.stringify(apiPayload);
+    const currentSnapshot = normalizeForComparison(apiPayload);
     
     // Check if data has changed since last save
     const hasChanged = currentSnapshot !== state.savedSnapshots.curriculum;
@@ -474,7 +475,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     const newFAQs = faqs.filter((f) => !f.faqId || f.faqId.startsWith("temp-"));
     const existingFAQs = faqs.filter((f) => f.faqId && !f.faqId.startsWith("temp-"));
     
-    const currentSnapshot = JSON.stringify(faqs);
+    const currentSnapshot = normalizeForComparison(faqs);
     
     // Check if data has changed since last save
     const hasChanged = currentSnapshot !== state.savedSnapshots.faqs;
@@ -559,7 +560,7 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     
     // Transform UI pricing structure to API format
     const apiPricing = transformPricingToAPI(state.pricing);
-    const currentSnapshot = JSON.stringify(apiPricing);
+    const currentSnapshot = normalizeForComparison(apiPricing);
     
     // Check if data has changed since last save
     const hasChanged = currentSnapshot !== state.savedSnapshots.pricing;

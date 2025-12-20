@@ -16,7 +16,9 @@ export function useUpload() {
     useGetQuery<Asset>({ 
       queryKey: ["asset", assetId], 
       url: `/api/v1/assets/${assetId}`,
-      enabled: assetId > 0 // Only fetch if assetId is valid
+      enabled: assetId > 0, // Only fetch if assetId is valid
+      refetchOnWindowFocus: false, // Prevent refetch when switching tabs
+      staleTime: 1000 * 60 * 5, // 5 minutes
     });
 
   return { uploadAsset, useGetAssetById };

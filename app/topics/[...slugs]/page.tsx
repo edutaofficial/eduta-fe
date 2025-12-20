@@ -15,9 +15,7 @@ export async function generateMetadata({
   params,
 }: SlugPageProps): Promise<Metadata> {
   const { slugs } = await params;
-  const categorySlug = slugs[0] || "";
-  const subcategorySlug = slugs[1] || "";
-
+  
   // Create title from slugs
   const formatSlug = (slug: string) =>
     slug
@@ -25,24 +23,24 @@ export async function generateMetadata({
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
 
-  const title = subcategorySlug
-    ? `${formatSlug(subcategorySlug)} Courses`
-    : `${formatSlug(categorySlug)} Courses`;
+  // Support multiple category slugs
+  const formattedSlugs = slugs.map(formatSlug);
+  
+  const title = slugs.length > 1
+    ? `${formattedSlugs.join(", ")} Courses`
+    : `${formattedSlugs[0]} Courses`;
 
-  const description = subcategorySlug
-    ? `Browse ${formatSlug(subcategorySlug)} courses in ${formatSlug(categorySlug)}. Filter by skill level, duration, and rating to find the perfect course.`
-    : `Browse all ${formatSlug(categorySlug)} courses. Filter by skill level, duration, and rating to find the perfect course.`;
+  const description = slugs.length > 1
+    ? `Browse courses in ${formattedSlugs.join(", ")}. Filter by skill level, duration, and rating to find the perfect course.`
+    : `Browse all ${formattedSlugs[0]} courses. Filter by skill level, duration, and rating to find the perfect course.`;
 
-  const canonicalUrl = subcategorySlug
-    ? `${SITE_BASE_URL}/topics/${categorySlug}/${subcategorySlug}`
-    : `${SITE_BASE_URL}/topics/${categorySlug}/${categorySlug}`;
+  const canonicalUrl = `${SITE_BASE_URL}/topics/${slugs.join("/")}`;
 
   return {
     title,
     description,
     keywords: [
-      formatSlug(categorySlug),
-      subcategorySlug ? formatSlug(subcategorySlug) : "",
+      ...formattedSlugs,
       "courses",
       "online learning",
       "skill development",

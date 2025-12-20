@@ -42,6 +42,9 @@ export function VideoJSHlsPlayer({
   const playerRef = React.useRef<VideoJsPlayerExtended | null>(null);
   const progressIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const lastReportedTimeRef = React.useRef<number>(0);
+  
+  // Store playback state for tab visibility changes
+  const wasPlayingBeforeHiddenRef = React.useRef<boolean>(false);
 
   // Store callbacks and startPosition in refs to prevent player reload when they change
   const onProgressUpdateRef = React.useRef(onProgressUpdate);
@@ -473,6 +476,51 @@ export function VideoJSHlsPlayer({
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
       }
+    };
+  }, []);
+
+  // Handle Page Visibility API to preserve playback state across tab changes
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!playerRef.current) return;
+
+      if (document.hidden) {
+        // Tab is being hidden - save playback state
+        const isPlaying = !playerRef.current.paused();
+        wasPlayingBeforeHiddenRef.current = isPlaying;
+        
+        console.log("👁️ Tab hidden - Video was playing:", isPlaying);
+        console.log("📍 Current position:", playerRef.current.currentTime());
+        
+        // Save progress when tab is hidden
+        const time = playerRef.current.currentTime() || 0;
+        const dur = playerRef.current.duration() || 0;
+        onProgressUpdateRef.current(time, dur);
+      } else {
+        // Tab is becoming visible - restore playback state
+        console.log("👁️ Tab visible - Restoring playback state");
+        console.log("▶️ Was playing before hidden:", wasPlayingBeforeHiddenRef.current);
+        
+        // Resume playback if it was playing before tab was hidden
+        const player = playerRef.current;
+        if (wasPlayingBeforeHiddenRef.current && player) {
+          if (player.paused()) {
+            console.log("▶️ Auto-resuming playback");
+            const playPromise = player.play();
+            if (playPromise) {
+              playPromise.catch((err) => {
+                console.warn("⚠️ Could not auto-resume playback:", err);
+              });
+            }
+          }
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 

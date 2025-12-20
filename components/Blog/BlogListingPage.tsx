@@ -83,6 +83,8 @@ export function BlogListingPage() {
     queryKey: ["blogs", filters],
     queryFn: () => getAllBlogs(filters),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Update URL when filters change

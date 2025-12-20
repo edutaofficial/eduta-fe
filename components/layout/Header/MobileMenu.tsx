@@ -32,6 +32,8 @@ export default function MobileMenu() {
     queryKey: ["mobile-menu-blogs"],
     queryFn: () => getAllBlogs({ pageSize: 3, page: 1 }),
     staleTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const blogs = blogsData?.data?.posts || [];

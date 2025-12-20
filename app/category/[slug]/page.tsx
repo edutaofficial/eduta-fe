@@ -36,6 +36,8 @@ export default function CategoryPage({ params }: CategoryPageProps) {
     queryFn: () => getCategoryBySlug(slug),
     retry: 1,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Fetch courses for this category
@@ -52,6 +54,8 @@ export default function CategoryPage({ params }: CategoryPageProps) {
       }),
     enabled: !!slug,
     staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const totalPages = coursesData?.meta.totalPages || 1;
@@ -69,7 +73,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
 
   if (categoryError || !category) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 ">
         <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
           <div className="size-16 mx-auto bg-error-100 rounded-full flex items-center justify-center mb-4">
             <svg
@@ -102,7 +106,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-default-50">
+    <div className="min-h-screen bg-default-50 mt-20">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-800 text-white py-16 px-4">
         <div className="max-w-7xl mx-auto">

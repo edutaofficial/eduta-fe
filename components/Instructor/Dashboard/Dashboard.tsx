@@ -67,6 +67,7 @@ export function InstructorDashboard() {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     gcTime: 1000 * 60 * 10, // 10 minutes cache
+
   });
 
   // ============================================================================

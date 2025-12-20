@@ -29,6 +29,8 @@ export default function CertificateDownloadPage({
     retry: 1,
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: !!certificateId,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Format date with ordinal suffix

@@ -97,6 +97,8 @@ export function InstructorQuestions() {
       });
     },
     enabled: !!instructorId,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const courses = React.useMemo(() => coursesResponse?.data ?? [], [coursesResponse?.data]);

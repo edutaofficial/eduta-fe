@@ -1,15 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useCategoryStore } from "@/store/useCategoryStore";
+import { Swiper, SwiperSlide } from "swiper/react";
+import type { Swiper as SwiperType } from "swiper";
+import { Navigation } from "swiper/modules";
 import { Button } from "@/components/ui/button";
+
+// Import Swiper styles
+import "swiper/css";
+import "swiper/css/navigation";
 
 function Categories() {
   const { categories, loading, fetchCategories } = useCategoryStore();
-  const [currentIndex, setCurrentIndex] = React.useState(0);
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [swiperInstance, setSwiperInstance] = React.useState<SwiperType | null>(null);
 
   React.useEffect(() => {
     if (categories.length === 0) {
@@ -37,16 +43,15 @@ function Categories() {
     ]);
   }, [categories]);
 
-  const itemsPerView = 4;
-  const maxIndex = Math.max(0, allCategories.length - itemsPerView);
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => Math.min(prev + itemsPerView, maxIndex));
-  };
-
-  const handlePrev = () => {
-    setCurrentIndex((prev) => Math.max(prev - itemsPerView, 0));
-  };
+  // Group categories into slides of 8 items (2 rows x 4 columns)
+  const itemsPerSlide = 8;
+  const categorySlides = React.useMemo(() => {
+    const slides: typeof allCategories[] = [];
+    for (let i = 0; i < allCategories.length; i += itemsPerSlide) {
+      slides.push(allCategories.slice(i, i + itemsPerSlide));
+    }
+    return slides;
+  }, [allCategories]);
 
   if (loading) {
     return (
@@ -77,16 +82,20 @@ function Categories() {
           Explore Categories
         </h2>
         
-        <div className="relative">
-          {/* Categories Grid/Slider */}
-          <div className="overflow-hidden" ref={containerRef}>
-            <div
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 transition-transform duration-300 ease-in-out"
-              style={{
-                transform: `translateX(-${(currentIndex / allCategories.length) * 100}%)`,
-              }}
-            >
-              {allCategories.map((category) => (
+        <div className="relative p-2">
+          {/* Categories Swiper */}
+          <Swiper
+            modules={[Navigation]}
+            spaceBetween={0}
+            slidesPerView={1}
+            speed={500}
+            onSwiper={setSwiperInstance}
+            className="w-full"
+          >
+            {categorySlides.map((slideCategories, slideIndex) => (
+              <SwiperSlide key={slideIndex}>
+                <div className="p-3 w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {slideCategories.map((category) => (
                 <CategoryLinkCard
                   key={category.id}
                   name={category.name}
@@ -95,23 +104,25 @@ function Categories() {
                 />
               ))}
             </div>
-          </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
 
           {/* Navigation Buttons - Bottom Right */}
-          {allCategories.length > itemsPerView && (
+          {categorySlides.length > 1 && (
             <div className="flex items-center justify-end gap-2 mt-6">
               <Button
-                onClick={handlePrev}
-                disabled={currentIndex === 0}
+                onClick={() => swiperInstance?.slidePrev()}
+                disabled={!swiperInstance}
                 variant="outline"
                 size="icon"
                 className="size-10"
               >
-                <ChevronLeft className="size-5" />
+                <ChevronRight className="size-5 rotate-180" />
               </Button>
               <Button
-                onClick={handleNext}
-                disabled={currentIndex >= maxIndex}
+                onClick={() => swiperInstance?.slideNext()}
+                disabled={!swiperInstance}
                 variant="outline"
                 size="icon"
                 className="size-10"

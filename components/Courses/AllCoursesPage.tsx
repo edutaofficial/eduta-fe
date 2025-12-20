@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { CoursesSearchBar } from "./CoursesSearchBar";
@@ -21,7 +21,6 @@ interface AllCoursesPageProps {
 export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const pathname = usePathname();
   const { categories, fetchCategories } = useCategoryStore();
 
   // Fetch categories on mount
@@ -31,173 +30,23 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
     }
   }, [categories.length, fetchCategories]);
 
-  // Get current URL params as strings for dependency tracking
-  // Use toString() to ensure we detect URL changes properly
-  const categoryParamFromUrl = searchParams.get("category");
-  const searchParamsString = searchParams.toString(); // This changes when URL changes
+  // Query params are now only used for non-category filters (search, sort, etc.)
 
   // Check if we're using slug-based routing
   const isSlugBasedRoute = React.useMemo(() => {
     return slugs && slugs.length > 0;
   }, [slugs]);
 
-  // Helper function to find category/subcategory by slug
-  const _findCategoryBySlug = React.useCallback((slug: string) => {
-    // First check if it's a parent category
-    const parentCategory = categories.find((c) => c.slug === slug);
-    if (parentCategory) {
-      return { category: parentCategory, isParent: true };
-    }
-
-    // Then check subcategories
-    for (const parent of categories) {
-      const subcategory = parent.subcategories.find((sub) => sub.slug === slug);
-      if (subcategory) {
-        return { category: subcategory, parent, isParent: false };
-      }
-    }
-
-    return null;
-  }, [categories]);
-
   // Convert slugs to category slugs for API - used for slug-based routing
+  // Supports multiple category slugs: /topics/cat1/cat2/cat3
   const categorySlugsFromRoute = React.useMemo(() => {
     if (!slugs || slugs.length === 0 || categories.length === 0) {
       return null;
     }
 
-    const [categorySlug, subcategorySlug] = slugs;
-
-    // If we have a subcategory slug and it's different from category slug
-    if (subcategorySlug && subcategorySlug !== categorySlug) {
-      // It's a subcategory - just use the subcategory slug
-      return subcategorySlug;
-    }
-
-    // Otherwise use the category slug
-    return categorySlug;
+    // Return all slugs joined by comma for the API
+    return slugs.join(",");
   }, [slugs, categories.length]);
-
-  // Get the category IDs from slugs for sidebar selection
-  const categoryIdsFromSlugs = React.useMemo(() => {
-    if (!slugs || slugs.length === 0 || categories.length === 0) {
-      return [];
-    }
-
-    const [categorySlug, subcategorySlug] = slugs;
-
-    // If we have a subcategory slug and it's different from category slug
-    if (subcategorySlug && subcategorySlug !== categorySlug) {
-      // Find the subcategory
-      for (const parent of categories) {
-        const subcategory = parent.subcategories.find((sub) => sub.slug === subcategorySlug);
-        if (subcategory) {
-          return [subcategory.categoryId];
-        }
-      }
-    }
-
-    // Otherwise find the category
-    const category = categories.find((c) => c.slug === categorySlug);
-    if (category) {
-      // If category has subcategories, select all of them
-      if (category.subcategories.length > 0) {
-        return category.subcategories.map((sub) => sub.categoryId);
-      }
-      // Otherwise select the category itself
-      return [category.categoryId];
-    }
-
-    return [];
-  }, [slugs, categories]);
-
-  // Initialize selectedCategories from slugs when using slug-based routing
-  React.useEffect(() => {
-    if (isSlugBasedRoute && categoryIdsFromSlugs.length > 0) {
-      setSelectedCategories(categoryIdsFromSlugs);
-    }
-  }, [isSlugBasedRoute, categoryIdsFromSlugs]);
-
-  // Only handle old query param routing if NOT using slug-based routing
-  // Handle "category" param from URL (from breadcrumb) - convert to "categories" with all subcategories
-  React.useEffect(() => {
-    // Skip if using slug-based routing
-    if (isSlugBasedRoute) {
-      return;
-    }
-
-    // Only process if category param exists and categories are loaded
-    if (!categoryParamFromUrl || categories.length === 0) {
-      return;
-    }
-    
-    // Find the category in the categories list
-    const category = categories.find((c) => c.categoryId === categoryParamFromUrl);
-    
-    if (!category) {
-      return;
-    }
-    
-    const hasSubcategories = category.subcategories.length > 0;
-    let newCategories: string[] = [];
-    
-    if (hasSubcategories) {
-      // If category has subcategories, select all subcategories (not the parent)
-      const allSubcategoryIds = category.subcategories.map((sub) => sub.categoryId);
-      newCategories = allSubcategoryIds;
-    } else {
-      // If category has no subcategories, select the category itself
-      newCategories = [categoryParamFromUrl];
-    }
-    
-    // Update URL to use "categories" param instead of "category"
-    // The sync effect below will update state and trigger refetch
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("category");
-    if (newCategories.length > 0) {
-      params.set("categories", newCategories.join(","));
-    }
-    const newUrl = params.toString() ? `/topics?${params.toString()}` : "/topics";
-    router.replace(newUrl);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryParamFromUrl, categories.length, isSlugBasedRoute]);
-
-  // Sync selectedCategories with "categories" URL param - this is the single source of truth
-  // This effect runs whenever the URL changes (including external navigation)
-  // Only for query-param based routing, not slug-based routing
-  React.useEffect(() => {
-    // Skip if using slug-based routing
-    if (isSlugBasedRoute) {
-      return;
-    }
-
-    // Read params directly from searchParams inside effect to ensure we get latest values
-    const categoryParam = searchParams.get("category");
-    const categoriesParam = searchParams.get("categories");
-    
-    // If category param exists, let the conversion effect handle it first
-    if (categoryParam) {
-      return;
-    }
-    
-    const urlCategories = categoriesParam
-      ? categoriesParam.split(",").filter(Boolean)
-      : [];
-    
-    // Always sync from URL - URL is the source of truth
-    // Compare as strings to ensure we catch all changes
-    const currentSorted = [...selectedCategories].sort().join(",");
-    const urlSorted = [...urlCategories].sort().join(",");
-    
-    if (currentSorted !== urlSorted) {
-      // Update state - this will trigger query refetch via apiParams dependency
-      setSelectedCategories(urlCategories);
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParamsString, pathname, searchParams, isSlugBasedRoute]); // Watch searchParamsString, pathname, and searchParams to detect any URL changes
 
   // Initialize state from URL parameters
   const [searchQuery, setSearchQuery] = React.useState(
@@ -213,16 +62,60 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
     Number(searchParams.get("page")) || 1
   );
 
-  // Filters from URL - categories will be synced via useEffect below
+  // Filters from URL (non-category filters only)
   const [selectedLevels, setSelectedLevels] = React.useState<SkillLevel[]>(
     (searchParams.get("levels")?.split(",").filter(Boolean) as SkillLevel[]) ||
       []
   );
-  // Initialize from URL, then sync effect will keep it updated
-  const [selectedCategories, setSelectedCategories] = React.useState<string[]>(() => {
-    const categoriesParam = searchParams.get("categories");
-    return categoriesParam ? categoriesParam.split(",").filter(Boolean) : [];
-  });
+  // Selected categories are managed via slug-based routing, not query params
+  const [selectedCategories, setSelectedCategories] = React.useState<string[]>([]);
+  
+  // Get the category IDs from slugs for sidebar selection
+  // Supports multiple category slugs
+  const categoryIdsFromSlugs = React.useMemo(() => {
+    if (!slugs || slugs.length === 0 || categories.length === 0) {
+      return [];
+    }
+
+    const categoryIds: string[] = [];
+
+    // Process each slug
+    slugs.forEach((slug) => {
+      // First check if it's a parent category
+      const parentCategory = categories.find((c) => c.slug === slug);
+      if (parentCategory) {
+        // If category has subcategories, select all of them
+        if (parentCategory.subcategories.length > 0) {
+          categoryIds.push(...parentCategory.subcategories.map((sub) => sub.categoryId));
+        } else {
+          // Otherwise select the category itself
+          categoryIds.push(parentCategory.categoryId);
+        }
+        return;
+      }
+
+      // Then check subcategories
+      for (const parent of categories) {
+        const subcategory = parent.subcategories.find((sub) => sub.slug === slug);
+        if (subcategory) {
+          categoryIds.push(subcategory.categoryId);
+          return;
+        }
+      }
+    });
+
+    return categoryIds;
+  }, [slugs, categories]);
+
+  // Initialize selectedCategories from slugs when using slug-based routing
+  React.useEffect(() => {
+    if (isSlugBasedRoute && categoryIdsFromSlugs.length > 0) {
+      setSelectedCategories(categoryIdsFromSlugs);
+    }
+  }, [isSlugBasedRoute, categoryIdsFromSlugs]);
+
+  // Query param routing is no longer supported for categories
+  // All category filtering should use slug-based routing
   const [selectedDurations, setSelectedDurations] = React.useState<string[]>(
     searchParams.get("durations")?.split(",").filter(Boolean) || []
   );
@@ -268,67 +161,6 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
     };
   };
 
-  /**
-   * Optimizes category selection for API
-   * - Categories with no subcategories: pass parent ID directly
-   * - If all subcategories of a parent are selected: return only parent ID
-   * - Otherwise: return only the selected subcategory IDs
-   */
-  const getOptimizedCategoryIds = React.useCallback(
-    (
-      selectedIds: string[],
-      categories: Array<{
-        categoryId: string;
-        subcategories: Array<{ categoryId: string }>;
-      }>
-    ): string[] => {
-      if (selectedIds.length === 0) return [];
-
-      const optimized = new Set<string>();
-      const processedParents = new Set<string>();
-
-      categories.forEach((parent) => {
-        const hasSubcategories = parent.subcategories.length > 0;
-
-        // If no subcategories, check if parent itself is selected
-        if (!hasSubcategories) {
-          if (selectedIds.includes(parent.categoryId)) {
-            optimized.add(parent.categoryId);
-            processedParents.add(parent.categoryId);
-          }
-          return;
-        }
-
-        // Check if parent itself is selected (shouldn't happen with subcategories, but handle it)
-        if (selectedIds.includes(parent.categoryId)) {
-          optimized.add(parent.categoryId);
-          processedParents.add(parent.categoryId);
-          return;
-        }
-
-        // Get selected subcategories for this parent
-        const selectedSubs = parent.subcategories.filter((sub) =>
-          selectedIds.includes(sub.categoryId)
-        );
-
-        // If all subcategories are selected, use parent ID instead
-        if (
-          selectedSubs.length > 0 &&
-          selectedSubs.length === parent.subcategories.length
-        ) {
-          optimized.add(parent.categoryId);
-          processedParents.add(parent.categoryId);
-        } else {
-          // Otherwise, use individual subcategory IDs
-          selectedSubs.forEach((sub) => optimized.add(sub.categoryId));
-        }
-      });
-
-      return Array.from(optimized);
-    },
-    []
-  );
-
   // Debounce search query - wait 500ms after user stops typing
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -338,16 +170,16 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Update URL when filters change
+  // Update URL when filters change (non-category filters only)
+  // Categories are handled via slug-based routing
   const updateURL = React.useCallback(
     (updates: Record<string, string | number | string[] | null>) => {
       const params = new URLSearchParams();
 
-      // Build params object with all current values
+      // Build params object with all current values (excluding categories)
       const allParams = {
         query: debouncedSearchQuery,
         levels: selectedLevels,
-        categories: selectedCategories,
         durations: selectedDurations,
         rating: minRating,
         sort: sortBy,
@@ -355,18 +187,10 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
         ...updates,
       };
 
-      // Add params to URL (but NOT categories for slug-based routing)
+      // Add params to URL (categories are NOT included - they're in the slug path)
       if (allParams.query) params.set("query", allParams.query as string);
       if (Array.isArray(allParams.levels) && allParams.levels.length > 0) {
         params.set("levels", allParams.levels.join(","));
-      }
-      // Only add categories param if NOT using slug-based routing
-      if (
-        !isSlugBasedRoute &&
-        Array.isArray(allParams.categories) &&
-        allParams.categories.length > 0
-      ) {
-        params.set("categories", allParams.categories.join(","));
       }
       if (
         Array.isArray(allParams.durations) &&
@@ -389,14 +213,13 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
         const slugPath = `/topics/${slugs.join("/")}`;
         router.push(queryString ? `${slugPath}?${queryString}` : slugPath);
       } else {
-        // Otherwise use query param routing
+        // Base /topics page (no categories selected)
         router.push(queryString ? `/topics?${queryString}` : "/topics");
       }
     },
     [
       debouncedSearchQuery,
       selectedLevels,
-      selectedCategories,
       selectedDurations,
       minRating,
       sortBy,
@@ -414,44 +237,11 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
       "asc" | "desc",
     ];
 
-    // If we have category slugs from route, use those (slug-based routing)
-    // Otherwise use optimized category IDs from filters (query param routing)
-    let categoryParam: string | undefined;
-    let categorySlugParam: string | undefined;
-
-    if (categorySlugsFromRoute) {
-      // Slug-based routing - use categorySlug param
-      categorySlugParam = categorySlugsFromRoute;
-    } else {
-      // Query param routing - optimize category selection
-      const optimizedCategoryIds = getOptimizedCategoryIds(
-        selectedCategories,
-        categories
-      );
-      
-      if (optimizedCategoryIds.length > 0) {
-        // Convert IDs to slugs for SEO-friendly API calls
-        const slugs = optimizedCategoryIds
-          .map((id) => {
-            const parent = categories.find((c) => c.categoryId === id);
-            if (parent) return parent.slug;
-            
-            // Check subcategories
-            for (const cat of categories) {
-              const sub = cat.subcategories.find((s) => s.categoryId === id);
-              if (sub) return sub.slug;
-            }
-            return null;
-          })
-          .filter(Boolean) as string[];
-        
-        categorySlugParam = slugs.length > 0 ? slugs.join(",") : undefined;
-      }
-    }
+    // Category filtering is always slug-based now
+    const categorySlugParam = categorySlugsFromRoute || undefined;
 
     return {
       query: debouncedSearchQuery || undefined,
-      categoryId: categoryParam,
       categorySlug: categorySlugParam,
       learningLevel:
         selectedLevels.length > 0 ? selectedLevels.join(",") : undefined,
@@ -473,13 +263,10 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
   }, [
     debouncedSearchQuery,
     selectedLevels,
-    selectedCategories,
     selectedDurations,
     minRating,
     sortBy,
     currentPage,
-    categories,
-    getOptimizedCategoryIds,
     categorySlugsFromRoute,
   ]);
 
@@ -490,6 +277,7 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
     queryFn: () => searchCourses(apiParams),
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false, // Prevent refetch on window focus
+    refetchOnMount: false,
   });
 
   const courses = data?.data.courses || [];
@@ -525,31 +313,29 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
    * - Categories with subcategories: check/uncheck all subcategories
    * - Categories without subcategories: toggle parent directly
    * - Subcategories: toggle individually, update parent state
-   * - For slug-based routing: navigate to the category slug URL
+   * - For slug-based routing: navigate to the category slug URL with multiple slugs
    */
   const handleCategoryToggle = React.useCallback(
     (categoryId: string, isParent: boolean) => {
-      // If using slug-based routing, navigate to the category URL directly
-      if (isSlugBasedRoute) {
-        const parent = categories.find((c) => c.categoryId === categoryId);
-        if (parent) {
-          // Navigate to the parent category slug
-          router.push(`/topics/${parent.slug}/${parent.slug}`);
-          return;
-        }
+      // Helper to convert category IDs to slugs
+      const getCategorySlugs = (categoryIds: string[]): string[] => {
+        return categoryIds
+          .map((id) => {
+            // Check if it's a parent category
+            const parent = categories.find((c) => c.categoryId === id);
+            if (parent) return parent.slug;
 
-        // If it's a subcategory, find its parent and navigate
-        for (const cat of categories) {
-          const subcategory = cat.subcategories.find((sub) => sub.categoryId === categoryId);
-          if (subcategory) {
-            router.push(`/topics/${cat.slug}/${subcategory.slug}`);
-            return;
-          }
-        }
-        return;
-      }
+            // Check subcategories
+            for (const cat of categories) {
+              const subcategory = cat.subcategories.find((sub) => sub.categoryId === id);
+              if (subcategory) return subcategory.slug;
+            }
+            return null;
+          })
+          .filter(Boolean) as string[];
+      };
 
-      // Query param routing logic (existing logic)
+      // Calculate new categories (same logic for both routing types)
       let newCategories: string[] = [];
 
       if (isParent) {
@@ -619,12 +405,35 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
         }
       }
 
-      // Update URL - the sync effect will update selectedCategories state
-      // This ensures URL is the single source of truth
-      setCurrentPage(1);
-      updateURL({ categories: newCategories, page: 1 });
+      // If using slug-based routing, navigate to the slug URL with multiple categories
+      if (isSlugBasedRoute) {
+        if (newCategories.length === 0) {
+          // No categories selected - go back to /topics
+          router.push("/topics");
+          return;
+        }
+
+        // Convert category IDs to slugs and build URL
+        const categorySlugs = getCategorySlugs(newCategories);
+        if (categorySlugs.length > 0) {
+          router.push(`/topics/${categorySlugs.join("/")}`);
+        }
+        return;
+      }
+
+      // Query param routing logic - not allowed anymore, redirect to slug-based
+      // Convert to slug-based routing
+      if (newCategories.length === 0) {
+        router.push("/topics");
+        return;
+      }
+
+      const categorySlugs = getCategorySlugs(newCategories);
+      if (categorySlugs.length > 0) {
+        router.push(`/topics/${categorySlugs.join("/")}`);
+      }
     },
-    [selectedCategories, categories, updateURL, isSlugBasedRoute, router]
+    [selectedCategories, categories, isSlugBasedRoute, router]
   );
 
   const handleDurationToggle = (duration: string) => {
@@ -644,18 +453,13 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
 
   const handleClearFilters = () => {
     setSelectedLevels([]);
+    setSelectedCategories([]);
     setSelectedDurations([]);
     setMinRating(0);
     setCurrentPage(1);
     
-    // If using slug-based routing, preserve the slug path but clear other filters
-    if (isSlugBasedRoute && slugs) {
-      const slugPath = `/topics/${slugs.join("/")}`;
-      router.push(slugPath);
-    } else {
-      // Otherwise clear everything and go to base topics page
-      router.push("/topics");
-    }
+    // Clear all filters and go to base topics page
+    router.push("/topics");
   };
 
   const handleSearchChange = (value: string) => {

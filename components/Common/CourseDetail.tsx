@@ -45,6 +45,7 @@ import { VideoPreviewModal } from "./VideoPreviewModal";
 import { useQuery } from "@tanstack/react-query";
 import { getInstructorProfile } from "@/app/api/instructor/getInstructorProfile";
 import { Skeleton } from "@/components/ui/skeleton";
+import { createLectureUrl } from "@/lib/slugify";
 
 import type { CourseDetail as CourseDetailAPI } from "@/app/api/course/getCourseDetail";
 import type { CourseReview } from "@/app/api/learner/reviews";
@@ -79,7 +80,7 @@ interface CourseData {
   enrollments?: number;
   requirements?: string[];
   learningPoints: string[];
-  whoThisCourseIsFor?: string[];
+  whoThisCourseIsFor?: {description: string}[];
   certificateDescription?: string;
   description: string;
   updatedAt?: string;
@@ -275,6 +276,8 @@ export function CourseDetail({
       enabled: !!instructorId && instructorId > 0,
       staleTime: Infinity, // Never refetch instructor info
       gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
   // Update wishlist state when prop changes
@@ -417,7 +420,7 @@ export function CourseDetail({
         learningPoints: apiCourseData.learningPoints.map(
           (lp) => lp.description
         ),
-        whoThisCourseIsFor: apiCourseData.whoThisCourseIsFor || [],
+        whoThisCourseIsFor: apiCourseData.targetAudience?.map((ta) => ({ description: ta.description })) || [],
         certificateDescription: apiCourseData.certificateDescription || undefined,
         description: apiCourseData.fullDescription,
         outline:
@@ -472,7 +475,7 @@ export function CourseDetail({
         requirements: basicInfo?.requirements || [],
         learningPoints:
           basicInfo?.learningPoints?.map((lp) => lp.description) || [],
-        whoThisCourseIsFor: basicInfo?.whoThisCourseIsFor || [],
+        whoThisCourseIsFor: basicInfo?.whoThisCourseIsFor?.map((item) => ({ description: item })) || [],
         certificateDescription: basicInfo?.certificateDescription || undefined,
         description: basicInfo?.fullDescription || basicInfo?.description || "",
         outline:
@@ -937,7 +940,7 @@ export function CourseDetail({
                     {courseData.whoThisCourseIsFor.map((item, index) => (
                       <li key={index} className="flex items-start gap-3">
                         <span className="text-primary-600 mt-1">•</span>
-                        <p className="text-default-700 leading-relaxed">{item}</p>
+                        <p className="text-default-700 leading-relaxed">{item.description}</p>
                       </li>
                     ))}
                   </ul>
@@ -1212,8 +1215,8 @@ export function CourseDetail({
 
                   {/* Card Content */}
                   <div className="p-6 space-y-4">
-                    {/* Pricing Section */}
-                    {!isPreview && apiCourseData?.pricing && (
+                    {/* Pricing Section - Only show if NOT enrolled */}
+                    {!isPreview && apiCourseData?.pricing && !apiCourseData?.isEnrolled && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 flex-wrap">
@@ -1361,10 +1364,17 @@ export function CourseDetail({
                                 } bg-primary-400 hover:bg-primary-500 text-white`}
                                 size="lg"
                                 onClick={() => {
-                                  if (apiCourseData?.courseId) {
-                                    router.push(
-                                      `/learn/${apiCourseData.courseId}/lectures`
-                                    );
+                                  if (apiCourseData?.courseId && apiCourseData?.sections?.length > 0) {
+                                    const firstLecture = apiCourseData.sections[0]?.lectures[0];
+                                    if (firstLecture) {
+                                      const url = createLectureUrl(
+                                        apiCourseData.title,
+                                        apiCourseData.courseId,
+                                        firstLecture.title,
+                                        firstLecture.lectureId
+                                      );
+                                      router.push(url);
+                                    }
                                   }
                                 }}
                               >

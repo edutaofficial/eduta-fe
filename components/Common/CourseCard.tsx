@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { StarIcon, UsersIcon, EyeIcon, BookOpenIcon } from "lucide-react";
+import { StarIcon, UsersIcon, BookOpenIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatCompactNumber } from "@/lib/utils";
 
@@ -37,9 +37,11 @@ export interface CourseCardProps {
   rating: number | null; // e.g., 4.5 (can be null if no ratings yet)
   ratingCount: number; // e.g., 1233
   enrollments: number; // e.g., 120
-  impressions: number; // e.g., 340
+  impressions?: number; // e.g., 340 (deprecated - no longer displayed)
   featured?: boolean;
   price?: number; // 0 => Free
+  originalPrice?: number; // Original price before discount
+  discountPercentage?: number; // Discount percentage
   className?: string;
 }
 
@@ -51,18 +53,18 @@ export function CourseCard({
   rating,
   ratingCount,
   enrollments,
-  impressions,
   featured,
   price = 0,
-  className,
+  originalPrice,
+    className,
 }: CourseCardProps) {
   const [imageError, setImageError] = React.useState(false);
-
+const discountPercentage = 100;
   return (
     <Link
       href={`/course/${slug}`}
       className={cn(
-        "block rounded-md bg-white shadow-sm overflow-hidden transition-transform hover:scale-[1.02]",
+        "flex flex-col rounded-md h-full w-full bg-white shadow-sm overflow-hidden transition-transform hover:scale-[1.02]",
         className
       )}
     >
@@ -96,7 +98,7 @@ export function CourseCard({
           )}
         </div>
       </div>
-      <div className="p-4 space-y-3">
+      <div className="p-4 flex flex-col flex-1 gap-3">
         <div className="space-y-1">
           <h3 className="font-semibold text-foreground line-clamp-2">
             {title}
@@ -104,6 +106,7 @@ export function CourseCard({
           <p className="text-sm text-muted-foreground">{company}</p>
         </div>
 
+        <div className="mt-auto space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1">
             {[...Array(5)].map((_, i) => (
@@ -132,18 +135,35 @@ export function CourseCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-foreground">
-            <span className="text-sm font-semibold">
-              {price === 0 ? "Free" : `$${price}`}
-            </span>
-          </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <EyeIcon className="size-4" />
-            <span className="text-xs font-medium">
-              {formatCompactNumber(impressions)}+
-            </span>
-          </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {(() => {
+            // Determine if course is free (price is 0 OR 100% discount)
+            const isFree = price === 0 || (discountPercentage && discountPercentage >= 100);
+            const displayPrice = isFree ? 0 : price;
+            
+            // Show original price if there's any discount
+            const showOriginal = price !== 0;
+            const originalPriceToShow = originalPrice || price;
+
+            return (
+              <>
+                <span className="text-lg font-bold text-foreground">
+                  {displayPrice === 0 ? "Free" : `$${displayPrice.toFixed(2)}`}
+                </span>
+                {showOriginal && (
+                  <span className="text-sm text-muted-foreground line-through">
+                    ${originalPriceToShow.toFixed(2)}
+                  </span>
+                )}
+                {showOriginal && (
+                  <span className="text-xs font-semibold text-primary-600">
+                    {Math.round(discountPercentage)}% off
+                  </span>
+                )}
+              </>
+            );
+          })()}
+        </div>
         </div>
       </div>
     </Link>

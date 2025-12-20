@@ -94,6 +94,7 @@ export interface UIBasicInfo {
   courseLogoId?: number | null;
   courseBannerId?: number | null;
   promoVideoId?: number | null;
+  certificateDescription?: string;
   learningPoints: Array<{ id: string; text: string }>;
   targetAudiences: Array<{ id: string; text: string }>;
   prerequisites: Array<{ id: string; text: string }>;
@@ -141,6 +142,7 @@ export interface CourseDetailApiResponse {
       promoVideoId: number | null;
       courseBannerId: number | null;
       courseLogoId: number | null;
+      certificateDescription?: string;
       learningPoints: Array<{
         learningPointId: string;
         description: string;

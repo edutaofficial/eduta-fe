@@ -51,7 +51,6 @@ export default function FeaturedCourses() {
               showArrows: false,
               spacing: "",
             }}
-            slideClassName="pb-4"
             pagination={{
               enabled: false,
             }}
@@ -64,6 +63,9 @@ export default function FeaturedCourses() {
           <Slider
             slidesPerView={1}
             spaceBetween={16}
+            customStyle={{
+              padding: "5px 10px",
+            }}
             breakpoints={{
               640: { slidesPerView: 2, spaceBetween: 16 },
               1024: { slidesPerView: 3, spaceBetween: 20 },
@@ -75,7 +77,6 @@ export default function FeaturedCourses() {
               showArrows: true,
               spacing: "",
             }}
-            slideClassName="pb-4"
             pagination={{
               enabled: false,
             }}

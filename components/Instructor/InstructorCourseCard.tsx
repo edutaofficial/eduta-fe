@@ -39,10 +39,12 @@ interface InstructorCourseCardProps {
     rating: number;
     ratingCount: number;
     enrollments: number;
-    impressions: number;
+    impressions?: number; // Deprecated - no longer displayed
     featured?: boolean;
     status?: string;
     price: number;
+    originalPrice?: number;
+    discountPercentage?: number;
     slug?: string;
   };
   onEdit?: (courseId: string) => void;
@@ -85,8 +87,9 @@ export function InstructorCourseCard({
   const rating = course?.rating ?? 0;
   const ratingCount = course?.ratingCount ?? 0;
   const enrollments = course?.enrollments ?? 0;
-  const impressions = course?.impressions ?? 0;
   const price = course?.price ?? 0;
+  const originalPrice = course?.originalPrice;
+  const discountPercentage = course?.discountPercentage;
 
   const handleView = () => {
     if (course.slug) {
@@ -165,16 +168,38 @@ export function InstructorCourseCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-foreground">
-            <span className="text-sm font-semibold">
-              {price === 0 ? "Free" : `$${price}`}
+        <div className="flex items-center gap-2 flex-wrap">
+          {(() => {
+            // Determine if course is free (price is 0 OR 100% discount)
+            const isFree = price === 0 || (discountPercentage && discountPercentage >= 100);
+            const displayPrice = isFree ? 0 : price;
+            
+            // Show original price if there's any discount
+            const showOriginal = originalPrice && originalPrice > displayPrice;
+            const originalPriceToShow = originalPrice || price;
+
+            return (
+              <>
+                <span className="text-lg font-bold text-foreground">
+                  {displayPrice === 0 ? "Free" : `$${displayPrice.toFixed(2)}`}
+                </span>
+                {showOriginal && (
+                  <span className="text-sm text-muted-foreground line-through">
+                    ${originalPriceToShow.toFixed(2)}
+                  </span>
+                )}
+                {discountPercentage && discountPercentage >= 100 ? (
+                  <span className="text-xs font-semibold text-primary-600">
+                    100% off
+                  </span>
+                ) : discountPercentage && discountPercentage > 0 ? (
+                  <span className="text-xs font-semibold text-primary-600">
+                    {Math.round(discountPercentage)}% off
             </span>
-          </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <EyeIcon className="size-4" />
-            <span className="text-xs font-medium">{impressions}+</span>
-          </div>
+                ) : null}
+              </>
+            );
+          })()}
         </div>
       </div>
 
