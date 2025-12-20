@@ -471,9 +471,12 @@ export function VideoPlayer({
               e.stopPropagation();
               togglePlayPause();
             }}
-            className="pointer-events-auto bg-primary-600/90 hover:bg-primary-600 backdrop-blur-sm rounded-full p-6 transition-all hover:scale-110 shadow-2xl"
+            className="pointer-events-auto group"
+            aria-label="Play video"
           >
-            <Play className="w-12 h-12 text-white fill-white" />
+            <div className="bg-white/95 backdrop-blur-sm rounded-full p-5 group-hover:scale-110 transition-transform shadow-2xl ring-4 ring-white/20">
+              <Play className="w-14 h-14 text-primary-600 fill-primary-600" />
+            </div>
           </button>
         </div>
       )}

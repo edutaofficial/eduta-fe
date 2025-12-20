@@ -180,6 +180,9 @@ export function WishlistTab() {
                 rating={item.avgRating}
                 ratingCount={item.totalReviews}
                 enrollments={item.totalStudents}
+                totalLectures={(item as { totalLectures?: number }).totalLectures}
+                totalDuration={(item as { totalDurationFormatted?: string }).totalDurationFormatted}
+                learningLevel={(item as { learningLevel?: string }).learningLevel}
                 impressions={item.totalStudents * 3} // Estimated impressions
                 price={item.price}
                 featured={false}

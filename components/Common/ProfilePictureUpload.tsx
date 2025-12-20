@@ -142,14 +142,12 @@ export function ProfilePictureUpload({
   const handleUpload = async () => {
     if (!selectedFile) return;
 
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    formData.append("file_type", selectedFile.type);
-
     try {
       // eslint-disable-next-line no-console
       console.log("ProfilePictureUpload: Uploading image...");
-      const result = await uploadAsset.mutateAsync(formData);
+      const result = await uploadAsset.mutateAsync({
+        file: selectedFile,
+      });
       // eslint-disable-next-line no-console
       console.log(
         "ProfilePictureUpload: Upload successful, full result:",

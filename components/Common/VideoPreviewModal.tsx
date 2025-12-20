@@ -25,7 +25,7 @@ export function VideoPreviewModal({
   title,
   subtitle,
   dialogTitle,
-  className = "w-[95vw] md:w-[37.5rem]",
+  className = "w-[95vw] md:w-[50.5rem]",
   bottomInfo,
 }: VideoPreviewModalProps) {
   return (

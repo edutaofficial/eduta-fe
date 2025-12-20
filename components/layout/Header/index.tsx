@@ -60,7 +60,7 @@ function ExploreDropdown({
         Explore
       </NavigationMenuTrigger>
       <NavMenuContentModified triggerRef={exploreTriggerRef} className="left-0">
-        <ul className="grid w-[25rem] gap-2 p-4 md:w-[31.25rem] md:grid-cols-2 lg:w-[37.5rem]">
+        <ul className="grid w-[25rem] gap-2 p-4 md:w-[31.25rem] md:grid-cols-2 lg:w-[50.5rem]">
           {loading ? (
             // Skeleton
             <>
@@ -125,7 +125,7 @@ export default function Header() {
       fetchCategories();
     }
   }, [categories.length, fetchCategories]);
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const loggedIn = Boolean(user);
   const pathname = usePathname();
   const router = useRouter();
@@ -160,7 +160,9 @@ export default function Header() {
             {/* Right: Search Icon + Login/Avatar */}
             <div className="flex items-center gap-2">
               <MobileSearchTrigger onClick={() => setShowSearch(true)} />
-              {loggedIn ? (
+              {isLoading ? (
+                <div className="size-10 rounded-full bg-default-200 animate-pulse" />
+              ) : loggedIn ? (
                 <MobileUserDrawer user={user} onLogout={logout} />
               ) : (
                 <Button size="icon" variant="ghost" asChild>
@@ -217,7 +219,12 @@ export default function Header() {
               </NavigationMenuItem>
               <BlogDropdown blogTriggerRef={blogTriggerRef} />
               <NavigationMenuItem>
-                {loggedIn ? (
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-10 w-24 bg-default-200 animate-pulse rounded-md" />
+                    <div className="size-10 rounded-full bg-default-200 animate-pulse" />
+                  </div>
+                ) : loggedIn ? (
                   <>
                     {user?.role === "instructor" ? (
                       // Instructor - Show Dashboard link and Wishlist icon on home page

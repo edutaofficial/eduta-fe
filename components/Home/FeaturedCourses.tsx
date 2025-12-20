@@ -102,6 +102,9 @@ export default function FeaturedCourses() {
                   rating={parseFloat(courseStats.avgRating) || 0}
                   ratingCount={courseStats.totalReviews}
                   enrollments={courseStats.totalStudents}
+                  totalLectures={courseStats.totalLectures}
+                  totalDuration={courseStats.totalDurationFormatted}
+                  learningLevel={course.learningLevel}
                   impressions={0}
                   featured={true}
                   price={course.pricing ? parseFloat(course.pricing.amount) : 0}

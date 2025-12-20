@@ -68,8 +68,8 @@ function decodeJwt(token: string): {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, update: updateSession } = useSession();
-  const [isLoading] = useState(false);
+  const { data: session, update: updateSession, status } = useSession();
+  const isLoading = status === "loading";
   const [profilePictureOverride, setProfilePictureOverride] = useState<string | null>(null);
   const [profilePictureVersion, setProfilePictureVersion] = useState<number>(0);
 

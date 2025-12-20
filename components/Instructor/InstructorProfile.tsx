@@ -41,6 +41,8 @@ export function InstructorProfile({ instructorId }: InstructorProfileProps) {
     enabled: !isNaN(instructorId) && instructorId > 0,
     staleTime: Infinity,
     gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Fetch instructor courses
@@ -54,6 +56,8 @@ export function InstructorProfile({ instructorId }: InstructorProfileProps) {
       getInstructorCourses(instructorId, { page: currentPage, pageSize }),
     enabled: !isNaN(instructorId) && instructorId > 0,
     staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const handlePageChange = (page: number) => {

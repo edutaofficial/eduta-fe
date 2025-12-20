@@ -172,6 +172,14 @@ export function CourseDetailClient({ courseSlug }: { courseSlug: string }) {
       setShowLoginDialog(true);
       return;
     }
+    
+    // Check if user is an instructor
+    if (user.role === "instructor") {
+      setErrorMessage("Instructors cannot enroll in courses. Please create a student account to enroll.");
+      setShowErrorDialog(true);
+      return;
+    }
+    
     enrollMutation.mutate();
   };
 

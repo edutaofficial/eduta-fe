@@ -30,10 +30,13 @@ import {
   ArrowRightIcon,
   LockIcon, 
   ClockIcon,
-   DownloadIcon,
+  DownloadIcon,
   InfinityIcon,
   AwardIcon,
   Share2Icon,
+  UsersIcon,
+  MessageSquareIcon,
+  GraduationCapIcon,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -178,7 +181,7 @@ function ReviewCard({ review }: { review: CourseReview }) {
   }, [review.reviewText, isLongReview, isExpanded]);
 
   return (
-    <div className="bg-default-50 border border-default-200 rounded-lg p-6 h-full">
+    <div className="bg-default-50 border border-default-200 rounded-lg p-6 h-full w-full">
       <div className="flex items-center gap-3 mb-3">
         <div className="flex items-center gap-1">
           {[...Array(5)].map((_, i) => (
@@ -247,7 +250,8 @@ export function CourseDetail({
   const [selectedLecture, setSelectedLecture] = React.useState<{
     lectureId: string;
     title: string;
-    videoId: number;
+    videoId?: number;
+    videoUrl?: string;
   } | null>(null);
   const [appliedCoupon, setAppliedCoupon] = React.useState<string>("25BBPMXNVD25");
   const [couponInput, setCouponInput] = React.useState<string>("");
@@ -543,6 +547,18 @@ export function CourseDetail({
     return 0;
   }, [courseData.outline]);
 
+  // Create a map of preview lecture IDs to their video URLs from the API
+  const previewLectureVideoUrls = React.useMemo(() => {
+    if (!apiCourseData?.previewLectures) return new Map<string, string>();
+    const map = new Map<string, string>();
+    apiCourseData.previewLectures.forEach((lecture) => {
+      if (lecture.videoUrl) {
+        map.set(lecture.lectureId, lecture.videoUrl);
+      }
+    });
+    return map;
+  }, [apiCourseData?.previewLectures]);
+
   // Calculate total number of resources
   const totalResources = React.useMemo(() => {
     // In preview mode, count from curriculum store
@@ -582,12 +598,14 @@ export function CourseDetail({
   }, [isPreview, curriculum, apiCourseData]);
 
   // Get course banner URL for thumbnail (separate from promo video)
-  // In preview mode, fetch from store's courseBannerId
-  const courseBannerId = isPreview
-    ? basicInfo?.courseBannerId
-    : apiCourseData?.courseBannerId;
-  const { data: bannerAsset } = useGetAssetById(courseBannerId || 0);
+  // Only fetch asset in preview mode when we don't have URL from API
+  const courseBannerId = isPreview ? basicInfo?.courseBannerId : null;
+  const shouldFetchBannerAsset = isPreview && courseBannerId && !apiCourseData?.courseBannerUrl;
+  const { data: bannerAsset } = useGetAssetById(
+    shouldFetchBannerAsset ? courseBannerId : 0
+  );
   const courseBannerUrl = React.useMemo(() => {
+    // Priority: API URL > Preview mode asset
     if (apiCourseData?.courseBannerUrl) {
       return apiCourseData.courseBannerUrl;
     }
@@ -780,6 +798,63 @@ export function CourseDetail({
                 </div>
               )}
 
+              {/* This course includes */}
+              <div className="space-y-4">
+                <h2 className="text-2xl font-semibold text-default-900">
+                  This course includes
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {!isPreview && apiCourseData?.stats && (
+                    <>
+                      <div className="flex items-center gap-3 text-default-700">
+                        <VideoIcon className="size-5 text-default-600 shrink-0" />
+                        <span>
+                          {formatHoursLabel(
+                            (apiCourseData.stats.totalDuration || 0) || apiSectionsDuration
+                          )}
+                        </span>
+                      </div>
+                      {apiCourseData.stats.totalResources > 0 && (
+                        <div className="flex items-center gap-3 text-default-700">
+                          <DownloadIcon className="size-5 text-default-600 shrink-0" />
+                          <span>
+                            {apiCourseData.stats.totalResources} downloadable resource
+                            {apiCourseData.stats.totalResources !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {isPreview && (
+                    <>
+                      <div className="flex items-center gap-3 text-default-700">
+                        <VideoIcon className="size-5 text-default-600 shrink-0" />
+                        <span>
+                          {formatHoursLabel(totalDuration || 0)}
+                        </span>
+                      </div>
+                      {totalResources > 0 && (
+                        <div className="flex items-center gap-3 text-default-700">
+                          <DownloadIcon className="size-5 text-default-600 shrink-0" />
+                          <span>
+                            {totalResources} downloadable resource
+                            {totalResources !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div className="flex items-center gap-3 text-default-700">
+                    <InfinityIcon className="size-5 text-default-600 shrink-0" />
+                    <span>Full lifetime access</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-default-700">
+                    <AwardIcon className="size-5 text-default-600 shrink-0" />
+                    <span>Certificate of completion</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Last Updated */}
 
               {/* Course Outline */}
@@ -811,10 +886,13 @@ export function CourseDetail({
                               const isPreview = lecture.isPreview ?? false;
                               const handleLectureClick = () => {
                                 if (isPreview && lecture.videoId) {
+                                  // Check if we have the video URL from previewLectures array
+                                  const videoUrl = previewLectureVideoUrls.get(lecture.id);
                                   setSelectedLecture({
                                     lectureId: lecture.id,
                                     title: lecture.title,
                                     videoId: lecture.videoId,
+                                    videoUrl: videoUrl || undefined,
                                   });
                                 }
                               };
@@ -1045,129 +1123,149 @@ export function CourseDetail({
 
               {/* Instructor Information */}
               {courseData.instructor && (
-                <div className="space-y-4 pb-8">
+                <div className="space-y-6 pb-8">
                   <h2 className="text-2xl font-semibold text-default-900">
                     About the Instructor
                   </h2>
                   {instructorProfileLoading ? (
                     <InstructorSkeleton />
                   ) : (
-                    <div className="flex flex-col md:flex-row gap-6 items-start">
-                      <Avatar className="size-20 border-2 border-default-300">
-                        {instructorProfile?.profilePictureUrl ? (
-                          <AvatarImage
-                            src={instructorProfile.profilePictureUrl}
-                            alt={
-                              instructorProfile.fullName ||
-                              courseData.instructor.name
-                            }
-                          />
-                        ) : instructorAvatarSrc ? (
-                          <AvatarImage
-                            src={instructorAvatarSrc}
-                            alt={courseData.instructor.name}
-                          />
-                        ) : null}
-                        <AvatarFallback className="bg-primary-100 text-primary-700 text-2xl font-semibold">
-                          {instructorProfile
-                            ? `${instructorProfile.firstName.charAt(0)}${instructorProfile.lastName.charAt(0)}`.toUpperCase()
-                            : courseData.instructor.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")
-                                .toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <h3 className="text-xl font-semibold text-default-900">
-                              {instructorProfile?.fullName ||
-                                courseData.instructor.name}
-                            </h3>
-                            <p className="text-default-600">
-                              {instructorProfile?.professionalTitle ||
-                                courseData.instructor.title}
-                            </p>
-                          </div>
-                          {courseData.instructor.id && (
-                            <Link
-                              href={`/profile/instructor/${courseData.instructor.id}`}
-                            >
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex items-center gap-2"
+                    <div className="space-y-6">
+                      {/* Instructor Header */}
+                      <div className="flex flex-col md:flex-row gap-6 items-start">
+                        <Avatar className="size-24 border-2 border-default-300 shrink-0">
+                          {instructorProfile?.profilePictureUrl ? (
+                            <AvatarImage
+                              src={instructorProfile.profilePictureUrl}
+                              alt={
+                                instructorProfile.fullName ||
+                                courseData.instructor.name
+                              }
+                            />
+                          ) : instructorAvatarSrc ? (
+                            <AvatarImage
+                              src={instructorAvatarSrc}
+                              alt={courseData.instructor.name}
+                            />
+                          ) : null}
+                          <AvatarFallback className="bg-primary-100 text-primary-700 text-2xl font-semibold">
+                            {instructorProfile
+                              ? `${instructorProfile.firstName.charAt(0)}${instructorProfile.lastName.charAt(0)}`.toUpperCase()
+                              : courseData.instructor.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <h3 className="text-xl font-semibold text-default-900">
+                                {instructorProfile?.fullName ||
+                                  courseData.instructor.name}
+                              </h3>
+                              <p className="text-default-600 mt-1">
+                                {instructorProfile?.professionalTitle ||
+                                  courseData.instructor.title}
+                              </p>
+                            </div>
+                            {courseData.instructor.id && (
+                              <Link
+                                href={`/profile/instructor/${courseData.instructor.id}`}
                               >
-                                View Profile
-                                <ArrowRightIcon className="size-4" />
-                              </Button>
-                            </Link>
-                          )}
-                        </div>
-                        {(instructorProfile?.stats ||
-                          (courseData.instructor.rating !== undefined &&
-                            courseData.instructor.rating > 0) ||
-                          (courseData.instructor.studentCount !== undefined &&
-                            courseData.instructor.studentCount > 0) ||
-                          (courseData.instructor.courseCount !== undefined &&
-                            courseData.instructor.courseCount > 0)) && (
-                          <div className="flex items-center gap-4 text-sm text-default-600">
-                            {instructorProfile?.stats.avgRating !== undefined &&
-                            instructorProfile.stats.avgRating > 0 ? (
-                              <>
-                                <div className="flex items-center gap-1">
-                                  <StarIcon className="size-4 text-warning-500 fill-warning-500" />
-                                  <span>
-                                    {instructorProfile.stats.avgRating.toFixed(
-                                      1
-                                    )}
-                                  </span>
-                                </div>
-                                <span>•</span>
-                              </>
-                            ) : courseData.instructor.rating !== undefined &&
-                              courseData.instructor.rating > 0 ? (
-                              <>
-                                <div className="flex items-center gap-1">
-                                  <StarIcon className="size-4 text-warning-500" />
-                                  <span>{courseData.instructor.rating}</span>
-                                </div>
-                                <span>•</span>
-                              </>
-                            ) : null}
-                            {(instructorProfile?.stats.totalStudents !==
-                              undefined &&
-                              instructorProfile.stats.totalStudents > 0) ||
-                            (courseData.instructor.studentCount !== undefined &&
-                              courseData.instructor.studentCount > 0) ? (
-                              <>
-                                <span>
-                                  {instructorProfile?.stats.totalStudents.toLocaleString() ||
-                                    courseData.instructor.studentCount?.toLocaleString() ||
-                                    0}{" "}
-                                  students
-                                </span>
-                                <span>•</span>
-                              </>
-                            ) : null}
-                            {(instructorProfile?.stats.totalCourses !==
-                              undefined &&
-                              instructorProfile.stats.totalCourses > 0) ||
-                            (courseData.instructor.courseCount !== undefined &&
-                              courseData.instructor.courseCount > 0) ? (
-                              <span>
-                                {instructorProfile?.stats.totalCourses ||
-                                  courseData.instructor.courseCount ||
-                                  0}{" "}
-                                courses
-                              </span>
-                            ) : null}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center gap-2"
+                                >
+                                  View Profile
+                                  <ArrowRightIcon className="size-4" />
+                                </Button>
+                              </Link>
+                            )}
                           </div>
-                        )}
-                        <p className="text-default-700 leading-relaxed">
-                          {instructorProfile?.bio || courseData.instructor.bio}
-                        </p>
+                          
+                          {/* Stats Cards */}
+                          {instructorProfile?.stats && (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                              {/* Average Rating */}
+                              {instructorProfile.stats.avgRating > 0 && (
+                                <div className="bg-warning-50 border border-warning-200 rounded-lg p-3 text-center hover:shadow-md transition-shadow">
+                                  <div className="flex items-center justify-center gap-1 mb-1">
+                                    <StarIcon className="size-4 text-warning-600 fill-warning-600" />
+                                    <span className="text-lg font-bold text-warning-900">
+                                      {instructorProfile.stats.avgRating.toFixed(1)}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-warning-700 font-medium">
+                                    Instructor Rating
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {/* Total Students */}
+                              {instructorProfile.stats.totalStudents > 0 && (
+                                <div className="bg-primary-50 border border-primary-200 rounded-lg p-3 text-center hover:shadow-md transition-shadow">
+                                  <div className="flex items-center justify-center gap-1.5 mb-1">
+                                    <UsersIcon className="size-4 text-primary-600" />
+                                    <span className="text-lg font-bold text-primary-900">
+                                      {instructorProfile.stats.totalStudents.toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-primary-700 font-medium">
+                                    Students
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {/* Total Reviews */}
+                              {instructorProfile.stats.totalReviews > 0 && (
+                                <div className="bg-success-50 border border-success-200 rounded-lg p-3 text-center hover:shadow-md transition-shadow">
+                                  <div className="flex items-center justify-center gap-1.5 mb-1">
+                                    <MessageSquareIcon className="size-4 text-success-600" />
+                                    <span className="text-lg font-bold text-success-900">
+                                      {instructorProfile.stats.totalReviews.toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-success-700 font-medium">
+                                    Reviews
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {/* Total Courses */}
+                              {instructorProfile.stats.totalCourses > 0 && (
+                                <div className="bg-default-100 border border-default-200 rounded-lg p-3 text-center hover:shadow-md transition-shadow">
+                                  <div className="flex items-center justify-center gap-1.5 mb-1">
+                                    <GraduationCapIcon className="size-4 text-default-700" />
+                                    <span className="text-lg font-bold text-default-900">
+                                      {instructorProfile.stats.totalCourses}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-default-700 font-medium">
+                                    Courses
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Bio - Truncated with "Show more" link */}
+                          <div className="pt-2">
+                            <p className="text-default-700 leading-relaxed line-clamp-5">
+                              {instructorProfile?.bio || courseData.instructor.bio}
+                            </p>
+                            {courseData.instructor.id && (
+                              <Link
+                                href={`/profile/instructor/${courseData.instructor.id}`}
+                                className="text-primary-600 hover:text-primary-700 text-sm font-medium mt-2 inline-block transition-colors"
+                              >
+                                Show more →
+                              </Link>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1295,12 +1393,13 @@ export function CourseDetail({
                               const hasCouponApplied = appliedCoupon && appliedCoupon === "25BBPMXNVD25";
                               // If coupon is applied, make it free (100% discount)
                               const isFree = pricingIsFree || (hasCouponApplied && price > 0);
-                              const displayPrice = isFree && hasCouponApplied ? 0 : price;
+                              const displayPrice = isFree && hasCouponApplied ? 0 : (price ?? 0);
+                              const displayCurrency = currency || "$";
                               // Show original price if: there's an original price > display price, OR if coupon applied (show current price as strikethrough)
                               const showOriginal =
                                 (originalPrice && originalPrice > displayPrice) ||
                                 (hasCouponApplied && price > 0);
-                              const originalPriceToShow = originalPrice || price;
+                              const originalPriceToShow = originalPrice || price || 0;
                               const finalDiscountPercentage = hasCouponApplied && price > 0 && displayPrice === 0
                                 ? 100
                                 : discountPercentage || 0;
@@ -1308,11 +1407,11 @@ export function CourseDetail({
                               return (
                                 <>
                                   <span className="text-3xl font-bold text-default-900">
-                                    {displayPrice === 0 ? "Free" : `${currency} ${displayPrice.toFixed(2)}`}
+                                    {displayPrice === 0 ? "Free" : `${displayCurrency} ${displayPrice.toFixed(2)}`}
                                   </span>
                                   {showOriginal && (
                                     <span className="text-lg text-default-400 line-through">
-                                      {currency} {originalPriceToShow.toFixed(2)}
+                                      {displayCurrency} {originalPriceToShow.toFixed(2)}
                                     </span>
                                   )}
                                   {finalDiscountPercentage > 0 && (
@@ -1419,7 +1518,7 @@ export function CourseDetail({
                             <p className="text-lg font-semibold text-default-900">
                               {pricing.isFree
                                 ? "Free"
-                                : `${pricing.currency} ${pricing.price.toFixed(2)}`}
+                                : `${pricing.currency || "$"} ${(pricing.price ?? 0).toFixed(2)}`}
                             </p>
                           </div>
                         </div>
@@ -1430,65 +1529,6 @@ export function CourseDetail({
                     <p className="text-sm text-center text-default-600">
                       30-Day Money-Back Guarantee
                     </p>
-
-                    <Separator />
-
-                    {/* This course includes */}
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-default-900">
-                        This course includes:
-                      </h4>
-                      <div className="space-y-2.5">
-                        {!isPreview && apiCourseData?.stats && (
-                          <>
-                            <div className="flex items-center gap-3 text-sm text-default-700">
-                              <VideoIcon className="size-5 text-default-600 shrink-0" />
-                              <span>
-                                {formatHoursLabel(
-                                  (apiCourseData.stats.totalDuration || 0) || apiSectionsDuration
-                                )}
-                              </span>
-                            </div>
-                            {apiCourseData.stats.totalResources > 0 && (
-                              <div className="flex items-center gap-3 text-sm text-default-700">
-                                <DownloadIcon className="size-5 text-default-600 shrink-0" />
-                                <span>
-                                  {apiCourseData.stats.totalResources} downloadable resource
-                                  {apiCourseData.stats.totalResources !== 1 ? "s" : ""}
-                                </span>
-                              </div>
-                            )}
-                          </>
-                        )}
-                        {isPreview && (
-                          <>
-                            <div className="flex items-center gap-3 text-sm text-default-700">
-                              <VideoIcon className="size-5 text-default-600 shrink-0" />
-                              <span>
-                                {formatHoursLabel(totalDuration || 0)}
-                              </span>
-                            </div>
-                            {totalResources > 0 && (
-                              <div className="flex items-center gap-3 text-sm text-default-700">
-                                <DownloadIcon className="size-5 text-default-600 shrink-0" />
-                                <span>
-                                  {totalResources} downloadable resource
-                                  {totalResources !== 1 ? "s" : ""}
-                                </span>
-                              </div>
-                            )}
-                          </>
-                        )}
-                        <div className="flex items-center gap-3 text-sm text-default-700">
-                          <InfinityIcon className="size-5 text-default-600 shrink-0" />
-                          <span>Full lifetime access</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-default-700">
-                          <AwardIcon className="size-5 text-default-600 shrink-0" />
-                          <span>Certificate of completion</span>
-                        </div>
-                      </div>
-                    </div>
 
                     <Separator />
 
@@ -1569,7 +1609,7 @@ export function CourseDetail({
         title={courseData.title}
         subtitle="Course Preview"
         dialogTitle={`Course Preview: ${courseData.title}`}
-        className="w-[95vw] md:w-[37.5rem]"
+        className="w-[95vw] md:w-[50.5rem]"
         bottomInfo={
           <div className="flex items-center gap-4">
             {courseData.duration && (
@@ -1606,7 +1646,8 @@ interface LecturePreviewDialogProps {
   lecture: {
     lectureId: string;
     title: string;
-    videoId: number;
+    videoId?: number;
+    videoUrl?: string;
   };
   courseTitle: string;
   onClose: () => void;
@@ -1622,14 +1663,20 @@ function LecturePreviewDialog({
   onClose,
   useGetAssetById,
 }: LecturePreviewDialogProps) {
+  // Only fetch asset if we don't have the video URL already
+  const shouldFetchAsset = !lecture.videoUrl && lecture.videoId;
   const { data: videoAsset, isLoading: videoAssetLoading } = useGetAssetById(
-    lecture.videoId
+    shouldFetchAsset ? (lecture.videoId ?? 0) : 0
   );
 
   const videoUrl = React.useMemo(() => {
+    // Priority: Use provided videoUrl > fetch from asset API
+    if (lecture.videoUrl) return lecture.videoUrl;
     if (!videoAsset) return null;
     return videoAsset.presigned_url || videoAsset.file_url || null;
-  }, [videoAsset]);
+  }, [lecture.videoUrl, videoAsset]);
+
+  const isLoading = shouldFetchAsset ? videoAssetLoading : false;
 
   return (
     <VideoPreviewModal
@@ -1638,11 +1685,11 @@ function LecturePreviewDialog({
         if (!open) onClose();
       }}
       videoUrl={videoUrl}
-      isLoading={videoAssetLoading}
+      isLoading={isLoading}
       title={lecture.title}
       subtitle={courseTitle}
       dialogTitle={`Lecture Preview: ${lecture.title} - ${courseTitle}`}
-      className="w-[95vw] md:w-[37.5rem]"
+      className="w-[95vw] md:w-[50.5rem]"
       bottomInfo={<span className="text-white/50 text-xs">Lecture Preview</span>}
     />
   );
@@ -1687,27 +1734,32 @@ export function CourseMetadataSkeleton() {
 // Instructor Skeleton Component
 function InstructorSkeleton() {
   return (
-    <div className="flex flex-col md:flex-row gap-6 items-start">
-      <Skeleton className="size-20 rounded-full shrink-0" />
-      <div className="flex-1 space-y-3">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2 flex-1">
-            <Skeleton className="h-7 w-48" />
-            <Skeleton className="h-5 w-32" />
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row gap-6 items-start">
+        <Skeleton className="size-24 rounded-full shrink-0" />
+        <div className="flex-1 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-5 w-32" />
+            </div>
+            <Skeleton className="h-9 w-28" />
           </div>
-          <Skeleton className="h-9 w-28" />
-        </div>
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-1" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-1" />
-          <Skeleton className="h-4 w-20" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
+          
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Skeleton className="h-20 rounded-lg" />
+            <Skeleton className="h-20 rounded-lg" />
+            <Skeleton className="h-20 rounded-lg" />
+            <Skeleton className="h-20 rounded-lg" />
+          </div>
+          
+          {/* Bio Skeleton */}
+          <div className="space-y-2 pt-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
         </div>
       </div>
     </div>

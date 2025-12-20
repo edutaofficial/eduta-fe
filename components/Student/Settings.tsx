@@ -446,13 +446,9 @@ export function StudentSettings() {
                     currentAssetId={profilePictureId}
                     fallbackText={getInitials()}
                     onAssetIdChange={setProfilePictureId}
-                    onImageUrlChange={async (url) => {
-                      // Update local state immediately
+                    onImageUrlChange={(url) => {
+                      // Update local state only - auth context will be updated on form submission
                       setProfilePictureUrl(url);
-                      // Update auth context immediately so headers update
-                      if (url) {
-                        await updateProfilePictureUrl(url);
-                      }
                     }}
                     size="lg"
                   />

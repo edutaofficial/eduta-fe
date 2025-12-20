@@ -90,7 +90,7 @@ const instructorStep2Schema = z.object({
     .string()
     .min(1, "Bio is required")
     .min(500, "Bio must be at least 500 characters")
-    .max(1000, "Bio must not exceed 1000 characters"),
+    .max(4000, "Bio must not exceed 4000 characters"),
 });
 
 // Full instructor schema for final validation
@@ -99,7 +99,7 @@ const instructorSignupSchema = instructorStep1Schema.safeExtend({
     .string()
     .min(1, "Bio is required")
     .min(500, "Bio must be at least 500 characters")
-    .max(1000, "Bio must not exceed 1000 characters"),
+    .max(4000, "Bio must not exceed 4000 characters"),
 });
 
 type StudentSignupFormValues = z.infer<typeof studentSignupSchema>;
@@ -953,11 +953,11 @@ export default function Signup() {
                       Bio <span className="text-error-600">*</span>
                     </Label>
                     <span className={`text-sm ${
-                      instructorStep2Formik.values.bio.length < 500 || instructorStep2Formik.values.bio.length > 1000
+                      instructorStep2Formik.values.bio.length < 500 || instructorStep2Formik.values.bio.length > 4000
                         ? "text-error-600"
                         : "text-default-600"
                     }`}>
-                      {instructorStep2Formik.values.bio.length} / 1000 characters
+                      {instructorStep2Formik.values.bio.length} / 4000 characters
                     </span>
                   </div>
                   <div className="relative">
@@ -974,9 +974,9 @@ export default function Signup() {
                           ? "border-error-500"
                           : ""
                       }`}
-                      placeholder="Tell us about your experience, expertise, and what makes you a great instructor. This bio will be displayed on your instructor profile. (500-1000 characters)"
+                      placeholder="Tell us about your experience, expertise, and what makes you a great instructor. This bio will be displayed on your instructor profile. (500-4000 characters)"
                       disabled={signupInstructorMutation.isPending}
-                      maxLength={1000}
+                      maxLength={4000}
                     />
                   </div>
                   {instructorStep2Formik.touched.bio &&
@@ -1012,7 +1012,7 @@ export default function Signup() {
                     disabled={
                       signupInstructorMutation.isPending ||
                       instructorStep2Formik.values.bio.length < 500 ||
-                      instructorStep2Formik.values.bio.length > 1000
+                      instructorStep2Formik.values.bio.length > 4000
                     }
                     className="flex-1 bg-primary-600 hover:bg-primary-700 text-white shadow-md hover:shadow-lg transition-all"
                     size="lg"
