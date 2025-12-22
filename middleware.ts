@@ -164,10 +164,22 @@ export async function middleware(request: NextRequest) {
   // ---------------------------------------------------------------------------
   // STEP 1: Extract and verify user authentication
   // ---------------------------------------------------------------------------
-  const token = await getToken({ 
-    req: request, 
-    secret: process.env.NEXTAUTH_SECRET 
+  
+  // Try multiple approaches to get the token
+  const middlewareSecret = process.env.NEXTAUTH_SECRET || "dev-secret-for-local-development-only";
+  
+  // Approach 1: Standard getToken
+  let token = await getToken({ 
+    req: request,
+    secret: middlewareSecret
   });
+  
+  // Approach 2: If that fails, try without explicit secret (auto-detect)
+  if (!token) {
+    token = await getToken({ 
+      req: request
+    });
+  }
 
   const user: User | null = token
     ? {

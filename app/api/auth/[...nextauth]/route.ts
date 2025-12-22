@@ -199,6 +199,7 @@ async function handleOAuthUser(
 }
 
 const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET || "dev-secret-for-local-development-only",
   session: { 
     strategy: "jwt",
     // Match backend token expiry (24 hours)

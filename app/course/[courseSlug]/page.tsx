@@ -53,7 +53,7 @@ export async function generateMetadata({
 
     return {
       title: course.title,
-      description: course.shortDescription || course.fullDescription.substring(0, 160),
+      description: course.shortDescription || "Learn from industry experts and upgrade your potencies",
       keywords: [
         course.title,
         course.category.name,

@@ -222,13 +222,21 @@ export default function CategoryPage({ params }: CategoryPageProps) {
                   rating={parseFloat(course.stats.avgRating) || 0}
                   ratingCount={course.stats.totalReviews}
                   enrollments={course.stats.totalStudents}
-                  impressions={0}
+                  totalLectures={course.stats.totalLectures}
+                  totalDuration={course.stats.totalDurationFormatted}
+                  learningLevel={course.learningLevel}
                   featured={false}
                   price={
                     course.pricing && course.pricing.amount
                       ? parseFloat(course.pricing.amount)
                       : 0
                   }
+                  originalPrice={
+                    course.pricing && course.pricing.originalAmount
+                      ? parseFloat(course.pricing.originalAmount)
+                      : undefined
+                  }
+                  discountPercentage={course.pricing?.discountPercentage || 0}
                 />
               ))}
             </div>

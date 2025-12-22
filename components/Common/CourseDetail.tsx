@@ -37,6 +37,8 @@ import {
   UsersIcon,
   MessageSquareIcon,
   GraduationCapIcon,
+  UserIcon,
+  Globe,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -660,24 +662,31 @@ export function CourseDetail({
           )}
 
           {/* Breadcrumb - Hide in preview mode */}
-          {!isPreview && (
+          {!isPreview && apiCourseData && (
             <div className="relative z-10 my-4 max-w-container mx-auto">
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem>
-                    <span className="text-default-900 font-semibold">
-                      {courseData.category || "Category"}
-                    </span>
+                    {apiCourseData.category.parent?.slug ? (
+                      <Link
+                        href={`/category/${apiCourseData.category.parent.slug}`}
+                        className="text-default-900 font-semibold hover:text-primary-600 hover:underline transition-colors"
+                      >
+                        {apiCourseData.category.parent.name || apiCourseData.category.parentName || "Category"}
+                      </Link>
+                    ) : (
+                      <span className="text-default-900 font-semibold">
+                        {apiCourseData.category.parentName || apiCourseData.category.name || "Category"}
+                      </span>
+                    )}
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
                     <Link
-                      href={`/topics?subcategory=${encodeURIComponent(
-                        courseData.subCategory || courseData.category || "Category"
-                      )}`}
-                      className="text-default-600 hover:text-primary-600 transition-colors"
+                      href={`/category/${apiCourseData.category.slug}`}
+                      className="text-default-600 hover:text-primary-600 hover:underline transition-colors"
                     >
-                      {courseData.subCategory || courseData.category || "Category"}
+                      {apiCourseData.category.name || "Category"}
                     </Link>
                   </BreadcrumbItem>
                 </BreadcrumbList>
@@ -749,7 +758,7 @@ export function CourseDetail({
                   <div className="flex items-center gap-3 text-sm text-default-600">
                     <span>
                       {courseData.enrollments
-                        ? `${courseData.enrollments.toLocaleString()} students`
+                        ? `${courseData.enrollments.toLocaleString()} ${courseData.enrollments === 1 ? "student" : "students"}`
                         : "0 students"}
                     </span>
                     {totalLectures > 0 && (
@@ -768,7 +777,7 @@ export function CourseDetail({
               {courseData.requirements && courseData.requirements.length > 0 && (
                 <div className="bg-default-100 rounded-md p-6 space-y-4">
                   <h2 className="text-xl font-semibold text-default-900">
-                    Requirements
+                    Requirements?
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {courseData.requirements.map((requirement, index) => (
@@ -785,7 +794,7 @@ export function CourseDetail({
               {courseData.learningPoints.length > 0 && (
                 <div className="bg-default-100 rounded-md p-6 space-y-4">
                   <h2 className="text-xl font-semibold text-default-900">
-                    What you will learn
+                    What you will learn?
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {courseData.learningPoints.map((point, index) => (
@@ -798,10 +807,42 @@ export function CourseDetail({
                 </div>
               )}
 
+              {/* Created By and Language Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Created by Instructor */}
+                {courseData.instructor && (
+                  <div className="flex items-center gap-3 bg-default-50 p-4 rounded-lg border border-default-200">
+                    <div className="size-10 bg-primary-100 rounded-full flex items-center justify-center shrink-0">
+                      <UserIcon className="size-5 text-primary-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-default-600 mb-0.5">Created by</p>
+                      <Link
+                        href={`/profile/instructor/${courseData.instructor.id}`}
+                        className="text-base font-semibold text-default-900 hover:text-primary-600 hover:underline transition-colors block truncate"
+                      >
+                        {courseData.instructor.name}
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                {/* Language */}
+                <div className="flex items-center gap-3 bg-default-50 p-4 rounded-lg border border-default-200">
+                  <div className="size-10 bg-primary-100 rounded-full flex items-center justify-center shrink-0">
+                    <Globe className="size-5 text-primary-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-default-600 mb-0.5">Language</p>
+                    <p className="text-base font-semibold text-default-900">English</p>
+                  </div>
+                </div>
+              </div>
+
               {/* This course includes */}
               <div className="space-y-4">
                 <h2 className="text-2xl font-semibold text-default-900">
-                  This course includes
+                  This course includes?
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {!isPreview && apiCourseData?.stats && (
@@ -1012,7 +1053,7 @@ export function CourseDetail({
               {courseData.whoThisCourseIsFor && courseData.whoThisCourseIsFor.length > 0 && (
                 <div className="space-y-4">
                   <h2 className="text-2xl font-semibold text-default-900">
-                    Who This Course Is For
+                    Who This Course Is For?
                   </h2>
                   <ul className="space-y-3">
                     {courseData.whoThisCourseIsFor.map((item, index) => (

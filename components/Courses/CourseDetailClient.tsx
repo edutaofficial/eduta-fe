@@ -261,11 +261,20 @@ export function CourseDetailClient({ courseSlug }: { courseSlug: string }) {
 
       {/* Welcome Dialog */}
       <AlertDialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Welcome to the Course!</AlertDialogTitle>
             <AlertDialogDescription>{welcomeMessage}</AlertDialogDescription>
           </AlertDialogHeader>
+          
+          {/* Welcome Message from Course */}
+          {course?.welcomeMessage && (
+            <div 
+              className="max-h-96 overflow-y-auto prose prose-sm max-w-none p-4 bg-default-50 rounded-lg border border-default-200"
+              dangerouslySetInnerHTML={{ __html: course.welcomeMessage }}
+            />
+          )}
+          
           <AlertDialogFooter>
             <AlertDialogAction
               onClick={() => {
