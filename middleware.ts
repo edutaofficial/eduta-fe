@@ -136,15 +136,19 @@ function requiresInstructorRole(pathname: string): boolean {
 
 /**
  * Get the appropriate redirect URL for an authenticated user
+ * Preserves current environment (localhost or production)
  */
 function getRedirectUrl(user: User, request: NextRequest): URL {
+  // Use request.url to preserve the current host (localhost or production)
   return new URL(ROLE_DASHBOARDS[user.role] || "/login", request.url);
 }
 
 /**
  * Get login URL with return redirect parameter
+ * Preserves current environment (localhost or production)
  */
 function getLoginUrl(pathname: string, request: NextRequest): URL {
+  // Use request.url to preserve the current host (localhost or production)
   const loginUrl = new URL("/login", request.url);
   loginUrl.searchParams.set("redirect", pathname);
   return loginUrl;

@@ -71,38 +71,64 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>([]);
   
   // Get the category IDs from slugs for sidebar selection
-  // Supports multiple category slugs
+  // Supports multiple category slugs with smart parent/subcategory handling
   const categoryIdsFromSlugs = React.useMemo(() => {
     if (!slugs || slugs.length === 0 || categories.length === 0) {
       return [];
     }
 
-    const categoryIds: string[] = [];
+    // Step 1: Separate parent slugs from subcategory slugs
+    const parentSlugs: string[] = [];
+    const subcategorySlugs: string[] = [];
 
-    // Process each slug
     slugs.forEach((slug) => {
-      // First check if it's a parent category
-      const parentCategory = categories.find((c) => c.slug === slug);
-      if (parentCategory) {
-        // If category has subcategories, select all of them
-        if (parentCategory.subcategories.length > 0) {
-          categoryIds.push(...parentCategory.subcategories.map((sub) => sub.categoryId));
-        } else {
-          // Otherwise select the category itself
-          categoryIds.push(parentCategory.categoryId);
-        }
+      // Check if it's a parent category
+      const isParent = categories.some((c) => c.slug === slug);
+      if (isParent) {
+        parentSlugs.push(slug);
         return;
       }
 
-      // Then check subcategories
-      for (const parent of categories) {
-        const subcategory = parent.subcategories.find((sub) => sub.slug === slug);
-        if (subcategory) {
-          categoryIds.push(subcategory.categoryId);
-          return;
-        }
+      // Check if it's a subcategory
+      const isSubcategory = categories.some((parent) =>
+        parent.subcategories.some((sub) => sub.slug === slug)
+      );
+      if (isSubcategory) {
+        subcategorySlugs.push(slug);
       }
     });
+
+    // Step 2: Determine which slugs to process
+    // If there are ANY subcategory slugs, use ONLY subcategories (ignore parents)
+    // If there are ONLY parent slugs, expand them to all their subcategories
+    const categoryIds: string[] = [];
+
+    if (subcategorySlugs.length > 0) {
+      // Specific subcategories selected - use ONLY those, ignore parent slugs
+      subcategorySlugs.forEach((slug) => {
+        for (const parent of categories) {
+          const subcategory = parent.subcategories.find((sub) => sub.slug === slug);
+          if (subcategory) {
+            categoryIds.push(subcategory.categoryId);
+            break;
+          }
+        }
+      });
+    } else {
+      // Only parent categories selected - expand to all subcategories
+      parentSlugs.forEach((slug) => {
+        const parentCategory = categories.find((c) => c.slug === slug);
+        if (parentCategory) {
+          if (parentCategory.subcategories.length > 0) {
+            // Parent has subcategories - select all of them
+            categoryIds.push(...parentCategory.subcategories.map((sub) => sub.categoryId));
+          } else {
+            // Parent has no subcategories - select the parent itself
+            categoryIds.push(parentCategory.categoryId);
+          }
+        }
+      });
+    }
 
     return categoryIds;
   }, [slugs, categories]);
@@ -529,3 +555,4 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
     </div>
   );
 }
+

@@ -199,7 +199,11 @@ async function handleOAuthUser(
 }
 
 const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" },
+  session: { 
+    strategy: "jwt",
+    // Match backend token expiry (24 hours)
+    maxAge: 24 * 60 * 60, // 24 hours in seconds
+  },
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -402,7 +406,7 @@ const authOptions: NextAuthOptions = {
         tokenSub: token.sub,
       });
 
-      // Initial sign in - store tokens from user object
+      // Initial sign in - store tokens from user object and set expiry time
       if (user) {
         const userRole = (user as unknown as { role?: string }).role;
         const userToken = (user as unknown as { token?: string }).token;
@@ -419,18 +423,86 @@ const authOptions: NextAuthOptions = {
         (token as unknown as Record<string, unknown>).role = userRole;
         (token as unknown as Record<string, unknown>).accessToken = userToken;
         (token as unknown as Record<string, unknown>).refreshToken = userRefreshToken;
+        // Set token expiry time - 24 hours from now (in seconds)
+        (token as unknown as Record<string, unknown>).accessTokenExpires = Math.floor(Date.now() / 1000) + (24 * 60 * 60);
+        
+        return token;
       }
       
-      // Handle token refresh - update tokens when explicitly triggered
+      // Handle manual token refresh - update tokens when explicitly triggered
       if (trigger === "update" && session) {
         // eslint-disable-next-line no-console
         console.log("[NextAuth] Updating JWT token from session");
         const sessionData = session as { accessToken?: string; refreshToken?: string };
         if (sessionData.accessToken) {
           (token as unknown as Record<string, unknown>).accessToken = sessionData.accessToken;
+          // Reset expiry time when manually updating token
+          (token as unknown as Record<string, unknown>).accessTokenExpires = Math.floor(Date.now() / 1000) + (24 * 60 * 60);
         }
         if (sessionData.refreshToken) {
           (token as unknown as Record<string, unknown>).refreshToken = sessionData.refreshToken;
+        }
+        
+        return token;
+      }
+      
+      // Check if access token is expired or about to expire (within 5 minutes)
+      const tokenData = token as unknown as {
+        accessToken?: string;
+        refreshToken?: string;
+        accessTokenExpires?: number;
+      };
+      
+      const now = Math.floor(Date.now() / 1000);
+      const timeUntilExpiry = (tokenData.accessTokenExpires || 0) - now;
+      const shouldRefresh = timeUntilExpiry < 300; // Refresh if less than 5 minutes left
+      
+      if (shouldRefresh && tokenData.refreshToken) {
+        // eslint-disable-next-line no-console
+        console.log("[NextAuth] Token expiring soon, attempting refresh", {
+          timeUntilExpiry,
+          expiresAt: new Date((tokenData.accessTokenExpires || 0) * 1000).toISOString(),
+        });
+        
+        try {
+          // Call backend refresh endpoint
+          const response = await fetch(`${process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/refresh`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              token: tokenData.accessToken,
+              refresh_token: tokenData.refreshToken,
+            }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            
+            if (data.token && data.refresh_token) {
+              // eslint-disable-next-line no-console
+              console.log("[NextAuth] Token refresh successful");
+              
+              // Update token with new access token and refresh token
+              (token as unknown as Record<string, unknown>).accessToken = data.token;
+              (token as unknown as Record<string, unknown>).refreshToken = data.refresh_token;
+              // Reset expiry time - 24 hours from now
+              (token as unknown as Record<string, unknown>).accessTokenExpires = Math.floor(Date.now() / 1000) + (24 * 60 * 60);
+              
+              return token;
+            }
+          }
+          
+          // eslint-disable-next-line no-console
+          console.error("[NextAuth] Token refresh failed", {
+            status: response.status,
+            statusText: response.statusText,
+          });
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error("[NextAuth] Token refresh error:", error);
         }
       }
       
@@ -447,6 +519,8 @@ const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login",
   },
+  // Ensure callbacks preserve the current URL (localhost or production)
+  useSecureCookies: process.env.NODE_ENV === "production",
   logger: {
     error() {
       // suppress noisy fetch errors

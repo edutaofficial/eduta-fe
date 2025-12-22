@@ -332,7 +332,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       localStorage.removeItem(PROFILE_PICTURE_STORAGE_KEY);
     }
-    nextAuthSignOut({ redirect: true, callbackUrl: "/login" });
+    // Use relative URL to preserve current environment (localhost/production)
+    nextAuthSignOut({ 
+      redirect: true, 
+      callbackUrl: `${window.location.origin}/login` 
+    });
   };
 
   const updateProfilePictureUrl = async (url: string) => {
