@@ -65,6 +65,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
       key={section.id}
       value={`section-${section.id}`}
       className="mb-4"
+      data-section-id={section.id}
     >
       <CourseAccordionTrigger
         variant="section"

@@ -65,6 +65,9 @@ const CurriculumInner = (
   const [openSections, setOpenSections] = React.useState<string[]>([]);
   const [openLectures, setOpenLectures] = React.useState<string[]>([]);
 
+  // Track previous sections count to detect new additions
+  const prevSectionsCountRef = React.useRef(0);
+
   // Initialize accordion state - only run once on mount
   const isInitializedRef = React.useRef(false);
   React.useEffect(() => {
@@ -80,7 +83,48 @@ const CurriculumInner = (
       if (firstLectureKey) {
         setOpenLectures([firstLectureKey]);
       }
+      prevSectionsCountRef.current = sections.length;
     }
+  }, [sections]);
+
+  // Auto-open newly added sections
+  React.useEffect(() => {
+    // Only run after initialization
+    if (!isInitializedRef.current) return;
+
+    // Check if a new section was added
+    if (sections.length > prevSectionsCountRef.current) {
+      // Get the newly added section (last one)
+      const newSection = sections[sections.length - 1];
+      const newSectionKey = `section-${newSection.id}`;
+      
+      // Open the new section
+      setOpenSections((prev) => {
+        // Avoid duplicates
+        if (prev.includes(newSectionKey)) return prev;
+        return [...prev, newSectionKey];
+      });
+
+      // Also open the first lecture in the new section if it exists
+      if (newSection.lectures && newSection.lectures.length > 0) {
+        const firstLectureKey = `lecture-${newSection.lectures[0].id}`;
+        setOpenLectures((prev) => {
+          if (prev.includes(firstLectureKey)) return prev;
+          return [...prev, firstLectureKey];
+        });
+      }
+
+      // Scroll to the newly added section after a short delay (to allow accordion animation)
+      setTimeout(() => {
+        const sectionElement = document.querySelector(`[data-section-id="${newSection.id}"]`);
+        if (sectionElement) {
+          sectionElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }, 300);
+    }
+
+    // Update the count for next comparison
+    prevSectionsCountRef.current = sections.length;
   }, [sections]);
 
   // Enhanced validation that expands accordions
@@ -180,9 +224,10 @@ const CurriculumInner = (
         type="button"
         onClick={addSection}
         variant="outline"
-        className="w-full gap-2"
+        size="default"
+        className="w-full gap-2 h-11"
       >
-        <PlusIcon className="size-4" />
+        <PlusIcon className="size-5" />
         Add Module
       </Button>
 
