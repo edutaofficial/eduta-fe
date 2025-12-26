@@ -80,43 +80,44 @@ export function LearningToolsDrawer({
   return (
     <div className="pointer-events-none fixed inset-0 z-40">
       <div
-        className="pointer-events-auto absolute overflow-auto rounded-2xl border border-default-200 bg-background shadow-2xl"
+        className="pointer-events-auto absolute overflow-auto rounded-lg sm:rounded-2xl border border-default-200 bg-background shadow-2xl"
         style={{
-          width: size.width,
-          height: size.height,
-          minWidth: 260,
-          minHeight: 320,
-          top: position.y,
-          left: position.x,
+          width: Math.min(size.width, window.innerWidth - 32),
+          height: Math.min(size.height, window.innerHeight - 100),
+          minWidth: 240,
+          minHeight: 280,
+          maxWidth: 600,
+          top: Math.max(16, Math.min(position.y, window.innerHeight - size.height - 16)),
+          left: Math.max(16, Math.min(position.x, window.innerWidth - size.width - 16)),
         }}
       >
         {/* Draggable Header */}
         <div
-          className="flex items-center justify-between gap-2 border-b border-default-200 px-4 py-3 cursor-move select-none"
+          className="flex items-center justify-between gap-2 border-b border-default-200 px-3 sm:px-4 py-2 sm:py-3 cursor-move select-none touch-none"
           onMouseDown={onDragStart}
           role="button"
           tabIndex={0}
           aria-label="Drag learning tools panel"
           onKeyDown={(e) => handleKeyActivate(e, onDragStart)}
         >
-          <div>
-            <p className="text-sm font-semibold text-default-900">{label}</p>
-            <p className="text-xs text-default-500">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm font-semibold text-default-900 truncate">{label}</p>
+            <p className="hidden sm:block text-xs text-default-500 truncate">
               Description, Q&A, notes, and resources
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 place-items-center rounded-full border text-default-600 transition hover:text-default-900"
+            className="grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-full border text-default-600 transition hover:text-default-900 shrink-0"
             aria-label="Close"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="max-h-[calc(100vh-200px)] overflow-auto px-4 pb-4 pt-3">
+        <div className="max-h-[calc(100vh-160px)] sm:max-h-[calc(100vh-200px)] overflow-auto px-3 sm:px-4 pb-3 sm:pb-4 pt-2 sm:pt-3">
           <Tabs
             value={activeTab || undefined}
             onValueChange={(val) => onTabChange(val as ToolTab)}
@@ -152,9 +153,9 @@ export function LearningToolsDrawer({
           </Tabs>
         </div>
 
-        {/* Resize Handle */}
+        {/* Resize Handle - Hidden on mobile */}
         <div
-          className="absolute bottom-1 right-1 h-4 w-4 cursor-se-resize rounded-md bg-default-200"
+          className="hidden sm:block absolute bottom-1 right-1 h-4 w-4 cursor-se-resize rounded-md bg-default-200 touch-none"
           onMouseDown={onResizeStart}
           role="button"
           tabIndex={0}

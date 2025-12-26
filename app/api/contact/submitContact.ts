@@ -26,7 +26,7 @@ export interface ContactResponse {
 export async function submitContact(
   formData: ContactFormData
 ): Promise<ContactResponse> {
-  const url = `${getBaseUrl()}/api/v1/contact`;
+  const url = `${getBaseUrl()}api/v1/contact`;
 
   const response = await fetch(url, {
     method: "POST",

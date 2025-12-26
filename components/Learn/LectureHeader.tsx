@@ -48,38 +48,39 @@ export function LectureHeader({
   }
 
   return (
-    <header className="bg-white border-b border-default-200 px-6 py-4 sticky top-0 z-40 shadow-sm">
+    <header className="bg-white border-b border-default-200 px-3 sm:px-6 py-3 sm:py-4 sticky top-0 z-40 shadow-sm">
       <div className="flex items-center justify-between max-w-[100rem] mx-auto">
         {/* Left: Back Button + Lecture Name */}
-        <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 mr-2 sm:mr-4">
           {/* Back Button */}
           <Button
             onClick={onBack}
             variant="ghost"
             size="icon"
-            className="flex-shrink-0"
+            className="flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10"
             title="Back to courses"
           >
-            <ArrowLeft className="size-5" />
+            <ArrowLeft className="size-4 sm:size-5" />
           </Button>
 
           {/* Lecture Name */}
-          <h1 className="text-xl font-semibold text-default-900 truncate">
+          <h1 className="text-sm sm:text-lg md:text-xl font-semibold text-default-900 truncate">
             {lectureName}
           </h1>
         </div>
 
         {/* Right: Action Buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Previous Button */}
           <Button
             onClick={onPrevious}
             disabled={!canGoPrevious}
             variant="outline"
-            className="flex items-center gap-2"
+            size="sm"
+            className="flex items-center gap-1 sm:gap-2 h-9 sm:h-10 px-2 sm:px-4"
           >
-            <ChevronLeftIcon className="size-4" />
-            Previous
+            <ChevronLeftIcon className="size-3 sm:size-4" />
+            <span className="hidden xs:inline">Previous</span>
           </Button>
 
           {/* Complete/Next Button */}
@@ -87,22 +88,25 @@ export function LectureHeader({
             onClick={isCompleted ? onNext : onComplete}
             disabled={isCompletingLecture || (isCompleted && !hasNextLecture)}
             variant={isCompleted ? "outline" : "default"}
-            className="flex items-center gap-2"
+            size="sm"
+            className="flex items-center gap-1 sm:gap-2 h-9 sm:h-10 px-2 sm:px-4"
           >
             {isCompletingLecture ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                Completing...
+                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-white border-t-transparent" />
+                <span className="hidden xs:inline">Completing...</span>
               </>
             ) : isCompleted ? (
               <>
-                Next
-                {hasNextLecture && <ChevronRightIcon className="size-4" />}
+                <span className="hidden xs:inline">Next</span>
+                <span className="xs:hidden">Next</span>
+                {hasNextLecture && <ChevronRightIcon className="size-3 sm:size-4" />}
               </>
             ) : (
               <>
-                Complete & Next
-                {hasNextLecture && <ChevronRightIcon className="size-4" />}
+                <span className="hidden sm:inline">Complete & Next</span>
+                <span className="sm:hidden">Complete</span>
+                {hasNextLecture && <ChevronRightIcon className="size-3 sm:size-4" />}
               </>
             )}
           </Button>
