@@ -11,7 +11,7 @@ interface LectureSidebarProps {
   sections: Section[];
   currentLectureId: string;
   currentVideoPosition: number;
-  onLectureClick: (lectureId: string) => void;
+  onLectureClick: (lectureId: string, lectureTitle: string) => void;
   overallProgress: number;
   completedLectures: number;
   totalLectures: number;
@@ -45,13 +45,13 @@ export function LectureSidebar({
 }: LectureSidebarProps) {
   if (loading) {
     return (
-      <aside className="w-96 bg-white border-l border-default-200 flex flex-col h-full">
-        <div className="p-6 border-b border-default-200 shrink-0">
+      <aside className="hidden lg:flex w-80 xl:w-96 bg-white border-l border-default-200 flex-col h-full">
+        <div className="p-4 xl:p-6 border-b border-default-200 shrink-0">
           <Skeleton className="h-6 w-32 mb-4" />
           <Skeleton className="h-2 w-full mb-2" />
           <Skeleton className="h-4 w-24" />
         </div>
-        <div className="flex-1 p-4 space-y-4 overflow-auto">
+        <div className="flex-1 p-3 xl:p-4 space-y-4 overflow-auto">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="space-y-2">
               <Skeleton className="h-6 w-32" />
@@ -66,26 +66,26 @@ export function LectureSidebar({
   }
 
   return (
-    <aside className="w-96 bg-white border-l border-default-200 flex flex-col h-full">
+    <aside className="hidden lg:flex w-80 xl:w-96 bg-white border-l border-default-200 flex-col h-full">
       {/* Progress Header - Fixed */}
-      <div className="p-6 border-b border-default-200 shrink-0">
-        <h2 className="text-lg font-semibold text-default-900 mb-4">
+      <div className="p-4 xl:p-6 border-b border-default-200 shrink-0">
+        <h2 className="text-base xl:text-lg font-semibold text-default-900 mb-3 xl:mb-4">
           Course Progress
         </h2>
         <Progress value={overallProgress} className="mb-2 h-2" />
-        <p className="text-sm text-default-600">
+        <p className="text-xs xl:text-sm text-default-600">
           {completedLectures} of {totalLectures} lectures completed
         </p>
       </div>
 
       {/* Sections & Lectures - Scrollable */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-400">
-        <div className="p-4 space-y-6">
+        <div className="p-3 xl:p-4 space-y-4 xl:space-y-6">
           {sections.map((section, sectionIndex) => (
             <div key={section.sectionId} className="space-y-2">
               {/* Section Header */}
               <div className="sticky top-0 bg-white z-10 pb-2">
-                <h3 className="font-semibold text-default-900 text-sm">
+                <h3 className="font-semibold text-default-900 text-xs xl:text-sm">
                   Section {sectionIndex + 1}: {section.title}
                 </h3>
                 <p className="text-xs text-default-600 mt-1">
@@ -103,7 +103,7 @@ export function LectureSidebar({
                     lectureNumber={lectureIndex + 1}
                     isActive={lecture.lectureId === currentLectureId}
                     currentVideoPosition={currentVideoPosition}
-                    onClick={() => onLectureClick(lecture.lectureId)}
+                    onClick={() => onLectureClick(lecture.lectureId, lecture.title)}
                   />
                 ))}
               </div>
@@ -141,7 +141,7 @@ function LectureItem({
     <button
       onClick={onClick}
       className={cn(
-        "w-full px-3 py-2.5 flex items-center gap-3 rounded-md transition-all text-left group",
+        "w-full px-2 xl:px-3 py-2 xl:py-2.5 flex items-center gap-2 xl:gap-3 rounded-md transition-all text-left group",
         isActive
           ? "bg-primary-600 text-white shadow-md"
           : "hover:bg-default-100 text-default-900"
@@ -152,16 +152,16 @@ function LectureItem({
         {lecture.isCompleted ? (
           <CheckCircle2Icon
             className={cn(
-              "size-5",
+              "size-4 xl:size-5",
               isActive ? "text-white" : "text-success-600"
             )}
           />
         ) : isActive ? (
-          <PlayCircleIcon className="size-5 text-white" />
+          <PlayCircleIcon className="size-4 xl:size-5 text-white" />
         ) : (
           <div
             className={cn(
-              "size-5 rounded-full border-2 flex items-center justify-center text-xs font-medium",
+              "size-4 xl:size-5 rounded-full border-2 flex items-center justify-center text-xs font-medium",
               "border-default-300 text-default-600"
             )}
           >
@@ -174,7 +174,7 @@ function LectureItem({
       <div className="flex-1 min-w-0">
         <h4
           className={cn(
-            "text-sm font-medium line-clamp-2",
+            "text-xs xl:text-sm font-medium line-clamp-2",
             isActive ? "text-white" : "text-default-900"
           )}
         >

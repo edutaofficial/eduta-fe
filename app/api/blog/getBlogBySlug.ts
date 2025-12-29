@@ -2,14 +2,15 @@ import { getBaseUrl } from "@/lib/config/api";
 import type { BlogDetailResponse } from "@/types/blog";
 
 export async function getBlogBySlug(slug: string): Promise<BlogDetailResponse> {
-  const url = `${getBaseUrl()}/api/v1/blog/${slug}`;
+  const url = `${getBaseUrl()}api/v1/blog/${slug}`;
 
   const response = await fetch(url, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
     },
-    cache: "no-store",
+    cache: "force-cache",
+    next: { revalidate: 3600 }, // Revalidate every hour for ISR
   });
 
   if (!response.ok) {

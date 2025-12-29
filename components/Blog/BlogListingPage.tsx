@@ -83,6 +83,8 @@ export function BlogListingPage() {
     queryKey: ["blogs", filters],
     queryFn: () => getAllBlogs(filters),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Update URL when filters change
@@ -98,7 +100,7 @@ export function BlogListingPage() {
     router.replace(newUrl, { scroll: false });
   }, [debouncedSearchQuery, selectedTag, featuredFilter, currentPage, router]);
 
-  const posts = blogsData?.data?.posts || [];
+  const posts = React.useMemo(() => blogsData?.data?.posts || [], [blogsData?.data?.posts]);
   const pagination = blogsData?.pagination;
 
   // Extract unique tags from posts for filter

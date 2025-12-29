@@ -40,7 +40,7 @@ const PUBLIC_EXACT_ROUTES = [
   "/faqs",
   "/terms",
   "/privacy",
-  "/all-courses",
+  "/topics",
 ] as const;
 
 /**
@@ -84,7 +84,7 @@ const INSTRUCTOR_PROTECTED_ROUTES = [
  * Used for redirecting users to their appropriate dashboard
  */
 const ROLE_DASHBOARDS: Record<User["role"], string> = {
-  student: "/student/courses",
+  student: "/",
   instructor: "/instructor/courses",
   admin: "/admin",
 };
@@ -136,15 +136,19 @@ function requiresInstructorRole(pathname: string): boolean {
 
 /**
  * Get the appropriate redirect URL for an authenticated user
+ * Preserves current environment (localhost or production)
  */
 function getRedirectUrl(user: User, request: NextRequest): URL {
+  // Use request.url to preserve the current host (localhost or production)
   return new URL(ROLE_DASHBOARDS[user.role] || "/login", request.url);
 }
 
 /**
  * Get login URL with return redirect parameter
+ * Preserves current environment (localhost or production)
  */
 function getLoginUrl(pathname: string, request: NextRequest): URL {
+  // Use request.url to preserve the current host (localhost or production)
   const loginUrl = new URL("/login", request.url);
   loginUrl.searchParams.set("redirect", pathname);
   return loginUrl;
@@ -154,16 +158,79 @@ function getLoginUrl(pathname: string, request: NextRequest): URL {
 // MIDDLEWARE FUNCTION
 // ============================================================================
 
+/**
+ * Decode JWT token to check expiration (without verification)
+ */
+function decodeJWT(token: string): { exp?: number; [key: string]: unknown } | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const base64Payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const json = Buffer.from(base64Payload, "base64").toString("utf-8");
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if JWT token is expired
+ */
+function isJWTExpired(token: string): boolean {
+  const decoded = decodeJWT(token);
+  if (!decoded || typeof decoded.exp !== "number") return false;
+  const currentTime = Math.floor(Date.now() / 1000);
+  return decoded.exp <= currentTime;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ---------------------------------------------------------------------------
   // STEP 1: Extract and verify user authentication
   // ---------------------------------------------------------------------------
-  const token = await getToken({ 
-    req: request, 
-    secret: process.env.NEXTAUTH_SECRET 
+  
+  // Try multiple approaches to get the token
+  const middlewareSecret = process.env.NEXTAUTH_SECRET || "dev-secret-for-local-development-only";
+  
+  // Approach 1: Standard getToken
+  let token = await getToken({ 
+    req: request,
+    secret: middlewareSecret
   });
+  
+  // Approach 2: If that fails, try without explicit secret (auto-detect)
+  if (!token) {
+    token = await getToken({ 
+      req: request
+    });
+  }
+
+  // Check if access token is expired
+  const accessToken = (token as { accessToken?: string })?.accessToken;
+  const refreshToken = (token as { refreshToken?: string })?.refreshToken;
+  const isTokenExpired = accessToken ? isJWTExpired(accessToken) : false;
+
+  // If token is expired but refresh token exists, allow request to proceed
+  // The client-side code will handle the token refresh
+  if (isTokenExpired && refreshToken) {
+    // eslint-disable-next-line no-console
+    console.log("[Middleware] Token expired but refresh token exists, allowing request to proceed for client-side refresh");
+    // Add a custom header to signal that token needs refresh
+    const response = NextResponse.next();
+    response.headers.set("X-Token-Expired", "true");
+    
+    // For protected routes, allow the request but signal that refresh is needed
+    // The client will handle the refresh before making API calls
+    return response;
+  }
+
+  // If token is expired and no refresh token, treat as no auth
+  if (isTokenExpired && !refreshToken) {
+    // eslint-disable-next-line no-console
+    console.log("[Middleware] Token expired and no refresh token, treating as unauthenticated");
+    token = null;
+  }
 
   const user: User | null = token
     ? {
@@ -281,7 +348,7 @@ export const config = {
  * PUBLIC ROUTES (No authentication required):
  * - / (Home - exact match only)
  * - /about, /contact, /faqs, /terms, /privacy (exact matches)
- * - /all-courses (exact match)
+ * - /topics (exact match)
  * - /blog/* (all blog routes)
  * - /course/* (Course detail pages)
  * - /profile/instructor/* (Instructor public profiles)

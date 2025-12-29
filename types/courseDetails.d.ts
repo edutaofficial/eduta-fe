@@ -8,12 +8,21 @@ export interface LearningPoint {
   text: string;
 }
 
+export interface BulletPoint {
+  id: number;
+  text: string;
+}
+
 export interface CourseDetailsFormValues {
   courseTitle: string;
   selectedCategory: string;
   learningLevel: string;
-  description: string;
+  shortDescription: string;
+  fullDescription: string;
   learningPoints: LearningPoint[];
+  requirements: BulletPoint[];
+  whoThisCourseIsFor: BulletPoint[];
+  certificateDescription: string;
   promoVideoId: number | null;
   courseBannerId: number | null;
 }

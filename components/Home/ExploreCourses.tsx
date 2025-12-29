@@ -44,21 +44,41 @@ export default function ExploreCourses() {
     return categories.length > 0 ? categories[0].categoryId : "";
   }, [selectedCategory, categories]);
 
+  // Get category slugs for API call
+  const activeCategorySlug = useMemo(() => {
+    const category = categories.find((c) => c.categoryId === activeCategory);
+    return category?.slug || "";
+  }, [activeCategory, categories]);
+
+  const activeSubcategorySlug = useMemo(() => {
+    if (!activeSubcategory) return null;
+    
+    for (const category of categories) {
+      const subcategory = category.subcategories.find(
+        (sub) => sub.categoryId === activeSubcategory
+      );
+      if (subcategory) return subcategory.slug;
+    }
+    return null;
+  }, [activeSubcategory, categories]);
+
   // Use TanStack Query for courses
   const { data: coursesData, isLoading: loadingCourses } = useQuery({
-    queryKey: ["exploreCourses", activeSubcategory || activeCategory],
+    queryKey: ["exploreCourses", activeSubcategorySlug || activeCategorySlug],
     queryFn: () =>
       searchCourses({
-        categoryId: activeSubcategory || activeCategory,
+        categorySlug: activeSubcategorySlug || activeCategorySlug,
         pageSize: 12,
         sortBy: "created_at",
         order: "desc",
       }),
-    enabled: !!activeCategory,
+    enabled: !!activeCategorySlug,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
-  const courses = coursesData?.data || [];
+  const courses = coursesData?.data.courses || [];
 
   const activeCategoryData = categories.find(
     (c) => c.categoryId === activeCategory
@@ -100,6 +120,9 @@ export default function ExploreCourses() {
             <Slider
               slidesPerView="auto"
               spaceBetween={24}
+              customStyle={{
+                padding: "10px",
+              }}
               className="subcategories-slider"
               slideClassName="!w-auto"
               navigation={{
@@ -240,6 +263,7 @@ export default function ExploreCourses() {
                     clickable: true,
                     className: "hero-pagination",
                   }}
+                 
                 >
                   {courses.map((course) => (
                     <CourseCard
@@ -253,6 +277,9 @@ export default function ExploreCourses() {
                       rating={parseFloat(course.stats.avgRating) || 0}
                       ratingCount={course.stats.totalReviews}
                       enrollments={course.stats.totalStudents}
+                      totalLectures={course.stats.totalLectures}
+                      totalDuration={course.stats.totalDurationFormatted}
+                      learningLevel={course.learningLevel}
                       impressions={course.stats.viewsCount}
                       featured={false}
                       price={
@@ -288,7 +315,7 @@ export default function ExploreCourses() {
                   size="lg"
                   className="px-8 bg-transparent"
                 >
-                  <Link href={`/all-courses?category=${activeCategory}`}>
+                  <Link href={`/topics/${activeCategorySlug}/${activeCategorySlug}`}>
                     Show all {activeCategoryData?.name} Courses
                   </Link>
                 </Button>

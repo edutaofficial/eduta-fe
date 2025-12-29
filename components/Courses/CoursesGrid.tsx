@@ -96,6 +96,9 @@ export function CoursesGrid({
               rating={parseFloat(course.stats.avgRating) || 0}
               ratingCount={course.stats.totalReviews}
               enrollments={course.stats.totalStudents}
+              totalLectures={course.stats.totalLectures}
+              totalDuration={course.stats.totalDurationFormatted}
+              learningLevel={course.learningLevel}
               impressions={0}
               featured={false}
               price={

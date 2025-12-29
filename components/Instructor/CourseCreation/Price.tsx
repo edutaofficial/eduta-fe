@@ -24,25 +24,32 @@ const PriceInner = ({ onPreview }: PriceProps, ref: React.Ref<PriceHandle>) => {
   const { pricing, setPricing } = useCourseStore();
 
   // Initialize from store or defaults
+  // Priority: use priceTier from store if available, otherwise infer from price
+  const getInitialPriceTier = () => {
+    if (pricing.priceTier && pricing.priceTier !== "free") {
+      return pricing.priceTier;
+    }
+    if (pricing.isFree) return "free";
+    if (pricing.price === 0) return "free";
+    if (Math.abs(pricing.price - 9.99) < 0.01) return "basic";
+    if (Math.abs(pricing.price - 19.99) < 0.01) return "standard";
+    if (Math.abs(pricing.price - 39.99) < 0.01) return "premium";
+    return "custom";
+  };
+
   const [currency, setCurrency] = React.useState(pricing.currency || "USD");
-  const [priceTier, setPriceTier] = React.useState(
-    pricing.isFree
-      ? "free"
-      : pricing.price === 0
-        ? "free"
-        : pricing.price === 9.99
-          ? "basic"
-          : pricing.price === 19.99
-            ? "standard"
-            : pricing.price === 39.99
-              ? "premium"
-              : "custom"
-  );
+  const [priceTier, setPriceTier] = React.useState(getInitialPriceTier());
   const [customPrice, setCustomPrice] = React.useState(
-    priceTier === "custom" ? String(pricing.price) : ""
+    getInitialPriceTier() === "custom" && pricing.price > 0
+      ? String(pricing.price)
+      : ""
   );
   const [showErrors, setShowErrors] = React.useState(false);
 
+  // Track if we're updating the store to prevent circular updates
+  const isUpdatingStore = React.useRef(false);
+  const prevLocalValues = React.useRef({ currency, priceTier, customPrice });
+  
   // Sync from store when pricing changes (e.g., when navigating back)
   // Only sync if component just mounted or store values changed externally
   const isInitialMount = React.useRef(true);
@@ -52,34 +59,67 @@ const PriceInner = ({ onPreview }: PriceProps, ref: React.Ref<PriceHandle>) => {
       return; // Skip on initial mount since useState already initialized from store
     }
 
+    // Don't sync if we're the ones updating the store (prevents circular updates)
+    if (isUpdatingStore.current) {
+      return;
+    }
+
     // Only update if store values are different from current local state
     if (pricing.currency && pricing.currency !== currency) {
       setCurrency(pricing.currency);
     }
-    const newPriceTier = pricing.isFree
-      ? "free"
-      : Math.abs(pricing.price - 0) < 0.01
+    
+    // Priority: use priceTier from store if available, otherwise infer from price
+    // This prevents the circular dependency where custom -> price 0 -> free -> custom
+    const newPriceTier = pricing.priceTier && pricing.priceTier !== "free"
+      ? pricing.priceTier
+      : pricing.isFree
         ? "free"
-        : Math.abs(pricing.price - 9.99) < 0.01
-          ? "basic"
-          : Math.abs(pricing.price - 19.99) < 0.01
-            ? "standard"
-            : Math.abs(pricing.price - 39.99) < 0.01
-              ? "premium"
-              : "custom";
+        : Math.abs(pricing.price - 0) < 0.01
+          ? "free"
+          : Math.abs(pricing.price - 9.99) < 0.01
+            ? "basic"
+            : Math.abs(pricing.price - 19.99) < 0.01
+              ? "standard"
+              : Math.abs(pricing.price - 39.99) < 0.01
+                ? "premium"
+                : "custom";
+    
     if (newPriceTier !== priceTier) {
       setPriceTier(newPriceTier);
       if (newPriceTier === "custom") {
-        setCustomPrice(String(pricing.price));
+        // Only set customPrice if price is not 0 and not a standard tier
+        const isStandardTier = Math.abs(pricing.price - 9.99) < 0.01 ||
+          Math.abs(pricing.price - 19.99) < 0.01 ||
+          Math.abs(pricing.price - 39.99) < 0.01;
+        if (pricing.price > 0 && !isStandardTier) {
+          setCustomPrice(String(pricing.price));
+        } else if (!customPrice) {
+          // Keep existing customPrice if it exists, otherwise leave empty for user to fill
+          setCustomPrice("");
+        }
       } else {
         setCustomPrice("");
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pricing.currency, pricing.price, pricing.isFree]); // Only re-sync when store values change, not on every render
+  }, [pricing.currency, pricing.price, pricing.isFree, pricing.priceTier]); // Only re-sync when store values change, not on every render
 
-  // Sync to store
+  // Sync to store - only when local values actually change
   React.useEffect(() => {
+    // Check if local values actually changed
+    const localValuesChanged = 
+      prevLocalValues.current.currency !== currency ||
+      prevLocalValues.current.priceTier !== priceTier ||
+      prevLocalValues.current.customPrice !== customPrice;
+
+    if (!localValuesChanged) {
+      return;
+    }
+
+    // Update ref to track current values
+    prevLocalValues.current = { currency, priceTier, customPrice };
+
     const price =
       priceTier === "free"
         ? 0
@@ -89,14 +129,25 @@ const PriceInner = ({ onPreview }: PriceProps, ref: React.Ref<PriceHandle>) => {
             ? 19.99
             : priceTier === "premium"
               ? 39.99
-              : parseFloat(customPrice) || 0;
+              : priceTier === "custom"
+                ? parseFloat(customPrice) || 0
+                : 0;
 
+    // Mark that we're updating the store
+    isUpdatingStore.current = true;
+    
     setPricing({
       currency,
       price,
       isFree: priceTier === "free",
       discountPercent: null,
-      priceTier,
+      priceTier, // Always include priceTier so sync FROM store can use it
+    });
+
+    // Reset the flag after store update completes
+    // Use requestAnimationFrame to ensure it happens after the store update
+    requestAnimationFrame(() => {
+      isUpdatingStore.current = false;
     });
   }, [currency, priceTier, customPrice, setPricing]);
 

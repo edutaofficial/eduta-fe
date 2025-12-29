@@ -14,6 +14,13 @@ export interface CourseDetailCategory {
   categoryId: string;
   name: string;
   slug: string;
+  parentId?: string | null;
+  parent?: {
+    categoryId: string;
+    name: string;
+    slug?: string | null;
+  } | null;
+  parentName?: string | null;
 }
 
 export interface CourseDetailPricing {
@@ -32,8 +39,10 @@ export interface CourseDetailStats {
   totalLectures: number;
   totalSections: number;
   totalDuration: number;
+  totalDurationFormatted?: string;
   totalExercises: number;
   totalProjects: number;
+  totalResources: number;
   viewsCount: number;
 }
 
@@ -90,6 +99,12 @@ export interface CourseDetailSection {
   lectures: CourseDetailLecture[];
 }
 
+export interface CourseDetailFAQ {
+  faqId: string;
+  question: string;
+  answer: string;
+}
+
 export interface CourseDetail {
   courseId: string;
   title: string;
@@ -116,10 +131,13 @@ export interface CourseDetail {
   learningPoints: CourseLearningPoint[];
   requirements: CourseRequirement[];
   targetAudience: CourseTargetAudience[];
+  whoThisCourseIsFor?: string[];
+  certificateDescription?: string;
   tags: CourseTag[];
   sections: CourseDetailSection[];
   previewLectures: CoursePreviewLecture[];
   reviews: unknown[];
+  faqs: CourseDetailFAQ[];
   publishedAt: string;
   createdAt: string;
   updatedAt: string;

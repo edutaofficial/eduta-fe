@@ -61,8 +61,13 @@ export function InstructorDashboard() {
       });
     },
     enabled: !!instructorId,
-    staleTime: 1000 * 60 * 2, // 2 minutes - drafts change frequently
+    // Always refetch when arriving back after create/edit to avoid stale cache
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     gcTime: 1000 * 60 * 10, // 10 minutes cache
+
   });
 
   // ============================================================================
@@ -93,7 +98,11 @@ export function InstructorDashboard() {
       });
     },
     enabled: !!instructorId,
-    staleTime: 1000 * 60 * 5, // 5 minutes - published courses don't change as often
+    // Always refetch when returning from create/edit to show latest courses
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     gcTime: 1000 * 60 * 15, // 15 minutes cache
   });
 

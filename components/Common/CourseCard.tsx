@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { StarIcon, UsersIcon, EyeIcon, BookOpenIcon } from "lucide-react";
+import { StarIcon, UsersIcon, BookOpenIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatCompactNumber } from "@/lib/utils";
 
@@ -29,6 +29,17 @@ function getPlaceholderColor(title?: string): string {
   return colors[hash % colors.length];
 }
 
+// InfoBadge component for consistent stat badges
+function InfoBadge({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="p-0.5 px-2 border border-default-400">
+      <span className="text-xs text-default-600 font-normal">
+        {children}
+      </span>
+    </div>
+  );
+}
+
 export interface CourseCardProps {
   slug: string; // Course slug for routing - MANDATORY
   image: string | null;
@@ -37,9 +48,14 @@ export interface CourseCardProps {
   rating: number | null; // e.g., 4.5 (can be null if no ratings yet)
   ratingCount: number; // e.g., 1233
   enrollments: number; // e.g., 120
-  impressions: number; // e.g., 340
+  totalLectures?: number; // Total number of lectures
+  totalDuration?: number | string; // Total duration in minutes OR formatted string (e.g., "5h 30m")
+  learningLevel?: string; // e.g., "Beginner", "Intermediate", "Advanced"
+  impressions?: number; // e.g., 340 (deprecated - no longer displayed)
   featured?: boolean;
   price?: number; // 0 => Free
+  originalPrice?: number; // Original price before discount
+  discountPercentage?: number; // Discount percentage
   className?: string;
 }
 
@@ -51,18 +67,59 @@ export function CourseCard({
   rating,
   ratingCount,
   enrollments,
-  impressions,
+  totalLectures,
+  totalDuration,
+  learningLevel,
   featured,
   price = 0,
+  originalPrice,
   className,
 }: CourseCardProps) {
   const [imageError, setImageError] = React.useState(false);
-
+  const discountPercentage = 100;
+  
+  // Format duration from minutes OR use pre-formatted string
+  const formatDuration = (duration?: number | string): string => {
+    if (!duration) return "0 Min";
+    
+    // If already a formatted string (from API), use it with proper capitalization
+    if (typeof duration === "string") {
+      // Parse formats like "5h 30m" or "45m" or "0m"
+      if (duration === "0m") return "0 Min";
+      
+      // Convert short format to full text format
+      const hourMatch = duration.match(/(\d+)h/);
+      const minMatch = duration.match(/(\d+)m/);
+      
+      const hours = hourMatch ? parseInt(hourMatch[1]) : 0;
+      const mins = minMatch ? parseInt(minMatch[1]) : 0;
+      
+      if (hours > 0 && mins > 0) {
+        return `${hours} Total hour${hours === 1 ? "" : "s"} ${mins} min${mins === 1 ? "" : "s"}`;
+      } else if (hours > 0) {
+        return `${hours} Total hour${hours === 1 ? "" : "s"}`;
+      } else if (mins > 0) {
+        return `${mins} Total min${mins === 1 ? "" : "s"}`;
+      }
+      return duration; // Fallback to original string
+    }
+    
+    // Handle numeric minutes
+    if (duration < 60) {
+      return `${duration} Total min${duration === 1 ? "" : "s"}`;
+    }
+    const hours = Math.floor(duration / 60);
+    const mins = duration % 60;
+    if (mins > 0) {
+      return `${hours} Total hour${hours === 1 ? "" : "s"} ${mins} min${mins === 1 ? "" : "s"}`;
+    }
+    return `${hours} Total hour${hours === 1 ? "" : "s"}`;
+  };
   return (
     <Link
       href={`/course/${slug}`}
       className={cn(
-        "block rounded-md bg-white shadow-sm overflow-hidden transition-transform hover:scale-[1.02]",
+        "flex flex-col rounded-md h-full w-full bg-white shadow-sm overflow-hidden transition-transform hover:scale-[1.02]",
         className
       )}
     >
@@ -88,7 +145,7 @@ export function CourseCard({
             <BookOpenIcon className="size-16 text-white opacity-40" />
           </div>
         )}
-        <div className="absolute top-4 right-4 bg-white rounded-md">
+        <div className="absolute top-4 right-4 rounded-md">
           {featured ? (
             <Badge variant="secondary">Featured</Badge>
           ) : (
@@ -96,7 +153,7 @@ export function CourseCard({
           )}
         </div>
       </div>
-      <div className="p-4 space-y-3">
+      <div className="p-4 flex flex-col flex-1 gap-3">
         <div className="space-y-1">
           <h3 className="font-semibold text-foreground line-clamp-2">
             {title}
@@ -104,6 +161,7 @@ export function CourseCard({
           <p className="text-sm text-muted-foreground">{company}</p>
         </div>
 
+        <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1">
             {[...Array(5)].map((_, i) => (
@@ -132,18 +190,71 @@ export function CourseCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-foreground">
-            <span className="text-sm font-semibold">
-              {price === 0 ? "Free" : `$${price}`}
-            </span>
-          </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <EyeIcon className="size-4" />
-            <span className="text-xs font-medium">
-              {formatCompactNumber(impressions)}+
-            </span>
-          </div>
+        {/* Stats Badges */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Total Lectures */}
+          {totalLectures && totalLectures > 0 && (
+            <InfoBadge>
+              {totalLectures} Lecture{totalLectures === 1 ? "" : "s"}
+            </InfoBadge>
+          )}
+          
+          {/* Total Students */}
+          <InfoBadge>
+            {enrollments} Student{enrollments === 1 ? "" : "s"}
+          </InfoBadge>
+          
+          {/* Total Duration */}
+          {totalDuration && (
+            <InfoBadge>
+              {formatDuration(totalDuration)}
+            </InfoBadge>
+          )}
+          
+          {/* Total Reviews */}
+          {ratingCount > 0 && (
+            <InfoBadge>
+              {ratingCount} Review{ratingCount === 1 ? "" : "s"}
+            </InfoBadge>
+          )}
+          
+          {/* Learning Level */}
+          {learningLevel && (
+            <InfoBadge>
+              {learningLevel.charAt(0).toUpperCase() + learningLevel.slice(1).toLowerCase()}
+            </InfoBadge>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {(() => {
+            // Determine if course is free (price is 0 OR 100% discount)
+            const isFree = price === 0 || (discountPercentage && discountPercentage >= 100);
+            const displayPrice = isFree ? 0 : price;
+            
+            // Show original price if there's any discount
+            const showOriginal = price !== 0;
+            const originalPriceToShow = originalPrice || price;
+
+            return (
+              <>
+                <span className="text-lg font-bold text-foreground">
+                  {displayPrice === 0 ? "Free" : `$${displayPrice.toFixed(2)}`}
+                </span>
+                {showOriginal && (
+                  <span className="text-sm text-muted-foreground line-through">
+                    ${originalPriceToShow.toFixed(2)}
+                  </span>
+                )}
+                {showOriginal && (
+                  <span className="text-xs font-semibold text-primary-600">
+                    {Math.round(discountPercentage)}% off
+                  </span>
+                )}
+              </>
+            );
+          })()}
+        </div>
         </div>
       </div>
     </Link>

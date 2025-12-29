@@ -43,8 +43,8 @@ export default function MobileUserDrawer({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <button className="md:hidden">
-          <Avatar className="size-8">
-            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} />
+          <Avatar className="size-8" key={user?.profilePictureUrl || "no-avatar-mobile"}>
+            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} key={user?.profilePictureUrl} />
             <AvatarFallback>{user?.name?.charAt(0).toUpperCase() || CONSTANTS.USER_DATA.fallback}</AvatarFallback>
           </Avatar>
         </button>
@@ -56,8 +56,8 @@ export default function MobileUserDrawer({
 
         {/* User Info Section */}
         <div className="flex items-center gap-3 p-4">
-          <Avatar className="size-14">
-            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} />
+          <Avatar className="size-14" key={user?.profilePictureUrl || "no-avatar-mobile-drawer"}>
+            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} key={user?.profilePictureUrl} />
             <AvatarFallback>
               {user?.name?.charAt(0).toUpperCase() || "U"}
             </AvatarFallback>

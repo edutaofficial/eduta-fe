@@ -1,4 +1,29 @@
+/**
+ * Get a valid site base URL from environment variables
+ * Ensures the URL is properly formatted to avoid deprecation warnings
+ */
+function getSiteBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://eduta.org";
+  
+  // Ensure URL is properly formatted (has protocol)
+  try {
+    // Validate URL format using WHATWG URL API (not deprecated url.parse)
+    new URL(envUrl);
+    return envUrl;
+  } catch {
+    // If invalid, return default with proper protocol
+    return envUrl.startsWith("http") ? envUrl : `https://${envUrl}`;
+  }
+}
+
+// Site base URL from environment variable
+// Uses NEXT_PUBLIC_API_BASE_URL as primary source, falls back to NEXT_PUBLIC_SITE_URL, then default
+export const SITE_BASE_URL = getSiteBaseUrl();
+
 export const CONSTANTS = {
+  // Site base URL for metadata, canonical URLs, etc.
+  SITE_BASE_URL,
+  
   // HERO - slides data for homepage hero section
   HERO_SLIDES: [
     {

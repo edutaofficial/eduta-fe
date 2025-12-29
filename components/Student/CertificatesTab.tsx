@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SearchIcon, ExternalLinkIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useLearnerStore } from "@/store/useLearnerStore";
+import { RatingDialog } from "@/components/Student/RatingDialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function CertificatesTab() {
   const { 
@@ -22,8 +25,17 @@ export function CertificatesTab() {
     loading, 
     fetchCertificates 
   } = useLearnerStore();
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [showReviewDialog, setShowReviewDialog] = React.useState(false);
+  const [selectedCertificate, setSelectedCertificate] = React.useState<{
+    certificateId: string;
+    courseId: string;
+    courseTitle: string;
+    enrollmentId: string;
+  } | null>(null);
 
   // Fetch certificates on mount
   React.useEffect(() => {
@@ -123,7 +135,9 @@ export function CertificatesTab() {
                 <TableHead className="font-semibold text-default-900">
                   Issued Date
                 </TableHead>
-                <TableHead className="w-[180px]"/>
+                <TableHead className="font-semibold text-default-900 w-[180px]">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -160,14 +174,27 @@ export function CertificatesTab() {
                   </TableCell>
                   <TableCell>
                     <Button
-                      asChild
                       variant="outline"
                       size="sm"
                       className="w-full"
+                      onClick={() => {
+                        // Check if review is required
+                        if (!certificate.hasReview) {
+                          // Show review dialog
+                          setSelectedCertificate({
+                            certificateId: certificate.certificateId,
+                            courseId: certificate.courseId,
+                            courseTitle: certificate.courseTitle,
+                            enrollmentId: certificate.enrollmentId,
+                          });
+                          setShowReviewDialog(true);
+                        } else {
+                          // Review already exists, redirect to certificate detail
+                          router.push(`/certificate/verify/${certificate.certificateId}`);
+                        }
+                      }}
                     >
-                      <Link href={`/certificate/verify/${certificate.certificateId}`}>
-                        Verification Link
-                      </Link>
+                      View Certificate
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -193,6 +220,32 @@ export function CertificatesTab() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Review Dialog - Shown when viewing certificate without review */}
+      {selectedCertificate && (
+        <RatingDialog
+          open={showReviewDialog}
+          onOpenChange={(open) => {
+            setShowReviewDialog(open);
+            if (!open) {
+              setSelectedCertificate(null);
+            }
+          }}
+          courseId={selectedCertificate.courseId}
+          courseTitle={selectedCertificate.courseTitle}
+          enrollmentId={selectedCertificate.enrollmentId}
+          onSuccess={() => {
+            // After review is submitted, redirect to certificate detail page
+            setShowReviewDialog(false);
+            // Refresh certificates to update hasReview status
+            queryClient.invalidateQueries({ queryKey: ["certificates"] });
+            fetchCertificates();
+            // Redirect to certificate detail page
+            router.push(`/certificate/verify/${selectedCertificate.certificateId}`);
+            setSelectedCertificate(null);
+          }}
+        />
       )}
     </div>
   );

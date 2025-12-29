@@ -26,7 +26,6 @@ import { CONSTANTS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/context/AuthContext";
 import {
-  BellIcon,
   HeartIcon,
   LogInIcon,
   GraduationCapIcon,
@@ -55,13 +54,13 @@ function ExploreDropdown({
         onClick={(e) => {
           // On direct click, navigate to all courses
           e.preventDefault();
-          router.push("/all-courses");
+          router.push("/topics");
         }}
       >
         Explore
       </NavigationMenuTrigger>
       <NavMenuContentModified triggerRef={exploreTriggerRef} className="left-0">
-        <ul className="grid w-[25rem] gap-2 p-4 md:w-[31.25rem] md:grid-cols-2 lg:w-[37.5rem]">
+        <ul className="grid w-[25rem] gap-2 p-4 md:w-[31.25rem] md:grid-cols-2 lg:w-[50.5rem]">
           {loading ? (
             // Skeleton
             <>
@@ -73,24 +72,43 @@ function ExploreDropdown({
               ))}
             </>
           ) : (
-            categories.slice(0, 8).map((category) => (
-              <li key={category.categoryId}>
-                <NavigationMenuLink asChild>
-                  <Link
-                    href={`/all-courses?categories=${category.categoryId}`}
-                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-hidden transition-colors hover:bg-primary-100 hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                  >
-                    <div className="text-sm font-semibold leading-none line-clamp-1">
+            categories.slice(0, 8).map((category) => {
+              const hasSubcategories = category.subcategories?.length > 0;
+
+              return (
+                <li key={category.categoryId} className="rounded-md p-3">
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold leading-none line-clamp-1 text-default-900">
                       {category.name}
                     </div>
-                    <p className="text-sm leading-snug text-muted-foreground line-clamp-2 break-words">
-                      {category.description ||
-                        "Explore courses in this category"}
-                    </p>
-                  </Link>
-                </NavigationMenuLink>
-              </li>
-            ))
+
+                    {hasSubcategories ? (
+                      <div className="space-y-1">
+                        {category.subcategories.map((sub) => (
+                          <NavigationMenuLink asChild key={sub.categoryId}>
+                            <Link
+                              href={`/topics/${category.slug}/${sub.slug}`}
+                              className="block text-sm text-primary-700 hover:underline"
+                            >
+                              {sub.name}
+                            </Link>
+                          </NavigationMenuLink>
+                        ))}
+                      </div>
+                    ) : (
+                      <NavigationMenuLink asChild>
+                        <Link
+                          href={`/topics/${category.slug}/${category.slug}`}
+                          className="block text-sm text-primary-700 hover:underline"
+                        >
+                          {category.name}
+                        </Link>
+                      </NavigationMenuLink>
+                    )}
+                  </div>
+                </li>
+              );
+            })
           )}
         </ul>
       </NavMenuContentModified>
@@ -107,7 +125,7 @@ export default function Header() {
       fetchCategories();
     }
   }, [categories.length, fetchCategories]);
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const loggedIn = Boolean(user);
   const pathname = usePathname();
   const router = useRouter();
@@ -142,7 +160,9 @@ export default function Header() {
             {/* Right: Search Icon + Login/Avatar */}
             <div className="flex items-center gap-2">
               <MobileSearchTrigger onClick={() => setShowSearch(true)} />
-              {loggedIn ? (
+              {isLoading ? (
+                <div className="size-10 rounded-full bg-default-200 animate-pulse" />
+              ) : loggedIn ? (
                 <MobileUserDrawer user={user} onLogout={logout} />
               ) : (
                 <Button size="icon" variant="ghost" asChild>
@@ -162,9 +182,9 @@ export default function Header() {
                 <Image
                   src="/logo-main.webp"
                   alt="logo"
-                  width={100}
-                  height={32}
-                  className="min-w-[6.25rem] min-h-[2rem]"
+                  width={120  }
+                  height={36}
+                  className="min-w-[7.5rem] min-h-[2.25rem]"
                 />
               </Link>
               <ExploreDropdown exploreTriggerRef={exploreTriggerRef} />
@@ -199,7 +219,12 @@ export default function Header() {
               </NavigationMenuItem>
               <BlogDropdown blogTriggerRef={blogTriggerRef} />
               <NavigationMenuItem>
-                {loggedIn ? (
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-10 w-24 bg-default-200 animate-pulse rounded-md" />
+                    <div className="size-10 rounded-full bg-default-200 animate-pulse" />
+                  </div>
+                ) : loggedIn ? (
                   <>
                     {user?.role === "instructor" ? (
                       // Instructor - Show Dashboard link and Wishlist icon on home page
@@ -220,8 +245,8 @@ export default function Header() {
                           ref={avatarTriggerRef}
                           className="ml-2 p-0 hover:bg-transparent"
                         >
-                          <Avatar className="size-10">
-                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} />
+                          <Avatar className="size-10" key={user?.profilePictureUrl || "no-avatar-instructor"}>
+                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} key={user?.profilePictureUrl} />
                             <AvatarFallback>
                               {user?.name?.charAt(0).toUpperCase() || "U"}
                             </AvatarFallback>
@@ -231,9 +256,7 @@ export default function Header() {
                     ) : (
                       // Student - Show normal navigation
                       <div className="flex items-center">
-                        <Button variant="ghost" size="icon">
-                          <BellIcon className="size-5" />
-                        </Button>
+                     
                         <Button
                           variant="ghost"
                           size="icon"
@@ -245,8 +268,8 @@ export default function Header() {
                           ref={avatarTriggerRef}
                           className="ml-2 p-0 hover:bg-transparent"
                         >
-                          <Avatar className="size-10">
-                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} />
+                          <Avatar className="size-10" key={user?.profilePictureUrl || "no-avatar-instructor"}>
+                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} key={user?.profilePictureUrl} />
                             <AvatarFallback>
                               {user?.name?.charAt(0).toUpperCase() || "U"}
                             </AvatarFallback>
@@ -258,8 +281,8 @@ export default function Header() {
                       <div className="w-[18.75rem]">
                         {/* User Info Section */}
                         <div className="flex items-center gap-3 p-4">
-                          <Avatar className="size-14">
-                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} />
+                          <Avatar className="size-14" key={user?.profilePictureUrl || "no-avatar-dropdown"}>
+                            <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} key={user?.profilePictureUrl} />
                             <AvatarFallback>
                               {user?.name?.charAt(0).toUpperCase() || "U"}
                             </AvatarFallback>

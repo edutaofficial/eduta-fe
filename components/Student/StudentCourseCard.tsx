@@ -7,6 +7,7 @@ import { StarIcon, BookOpenIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { slugify } from "@/lib/slugify";
 
 interface StudentCourseCardProps {
   id: string;
@@ -67,6 +68,11 @@ export function StudentCourseCard({
       image.startsWith("/")) &&
     !imageError;
 
+  // Generate SEO-friendly course URL
+  // Using "lectures" as a placeholder that will be auto-redirected to first incomplete lecture
+  const courseSlug = slugify(title);
+  const courseUrl = `/course/${courseSlug}/learn/lecture/lectures?course=${courseId}&lecture=lectures`;
+
   return (
     <div
       className={cn(
@@ -75,7 +81,7 @@ export function StudentCourseCard({
       )}
     >
       {/* Course Image */}
-      <Link href={`/learn/${courseId}/lectures`}>
+      <Link href={courseUrl}>
         <div className="relative aspect-[3/2] w-full bg-default-100">
           {hasImage ? (
             <Image
@@ -103,7 +109,7 @@ export function StudentCourseCard({
       <div className="p-4 space-y-3">
         {/* Title and Instructor */}
         <div className="space-y-1">
-          <Link href={`/learn/${courseId}/lectures`}>
+          <Link href={courseUrl}>
             <h3 className="font-semibold text-foreground line-clamp-2 hover:text-primary-600 transition-colors">
               {title}
             </h3>

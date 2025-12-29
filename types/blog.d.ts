@@ -36,17 +36,20 @@ export interface Pagination {
   pageSize: number;
   totalItems: number;
   totalPages: number;
+  totalPosts?: number; // Backend expects this field
   hasNext: boolean;
   hasPrevious: boolean;
 }
 
 export interface BlogListResponse {
-  success: boolean;
-  message: string;
+  status?: string;
+  success?: boolean;
+  message?: string;
   data: {
     posts: BlogPost[];
   };
-  pagination: Pagination;
+  meta?: Pagination;
+  pagination?: Pagination;
 }
 
 export interface BlogDetailResponse {

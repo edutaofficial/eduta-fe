@@ -18,13 +18,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { countWords, truncateHtmlByWords } from "@/lib/textUtils";
+import { useToast } from "@/components/ui/toast";
 
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
-  maxLength?: number; // Maximum character count (HTML markup included)
+  minWords?: number; // Minimum word count (for course details: 1000)
+  maxWords?: number; // Maximum word count (for course details: 3000, others: 100)
   error?: boolean; // Show error state with red border
 }
 
@@ -33,15 +36,27 @@ export function RichTextEditor({
   onChange,
   placeholder,
   className,
-  maxLength,
+  minWords,
+  maxWords,
   error,
 }: RichTextEditorProps) {
   const [isMounted, setIsMounted] = React.useState(false);
-  const [charCount, setCharCount] = React.useState(0);
+  // Initialize wordCount from value prop to show correct count immediately
+  const [wordCount, setWordCount] = React.useState(() => countWords(value || ""));
+  const { showToast } = useToast();
+  
+  // Track if we've already shown toast for word limit to avoid spam
+  const wordLimitToastShownRef = React.useRef(false);
 
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Recalculate word count whenever value prop changes (handles remounts, preview returns, etc.)
+  React.useEffect(() => {
+    const words = countWords(value || "");
+    setWordCount(words);
+  }, [value]);
 
   const editor = useEditor({
     extensions: [
@@ -57,31 +72,111 @@ export function RichTextEditor({
         class:
           "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[200px] max-h-[400px] overflow-y-auto px-4 py-3",
       },
+      // Prevent input when at maxWords
+      handleKeyDown: (view, event) => {
+        if (!editor || !maxWords) return false;
+        
+        const currentHtml = editor.getHTML();
+        const currentWordCount = countWords(currentHtml);
+        
+        // Check word limit
+        const isAtWordLimit = currentWordCount >= maxWords;
+        
+        // If we're at word limit, prevent character insertion
+        if (isAtWordLimit) {
+          // Allow deletion keys (Backspace, Delete)
+          if (event.key === "Backspace" || event.key === "Delete") {
+            // Reset toast flag when deleting
+            wordLimitToastShownRef.current = false;
+            return false; // Allow deletion
+          }
+          // Allow navigation keys
+          if (event.key.startsWith("Arrow") || 
+              event.key === "Home" || 
+              event.key === "End" ||
+              event.key === "PageUp" ||
+              event.key === "PageDown") {
+            return false; // Allow navigation
+          }
+          // Allow modifier keys (Ctrl, Alt, Meta) for shortcuts
+          if (event.ctrlKey || event.altKey || event.metaKey) {
+            return false; // Allow shortcuts
+          }
+          // Prevent all other keys that would insert text
+          if (event.key.length === 1 || event.key === "Enter") {
+            event.preventDefault();
+            
+            // Show toast for word limit (only once)
+            if (!wordLimitToastShownRef.current) {
+              showToast(
+                `Word limit reached! You cannot add more than ${maxWords} words.`,
+                "warning",
+                4000
+              );
+              wordLimitToastShownRef.current = true;
+            }
+            
+            return true; // Block insertion
+          }
+        } else {
+          // Reset toast flag when not at limit
+          wordLimitToastShownRef.current = false;
+        }
+        
+        return false; // Use default handler
+      },
     },
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      const currentLength = html.length;
-
-      setCharCount(currentLength);
-
-      // Prevent exceeding max length
-      if (maxLength && currentLength > maxLength) {
-        // Don't allow the change
-        return false;
+      let html = editor.getHTML();
+      let words = countWords(html);
+      
+      // Strictly enforce word limit - truncate if exceeded
+      if (maxWords && words > maxWords) {
+        // Show toast if we exceeded word limit
+        if (!wordLimitToastShownRef.current) {
+          showToast(
+            `Word limit reached! Maximum ${maxWords} words allowed. Content has been truncated.`,
+            "warning",
+            4000
+          );
+          wordLimitToastShownRef.current = true;
+        }
+        
+        // Truncate HTML to exactly maxWords while preserving formatting
+        html = truncateHtmlByWords(html, maxWords);
+        words = countWords(html);
+        
+        // Update editor with truncated content
+        editor.commands.setContent(html);
+      } else {
+        // Reset toast flag when under limit
+        wordLimitToastShownRef.current = false;
       }
-
+      
+      setWordCount(words);
       onChange(html);
     },
   });
 
   React.useEffect(() => {
     if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value);
-      // Update character count based on HTML length
+      let contentToSet = value;
+      
+      // Truncate if value exceeds word limit (handles external updates)
+      if (maxWords) {
+        const wordCount = countWords(value);
+        if (wordCount > maxWords) {
+          contentToSet = truncateHtmlByWords(value, maxWords);
+        }
+      }
+      
+      editor.commands.setContent(contentToSet);
+      // Update word count from the actual editor content
       const html = editor.getHTML();
-      setCharCount(html.length);
+      const words = countWords(html);
+      setWordCount(words);
     }
-  }, [value, editor]);
+  }, [value, editor, maxWords]);
 
   if (!editor || !isMounted) {
     return (
@@ -262,20 +357,34 @@ export function RichTextEditor({
         className="min-h-[200px] max-h-[400px] overflow-y-auto"
       />
 
-      {/* Character Counter */}
-      {maxLength && (
-        <div className="border-t bg-muted/30 px-4 py-2 flex justify-end">
+      {/* Word Counter */}
+      {(minWords || maxWords) && (
+        <div className="border-t bg-muted/30 px-4 py-2 flex justify-between">
           <span
             className={cn(
               "text-xs font-medium",
-              charCount > maxLength
+              error
                 ? "text-destructive"
-                : charCount > maxLength * 0.9
-                  ? "text-warning-600"
-                  : "text-muted-foreground"
+                : "text-muted-foreground"
             )}
           >
-            {charCount}/{maxLength}
+            {minWords && maxWords
+              ? `${minWords.toLocaleString()} - ${maxWords.toLocaleString()} words`
+              : minWords
+                ? `${minWords.toLocaleString()}+ words`
+                : maxWords
+                  ? `Up to ${maxWords.toLocaleString()} words`
+                  : "Words"}
+          </span>
+          <span
+            className={cn(
+              "text-xs font-medium",
+              error
+                ? "text-destructive"
+                : "text-muted-foreground"
+            )}
+          >
+            {wordCount.toLocaleString()} words
           </span>
         </div>
       )}

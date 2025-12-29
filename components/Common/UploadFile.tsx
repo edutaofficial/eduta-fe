@@ -3,7 +3,6 @@
 import * as React from "react";
 import { UploadIcon, XIcon, Loader2Icon } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import type { Asset } from "@/types/course";
 import { cn } from "@/lib/utils";
 
 export interface UploadFileProps {
@@ -166,63 +165,137 @@ export function UploadFile({
     uploadStartTimeRef.current = Date.now();
     setUploadedBytes(0);
 
-    const formData = new FormData();
-    formData.append("file", file);
-
     // Create new abort controller for this upload
     abortControllerRef.current = new AbortController();
 
     try {
-      // Import upload-specific axios instance (no timeout)
-      const { axiosUploadInstance } = await import("@/app/api/axiosInstance");
+      // Import axios instance (default export)
+      const axiosInstanceModule = await import("@/app/api/axiosInstance");
+      const axiosInstance = axiosInstanceModule.default;
 
-      // Use upload instance with progress tracking (no timeout for large files)
-      const response = await axiosUploadInstance.post<Asset>(
-        "/api/v1/assets/upload",
-        formData,
+      // Step 1: Request presigned upload URL
+      const requestResponse = await axiosInstance.post<{
+        asset_id: number;
+        upload_url: string;
+        file_path: string;
+        expires_in: number;
+        download_url: string;
+      }>(
+        "/api/v1/assets/upload/request",
         {
-          headers: { "Content-Type": "multipart/form-data" },
+          file_name: file.name,
+          file_type: file.type,
+          file_size: file.size,
+        },
+        {
           signal: abortControllerRef.current.signal,
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-              setUploadProgress(percentCompleted);
-              setUploadedBytes(progressEvent.loaded);
-
-              // Calculate upload speed using ref to get current start time
-              const elapsedTime =
-                (Date.now() - uploadStartTimeRef.current) / 1000; // seconds
-              if (elapsedTime > 0 && progressEvent.loaded > 0) {
-                const speed = progressEvent.loaded / elapsedTime;
-                setUploadSpeed(formatSpeed(speed));
-              }
-            }
-          },
         }
       );
 
-      const asset = response.data;
+      const { asset_id, upload_url } = requestResponse.data;
 
-      if (asset && asset.asset_id) {
-        onChange(asset.asset_id, file); // Pass the file to onChange
-        setUploadProgress(100);
-        // Clear pending file on success
-        pendingFileRef.current = null;
-        // Show success animation before clearing
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadProgress(0);
-          setUploadSpeed(null);
-          setUploadedBytes(0);
-        }, 500);
-      } else {
-        throw new Error("Invalid response from server");
+      if (!asset_id || !upload_url) {
+        throw new Error("Invalid response: missing asset_id or upload_url");
       }
+
+      // Step 2: Upload file directly to S3 using presigned URL with progress tracking
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        // Track upload progress
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const percentCompleted = Math.round(
+              (event.loaded * 100) / event.total
+            );
+            setUploadProgress(percentCompleted);
+            setUploadedBytes(event.loaded);
+
+            // Calculate upload speed
+            const elapsedTime =
+              (Date.now() - uploadStartTimeRef.current) / 1000; // seconds
+            if (elapsedTime > 0 && event.loaded > 0) {
+              const speed = event.loaded / elapsedTime;
+              setUploadSpeed(formatSpeed(speed));
+            }
+          }
+        });
+
+        // Handle completion
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`S3 upload failed: ${xhr.statusText}`));
+          }
+        });
+
+        // Handle errors
+        xhr.addEventListener("error", () => {
+          reject(new Error("Network error during S3 upload"));
+        });
+
+        // Handle abort
+        xhr.addEventListener("abort", () => {
+          reject(new Error("Upload cancelled"));
+        });
+
+        // Connect abort controller to xhr
+        if (abortControllerRef.current) {
+          abortControllerRef.current.signal.addEventListener("abort", () => {
+            xhr.abort();
+          });
+        }
+
+        // Start upload
+        xhr.open("PUT", upload_url);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.send(file);
+      });
+
+      // Step 3: Confirm upload (optional but recommended)
+      try {
+        await axiosInstance.post(
+          "/api/v1/assets/upload/confirm",
+          {
+            asset_id,
+          },
+          {
+            signal: abortControllerRef.current.signal,
+          }
+        );
+      } catch (confirmError) {
+        // eslint-disable-next-line no-console
+        console.warn("Upload confirm failed, but file was uploaded:", confirmError);
+      }
+
+      // Success!
+      onChange(asset_id, file);
+      setUploadProgress(100);
+      // Clear pending file on success
+      pendingFileRef.current = null;
+      // Show success animation before clearing
+      setTimeout(() => {
+        setIsUploading(false);
+        setUploadProgress(0);
+        setUploadSpeed(null);
+        setUploadedBytes(0);
+      }, 500);
     } catch (error: unknown) {
       // Check if error was due to cancellation
       if (error && typeof error === "object" && "code" in error && error.code === "ERR_CANCELED") {
+        // eslint-disable-next-line no-console
+        console.log("Upload cancelled by user");
+        setUploadError("Upload cancelled");
+        setIsUploading(false);
+        setUploadProgress(0);
+        setUploadSpeed(null);
+        setUploadedBytes(0);
+        return;
+      }
+
+      // Check for abort/cancellation
+      if (error instanceof Error && error.message === "Upload cancelled") {
         // eslint-disable-next-line no-console
         console.log("Upload cancelled by user");
         setUploadError("Upload cancelled");
@@ -244,7 +317,7 @@ export function UploadFile({
           // Check for Axios error structure
           const axiosError = error as {
             response?: {
-              data?: { message?: string; error?: string };
+              data?: { message?: string; error?: string; detail?: string };
               status?: number;
               statusText?: string;
             };
@@ -257,9 +330,17 @@ export function UploadFile({
             errorMessage =
               axiosError.response.data.message ||
               axiosError.response.data.error ||
+              axiosError.response.data.detail ||
               `Upload failed (${axiosError.response.status || "Unknown status"})`;
           } else if (axiosError.message) {
-            errorMessage = axiosError.message;
+            // Handle specific error messages
+            if (axiosError.message.includes("S3 upload failed")) {
+              errorMessage = "Failed to upload to storage. Please try again.";
+            } else if (axiosError.message.includes("Network error")) {
+              errorMessage = "Network error. Please check your internet connection.";
+            } else {
+              errorMessage = axiosError.message;
+            }
           } else if (axiosError.code === "ERR_NETWORK") {
             errorMessage =
               "Network error. Please check your internet connection.";

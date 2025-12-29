@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useFormik } from "formik";
@@ -8,6 +8,7 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 import {
   Card,
   CardHeader,
@@ -43,6 +44,50 @@ export default function Login() {
   useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
+  
+  // Check for error from NextAuth OAuth redirect
+  const errorParam = searchParams.get("error");
+  
+  // Show error toast when OAuth fails
+  useEffect(() => {
+    if (errorParam && typeof window !== "undefined") {
+      // Decode URL-encoded error message
+      const decodedError = decodeURIComponent(errorParam);
+      
+      // Determine error type and message
+      let errorMessage = "";
+      let errorType: "error" | "warning" = "error";
+      
+      if (decodedError.includes("email is already in use") || 
+          decodedError.includes("email already in use")) {
+        errorMessage = "This email is already registered. Please sign in with your email and password, or contact support to link your Google account.";
+        errorType = "warning";
+      } else if (decodedError.includes("get_by_provider") || 
+                 decodedError.includes("UserRepositoryAdapter")) {
+        errorMessage = "OAuth authentication is currently unavailable due to a backend configuration issue. Please use email/password to sign in.";
+        errorType = "error";
+      } else if (decodedError.includes("OAuth authentication failed")) {
+        const underlyingError = decodedError.replace("Authentication failed: OAuth authentication failed: ", "");
+        if (underlyingError.includes("Failed to create user")) {
+          errorMessage = "Unable to create account via Google sign-in. Please try using email/password signup instead.";
+        } else {
+          errorMessage = `OAuth sign-in failed: ${underlyingError}. Please try using email/password instead.`;
+        }
+      } else if (errorParam === "AccessDenied") {
+        errorMessage = "Google sign-in was denied or failed. Please try again or use email/password to sign in.";
+      } else {
+        errorMessage = `Authentication error: ${decodedError}. Please try again.`;
+      }
+      
+      // Show toast notification
+      showToast(errorMessage, errorType, 8000);
+      
+      // Clear error from URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [errorParam, showToast]);
 
   const loginMutation = useMutation({
     mutationFn: async (values: LoginFormValues) => {
@@ -94,10 +139,10 @@ export default function Login() {
     onSubmit: async (values) => {
       const result = await loginMutation.mutateAsync(values);
       if (!result.success) {
-        formik.setFieldError(
-          "password",
-          result.error || "Something went wrong. Please try again."
-        );
+        const errorMessage = result.error || "Something went wrong. Please try again.";
+        // Show toast notification
+        showToast(errorMessage, "error", 6000);
+        formik.setFieldError("password", errorMessage);
       }
       if (result.success) {
         const redirect = searchParams.get("redirect");
@@ -107,7 +152,7 @@ export default function Login() {
           redirect ||
           (role === "instructor"
             ? "/instructor/courses"
-            : "/student/courses");
+            : "/");
         router.replace(dest);
       }
     },
@@ -234,6 +279,12 @@ export default function Login() {
                 className="w-full mt-2 bg-white text-default-900 border border-primary-200 hover:bg-primary-50"
                 size="lg"
               >
+                <svg className="size-5 mr-2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
                 Continue with Google
               </Button>
             </form>

@@ -32,6 +32,8 @@ export default function MobileMenu() {
     queryKey: ["mobile-menu-blogs"],
     queryFn: () => getAllBlogs({ pageSize: 3, page: 1 }),
     staleTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const blogs = blogsData?.data?.posts || [];
@@ -158,7 +160,7 @@ export default function MobileMenu() {
               {categories.slice(0, 8).map((category) => (
                 <Link
                   key={category.categoryId}
-                  href={`/all-courses?categories=${category.categoryId}`}
+                  href={`/topics/${category.slug}/${category.slug}`}
                   onClick={() => setOpen(false)}
                   className="rounded-md px-3 py-2 hover:bg-primary-100 transition-colors"
                 >
@@ -171,7 +173,7 @@ export default function MobileMenu() {
                 </Link>
               ))}
               <Link
-                href="/all-courses"
+                href="/topics"
                 onClick={() => setOpen(false)}
                 className="rounded-md px-3 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-100 transition-colors text-center"
               >

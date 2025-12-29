@@ -4,6 +4,7 @@
  */
 
 import * as z from "zod";
+import { countWords } from "./textUtils";
 
 export const courseDetailsValidationSchema = z.object({
   courseTitle: z
@@ -19,11 +20,32 @@ export const courseDetailsValidationSchema = z.object({
     .string()
     .min(1, "Learning level is required"),
   
-  description: z
+  shortDescription: z
     .string()
-    .min(1, "Course description is required")
-    .min(50, "Course description must be at least 50 characters")
-    .max(2500, "Course description must be less than 2500 characters"),
+    .max(500, "Short description must be less than 500 characters")
+    .optional()
+    .or(z.literal("")),
+  
+  fullDescription: z
+    .string()
+    .refine(
+      (val) => {
+        const words = countWords(val);
+        return words >= 1000;
+      },
+      {
+        message: "Course description must be at least 1,000 words",
+      }
+    )
+    .refine(
+      (val) => {
+        const words = countWords(val);
+        return words <= 3000;
+      },
+      {
+        message: "Course description must not exceed 3,000 words",
+      }
+    ),
   
   learningPoints: z
     .array(
@@ -35,10 +57,10 @@ export const courseDetailsValidationSchema = z.object({
     .refine(
       (points) => {
         const filledPoints = points.filter((p) => p.text.trim().length > 0);
-        return filledPoints.length >= 3;
+        return filledPoints.length >= 4;
       },
       {
-        message: "At least 3 learning points are required",
+        message: "At least 4 learning points are required",
       }
     )
     .refine(
@@ -48,11 +70,59 @@ export const courseDetailsValidationSchema = z.object({
       }
     ),
   
-  promoVideoId: z
-    .union([z.number(), z.null()])
-    .refine((val) => val !== null, {
-      message: "Promo video is required",
-    }),
+  requirements: z
+    .array(
+      z.object({
+        id: z.number(),
+        text: z.string().max(120, "Requirement must be 120 characters or less"),
+      })
+    )
+    .refine(
+      (points) => {
+        const filledPoints = points.filter((p) => p.text.trim().length > 0);
+        return filledPoints.length >= 2;
+      },
+      {
+        message: "At least 2 requirements are required",
+      }
+    )
+    .refine(
+      (points) => points.length <= 10,
+      {
+        message: "Maximum 10 requirements allowed",
+      }
+    ),
+  
+  whoThisCourseIsFor: z
+    .array(
+      z.object({
+        id: z.number(),
+        text: z.string().max(120, "Point must be 120 characters or less"),
+      })
+    )
+    .refine(
+      (points) => {
+        const filledPoints = points.filter((p) => p.text.trim().length > 0);
+        return filledPoints.length >= 2;
+      },
+      {
+        message: "At least 2 points are required for who this course is for",
+      }
+    )
+    .refine(
+      (points) => points.length <= 10,
+      {
+        message: "Maximum 10 points allowed",
+      }
+    ),
+  
+  certificateDescription: z
+    .string()
+    .max(500, "Certificate description must be less than 500 characters")
+    .optional()
+    .or(z.literal("")),
+  
+  promoVideoId: z.union([z.number(), z.null()]).nullable(),
   
   courseBannerId: z
     .union([z.number(), z.null()])

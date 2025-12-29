@@ -66,8 +66,7 @@ export const LectureItem: React.FC<LectureItemProps> = ({
           const durationInSeconds = await getVideoDuration(file);
           const durationInMinutes = secondsToMinutes(durationInSeconds);
 
-          // Update with actual duration
-          onUpdate("duration", durationInMinutes);
+          // Update with actual duration using batch update only
           onBatchUpdate({
             video: assetId,
             duration: durationInMinutes,
@@ -79,7 +78,7 @@ export const LectureItem: React.FC<LectureItemProps> = ({
         }
       }
     },
-    [onBatchUpdate, onUpdate]
+    [onBatchUpdate]
   );
 
   return (

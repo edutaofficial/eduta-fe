@@ -3,10 +3,13 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ExternalLinkIcon, Loader2Icon } from "lucide-react";
+import { ExternalLinkIcon, Loader2Icon, DownloadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { getCertificateById } from "@/app/api/learner/getCertificates";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { useToast } from "@/components/ui/toast";
 
 interface CertificateVerifyPageProps {
   params: Promise<{
@@ -14,10 +17,36 @@ interface CertificateVerifyPageProps {
   }>;
 }
 
+// Format date with ordinal suffix
+const formatDateWithOrdinal = (date: Date): string => {
+  const day = date.getDate();
+  const month = date.toLocaleString("en-US", { month: "short" });
+  const year = date.getFullYear();
+
+  const getOrdinalSuffix = (day: number): string => {
+    if (day > 3 && day < 21) return "th";
+    switch (day % 10) {
+      case 1:
+        return "st";
+      case 2:
+        return "nd";
+      case 3:
+        return "rd";
+      default:
+        return "th";
+    }
+  };
+
+  return `${day}${getOrdinalSuffix(day)} ${month} ${year}`;
+};
+
 export default function CertificateVerifyPage({
   params,
 }: CertificateVerifyPageProps) {
   const { certificateId } = React.use(params);
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const certificateRef = React.useRef<HTMLDivElement>(null);
+  const { showToast } = useToast();
 
   const {
     data: certificate,
@@ -29,7 +58,52 @@ export default function CertificateVerifyPage({
     retry: 1,
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: !!certificateId,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
+
+  const handleDownloadCertificate = async () => {
+    if (!certificateRef.current || !certificate) return;
+
+    setIsGenerating(true);
+
+    try {
+      // Wait for images to load
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Capture certificate as canvas
+      const canvas = await html2canvas(certificateRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        imageTimeout: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+
+      // Convert to image
+      const imgData = canvas.toDataURL("image/png");
+
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "px",
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      
+      const fileName = `Certificate_${certificate.recipientName.replace(/\s+/g, "_")}_${certificate.courseTitle.replace(/\s+/g, "_")}.pdf`;
+      pdf.save(fileName);
+      
+      showToast("Certificate downloaded successfully!", "success");
+    } catch {
+      showToast("Failed to generate certificate. Please try again.", "error");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -106,6 +180,96 @@ export default function CertificateVerifyPage({
 
       {/* Main Content */}
 
+      {/* Hidden Certificate for PDF Generation */}
+      <div className="fixed -left-[9999px] -top-[9999px]">
+        <div
+          ref={certificateRef}
+          className="relative"
+          style={{ 
+            width: "1200px",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/certificate-final.png"
+            alt="Certificate"
+            className="w-full h-auto block"
+            style={{ display: "block" }}
+          />
+
+          {/* Student Name Overlay */}
+          <div
+            className="absolute"
+            style={{
+              top: "15%",
+              left: "60%",
+              transform: "translateX(-50%)",
+              width: "80%",
+            }}
+          >
+            <p
+              className="font-bold text-primary-600"
+              style={{
+                fontSize: "36px",
+                letterSpacing: "0.05em",
+                margin: 0,
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              {certificate.recipientName}
+            </p>
+          </div>
+
+          {/* Course Name Overlay */}
+          <div
+            className="absolute"
+            style={{
+              top: "30%",
+              left: "60%",
+              transform: "translateX(-50%)",
+              width: "80%",
+            }}
+          >
+            <p
+              className="font-bold text-primary-600"
+              style={{
+                fontSize: "24px",
+                letterSpacing: "0.03em",
+                margin: 0,
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              {certificate.courseTitle}
+            </p>
+          </div>
+
+          {/* Date Overlay */}
+          <div
+            className="absolute"
+            style={{
+              top: "65%",
+              left: "24.5%",
+              transform: "translateX(-50%)",
+            }}
+          >
+            <p
+              className="font-medium text-default-800"
+              style={{
+                fontSize: "16px",
+                letterSpacing: "0.02em",
+                margin: 0,
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              {formatDateWithOrdinal(new Date(certificate.issuedAt))}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Certificate Card */}
       <div className="bg-white p-6 border-t-4 border-primary-400 max-w-5xl mx-auto mb-10 flex flex-col gap-8 relative z-10 shadow-lg">
         <h1 className="text-2xl w-full text-center md:text-3xl font-semibold text-default-900">
@@ -121,23 +285,37 @@ export default function CertificateVerifyPage({
             className="h-12 w-auto"
           />
 
-          {/* Right Side - View Certificate Link */}
-          {certificate.certificateUrl && (
+          {/* Right Side - Action Buttons */}
+          <div className="flex items-center gap-4">
+            {/* Download Certificate Button */}
             <Button
-              asChild
+              onClick={handleDownloadCertificate}
+              disabled={isGenerating}
               variant="secondary"
-              className=" text-white hover:underline bg-transparent hover:bg-transparent hover:text-white"
+              className="text-white hover:underline bg-transparent hover:bg-transparent hover:text-white disabled:opacity-50"
             >
-              <Link
-                href={certificate.certificateUrl}
-                target="_blank"
-                className="flex items-center gap-2 text-xl"
-              >
-                View Certificate
-                <ExternalLinkIcon className="size-6" />
-              </Link>
+              <DownloadIcon className="size-5 mr-2" />
+              {isGenerating ? "Generating..." : "Download Certificate"}
             </Button>
-          )}
+
+            {/* View Certificate Link */}
+            {certificate.certificateUrl && (
+              <Button
+                asChild
+                variant="secondary"
+                className="text-white hover:underline bg-transparent hover:bg-transparent hover:text-white"
+              >
+                <Link
+                  href={certificate.certificateUrl}
+                  target="_blank"
+                  className="flex items-center gap-2"
+                >
+                  View Certificate
+                  <ExternalLinkIcon className="size-5" />
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col gap-6">

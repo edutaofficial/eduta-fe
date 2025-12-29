@@ -35,6 +35,7 @@ export interface ProfilePictureUploadProps {
   currentAssetId?: number | null;
   fallbackText?: string;
   onAssetIdChange: (assetId: number | null) => void;
+  onImageUrlChange?: (url: string | null) => void;
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
 }
@@ -58,6 +59,7 @@ export function ProfilePictureUpload({
   currentAssetId,
   fallbackText = "U",
   onAssetIdChange,
+  onImageUrlChange,
   className,
   size = "lg",
 }: ProfilePictureUploadProps) {
@@ -140,14 +142,12 @@ export function ProfilePictureUpload({
   const handleUpload = async () => {
     if (!selectedFile) return;
 
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    formData.append("file_type", selectedFile.type);
-
     try {
       // eslint-disable-next-line no-console
       console.log("ProfilePictureUpload: Uploading image...");
-      const result = await uploadAsset.mutateAsync(formData);
+      const result = await uploadAsset.mutateAsync({
+        file: selectedFile,
+      });
       // eslint-disable-next-line no-console
       console.log(
         "ProfilePictureUpload: Upload successful, full result:",
@@ -166,19 +166,33 @@ export function ProfilePictureUpload({
           ? parseInt(result.asset_id, 10)
           : result.asset_id;
 
+      // Get the image URL (prefer presigned_url for S3, fallback to file_url)
+      const imageUrl = result.presigned_url || result.file_url || null;
+
       // eslint-disable-next-line no-console
       console.log(
         "ProfilePictureUpload: Asset ID converted to number:",
         assetIdAsNumber,
         typeof assetIdAsNumber
       );
+      // eslint-disable-next-line no-console
+      console.log(
+        "ProfilePictureUpload: Image URL:",
+        imageUrl
+      );
 
       onAssetIdChange(assetIdAsNumber);
+      
+      // Update image URL if callback is provided
+      if (onImageUrlChange && imageUrl) {
+        onImageUrlChange(imageUrl);
+      }
+      
       // Keep the preview but clear the selected file
       setSelectedFile(null);
       // eslint-disable-next-line no-console
       console.log(
-        "ProfilePictureUpload: Asset ID passed to parent via onAssetIdChange"
+        "ProfilePictureUpload: Asset ID and URL passed to parent"
       );
     } catch (err) {
       setError("Failed to upload image. Please try again.");

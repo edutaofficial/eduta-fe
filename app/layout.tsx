@@ -5,6 +5,9 @@ import ClientLayout from "@/components/layout/ClientLayout";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import QueryProvider from "@/components/providers/QueryProvider";
 import NextAuthSessionProvider from "@/components/providers/SessionProvider";
+import { TokenRefreshProvider } from "@/components/providers/TokenRefreshProvider";
+import { ToastProvider } from "@/components/ui/toast";
+import { SITE_BASE_URL } from "@/lib/constants";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -36,7 +39,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL("https://eduta.org"), // Replace with your actual domain
+  metadataBase: new URL(SITE_BASE_URL),
   alternates: {
     canonical: "/",
   },
@@ -65,7 +68,7 @@ export const metadata: Metadata = {
     title: "Eduta - Learn, Grow, Succeed",
     description:
       "Discover world-class online courses and expert instructors. Transform your skills with Eduta's comprehensive e-learning platform.",
-    url: "https://eduta.org", // Replace with your actual domain
+    url: SITE_BASE_URL,
     siteName: "Eduta",
     locale: "en_US",
     type: "website",
@@ -115,11 +118,15 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <QueryProvider>
           <NextAuthSessionProvider>
-            <main>
-              <AuthProvider>
-                <ClientLayout>{children}</ClientLayout>
-              </AuthProvider>
-            </main>
+            <TokenRefreshProvider>
+              <ToastProvider>
+                <main>
+                  <AuthProvider>
+                    <ClientLayout>{children}</ClientLayout>
+                  </AuthProvider>
+                </main>
+              </ToastProvider>
+            </TokenRefreshProvider>
           </NextAuthSessionProvider>
         </QueryProvider>
       </body>

@@ -3,7 +3,6 @@
 import * as React from "react";
 import { UploadIcon, XIcon, Loader2Icon, FileIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import type { Asset } from "@/types/course";
 import { cn } from "@/lib/utils";
 
 export interface UploadedFile {
@@ -185,56 +184,100 @@ export function UploadMultipleFiles({
       [fileKey]: { progress: 0, speed: null },
     }));
 
-    const formData = new FormData();
-    formData.append("file", file);
-
     try {
-      const { axiosUploadInstance } = await import("@/app/api/axiosInstance");
+      // Import axios instance (default export)
+      const axiosInstanceModule = await import("@/app/api/axiosInstance");
+      const axiosInstance = axiosInstanceModule.default;
 
-      const response = await axiosUploadInstance.post<Asset>(
-        "/api/v1/assets/upload",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
+      // Step 1: Request presigned upload URL
+      const requestResponse = await axiosInstance.post<{
+        asset_id: number;
+        upload_url: string;
+        file_path: string;
+        expires_in: number;
+        download_url: string;
+      }>("/api/v1/assets/upload/request", {
+        file_name: file.name,
+        file_type: file.type,
+        file_size: file.size,
+      });
 
-              const elapsedTime = (Date.now() - uploadStartTime) / 1000;
-              const speed =
-                elapsedTime > 0 ? progressEvent.loaded / elapsedTime : 0;
+      const { asset_id, upload_url } = requestResponse.data;
 
-              setUploadingFiles((prev) => ({
-                ...prev,
-                [fileKey]: {
-                  progress: percentCompleted,
-                  speed: formatSpeed(speed),
-                },
-              }));
-            }
-          },
-        }
-      );
-
-      const asset = response.data;
-
-      if (asset && asset.asset_id) {
-        // Remove from uploading state
-        setUploadingFiles((prev) => {
-          const { [fileKey]: _, ...rest } = prev;
-          return rest;
-        });
-
-        return {
-          assetId: asset.asset_id,
-          fileName: file.name,
-          fileSize: formatFileSize(file.size),
-        };
+      if (!asset_id || !upload_url) {
+        throw new Error("Invalid response: missing asset_id or upload_url");
       }
 
-      throw new Error("Invalid response from server");
+      // Step 2: Upload file directly to S3 using presigned URL with progress tracking
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        // Track upload progress
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const percentCompleted = Math.round(
+              (event.loaded * 100) / event.total
+            );
+
+            const elapsedTime = (Date.now() - uploadStartTime) / 1000;
+            const speed = elapsedTime > 0 ? event.loaded / elapsedTime : 0;
+
+            setUploadingFiles((prev) => ({
+              ...prev,
+              [fileKey]: {
+                progress: percentCompleted,
+                speed: formatSpeed(speed),
+              },
+            }));
+          }
+        });
+
+        // Handle completion
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`S3 upload failed: ${xhr.statusText}`));
+          }
+        });
+
+        // Handle errors
+        xhr.addEventListener("error", () => {
+          reject(new Error("Network error during S3 upload"));
+        });
+
+        // Handle abort
+        xhr.addEventListener("abort", () => {
+          reject(new Error("Upload cancelled"));
+        });
+
+        // Start upload
+        xhr.open("PUT", upload_url);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.send(file);
+      });
+
+      // Step 3: Confirm upload (optional but recommended)
+      try {
+        await axiosInstance.post("/api/v1/assets/upload/confirm", {
+          asset_id,
+        });
+      } catch (confirmError) {
+        // eslint-disable-next-line no-console
+        console.warn("Upload confirm failed, but file was uploaded:", confirmError);
+      }
+
+      // Remove from uploading state
+      setUploadingFiles((prev) => {
+        const { [fileKey]: _, ...rest } = prev;
+        return rest;
+      });
+
+      return {
+        assetId: asset_id,
+        fileName: file.name,
+        fileSize: formatFileSize(file.size),
+      };
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Upload error:", error);

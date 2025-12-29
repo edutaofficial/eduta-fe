@@ -2,7 +2,8 @@ import axios from "../axiosInstance";
 
 export interface SearchCoursesParams {
   query?: string | null;
-  categoryId?: string | null; // Can be comma-separated list of category IDs
+  categoryId?: string | null; // Can be comma-separated list of category IDs (deprecated, use categorySlug)
+  categorySlug?: string | null; // Can be comma-separated list of category slugs (SEO-friendly)
   learningLevel?: string | null; // Can be comma-separated list of levels
   language?: string | null;
   minPrice?: number | null;
@@ -67,7 +68,7 @@ export interface PublicCourse {
 export interface SearchCoursesResponse {
   success: boolean;
   message: string;
-  data: PublicCourse[];
+  data:{courses: PublicCourse[]};
   meta: {
     currentPage: number;
     pageSize: number;
@@ -91,7 +92,12 @@ export async function searchCourses(
 
     // Add only defined parameters
     if (params.query) queryParams.append("query", params.query);
-    if (params.categoryId) queryParams.append("categoryId", params.categoryId);
+    // Prefer categorySlug over categoryId for SEO-friendly URLs
+    if (params.categorySlug) {
+      queryParams.append("categorySlug", params.categorySlug);
+    } else if (params.categoryId) {
+      queryParams.append("categoryId", params.categoryId);
+    }
     if (params.learningLevel) queryParams.append("learningLevel", params.learningLevel);
     if (params.language) queryParams.append("language", params.language);
     if (params.minPrice !== null && params.minPrice !== undefined) {

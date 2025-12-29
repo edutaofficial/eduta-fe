@@ -88,9 +88,17 @@ const requestInterceptor = async (config: InternalAxiosRequestConfig): Promise<I
   const isAuthEndpoint = config.url?.includes("/api/v1/auth/login") || 
                          config.url?.includes("/api/v1/auth/signup") ||
                          config.url?.includes("/api/v1/auth/verify") ||
-                         config.url?.includes("/api/v1/auth/refresh");
+                         config.url?.includes("/api/v1/auth/refresh") ||
+                         config.url?.includes("/api/v1/user/login") ||
+                         (config.url?.includes("/api/v1/user") && config.method === "POST");
   
   if (isAuthEndpoint) {
+    // eslint-disable-next-line no-console
+    console.log("[Axios] Skipping auth token for endpoint", {
+      url: config.url,
+      method: config.method,
+      isAuthEndpoint: true,
+    });
     return config;
   }
 
@@ -103,7 +111,7 @@ const requestInterceptor = async (config: InternalAxiosRequestConfig): Promise<I
       // If token is expired or about to expire, refresh it proactively
       if (isTokenExpired(accessToken)) {
         // eslint-disable-next-line no-console
-        console.log("Token expired, proactively refreshing before request...");
+        console.log("[Axios] Token expired, proactively refreshing before request...");
         const newToken = await magicalTokenRefresh();
         
         if (newToken) {
@@ -179,7 +187,9 @@ const responseErrorInterceptor = async (error: AxiosError) => {
     const isAuthEndpoint = originalRequest.url?.includes("/api/v1/auth/login") || 
                            originalRequest.url?.includes("/api/v1/auth/signup") ||
                            originalRequest.url?.includes("/api/v1/auth/verify") ||
-                           originalRequest.url?.includes("/api/v1/user/");
+                           originalRequest.url?.includes("/api/v1/auth/refresh") ||
+                           originalRequest.url?.includes("/api/v1/user/login") ||
+                           (originalRequest.url?.includes("/api/v1/user") && originalRequest.method === "POST");
     
     if (isAuthEndpoint || !isTokenExpiredError) {
       // If not an auth endpoint and not token expired, or if auth endpoint, reject
@@ -192,6 +202,8 @@ const responseErrorInterceptor = async (error: AxiosError) => {
 
     // If already refreshing, queue this request
     if (isRefreshing) {
+      // eslint-disable-next-line no-console
+      console.log("[Axios] Request queued while token refresh in progress");
       return new Promise((resolve, reject) => {
         failedQueue.push({
           resolve: (token: string) => {
@@ -206,12 +218,17 @@ const responseErrorInterceptor = async (error: AxiosError) => {
     }
 
     isRefreshing = true;
+    // eslint-disable-next-line no-console
+    console.log("[Axios] 401 error detected, attempting token refresh...");
 
     try {
       // 🪄 MAGICAL TOKEN REFRESH - Call the magical function!
       const newAccessToken = await magicalTokenRefresh();
       
       if (newAccessToken) {
+        // eslint-disable-next-line no-console
+        console.log("[Axios] ✅ Token refresh successful, retrying request");
+        
         // Update the failed request with new token
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         
@@ -221,15 +238,21 @@ const responseErrorInterceptor = async (error: AxiosError) => {
         // ✨ MAGIC: Silently retry the original request with new token
         return axios(originalRequest);
       } else {
-        // Refresh failed, sign out
+        // Refresh failed - NOW we sign out
+        // eslint-disable-next-line no-console
+        console.error("[Axios] ❌ Token refresh failed, signing out user");
         processQueue(new Error("Token refresh failed"), null);
+        
+        // Sign out and redirect to login
         await signOut({ redirect: true, callbackUrl: "/login" });
         return Promise.reject(error);
       }
     } catch (refreshError) {
       // eslint-disable-next-line no-console
-      console.error("Magical token refresh failed:", refreshError);
+      console.error("[Axios] ❌ Token refresh threw error:", refreshError);
       processQueue(refreshError as Error, null);
+      
+      // Sign out and redirect to login
       await signOut({ redirect: true, callbackUrl: "/login" });
       return Promise.reject(error);
     } finally {

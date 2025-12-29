@@ -138,6 +138,7 @@ export function InstructorAnnouncements() {
           </form>
         </CardContent>
       </Card>
+
     </div>
   );
 }

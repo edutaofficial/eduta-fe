@@ -34,13 +34,14 @@ export async function getCourseForEdit(
     const basicInfo: UIBasicInfo = {
       title: courseData.courseDetails.title || "",
       shortDescription: courseData.courseDetails.description || "",
-      description: courseData.courseDetails.description || "",
+      description: courseData.courseDetails.fullDescription || "",
       learningLevel: courseData.courseDetails.learningLevel || "",
       language: courseData.courseDetails.language || "",
       categoryId: courseData.courseDetails.categoryId || "",
       courseLogoId: courseData.courseDetails.courseLogoId,
       courseBannerId: courseData.courseDetails.courseBannerId,
       promoVideoId: courseData.courseDetails.promoVideoId,
+      certificateDescription: courseData.courseDetails.certificateDescription || "",
       learningPoints: courseData.courseDetails.learningPoints.map((lp, index) => ({
         id: lp.learningPointId || `lp-${index}`,
         text: lp.description,

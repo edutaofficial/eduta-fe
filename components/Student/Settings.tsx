@@ -57,7 +57,17 @@ const accountSettingsSchema = z.object({
     .string()
     .min(1, "Last name is required")
     .regex(nameRegex, "Name must contain only letters and spaces"),
-  phoneNumber: z.string().optional(),
+  phoneNumber: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const digits = val.replace(/\D/g, "");
+        return digits.length <= 15;
+      },
+      "Phone number must be 15 digits or fewer"
+    ),
   dateOfBirth: z
     .string()
     .optional()
@@ -71,6 +81,11 @@ type AccountSettingsFormValues = z.infer<typeof accountSettingsSchema>;
 
 export function StudentSettings() {
   const { user, updateProfilePictureUrl } = useAuth();
+  const limitPhoneLength = React.useCallback((val: string | null | undefined) => {
+    if (!val) return "";
+    const digits = val.replace(/\D/g, "").slice(0, 15);
+    return val.startsWith("+") ? `+${digits}` : digits;
+  }, []);
   const {
     profile,
     loading,
@@ -162,7 +177,7 @@ export function StudentSettings() {
       clearError();
 
       try {
-        const oldProfilePictureId = profile?.profile_picture;
+        const _oldProfilePictureId = profile?.profile_picture;
 
         const payload = {
           first_name: values.firstName,
@@ -174,13 +189,16 @@ export function StudentSettings() {
 
         const updatedProfile = await updateProfile(payload);
 
-        // If profile picture was updated, update the header avatar
-        if (
-          oldProfilePictureId !== updatedProfile.profile_picture &&
-          updatedProfile.profile_picture_url
-        ) {
-          updateProfilePictureUrl(updatedProfile.profile_picture_url);
+        // Always update the profile picture URL if it exists (backend might return updated URL)
+        if (updatedProfile.profile_picture_url) {
+          // Update auth context (for header) - this will update headers immediately
+          await updateProfilePictureUrl(updatedProfile.profile_picture_url);
+          // Update local state
+          setProfilePictureUrl(updatedProfile.profile_picture_url);
         }
+        
+        // Refetch profile to update store (for header fallback and other data)
+        await fetchProfile();
 
         setAccountSuccess("Profile updated successfully!");
 
@@ -428,6 +446,10 @@ export function StudentSettings() {
                     currentAssetId={profilePictureId}
                     fallbackText={getInitials()}
                     onAssetIdChange={setProfilePictureId}
+                    onImageUrlChange={(url) => {
+                      // Update local state only - auth context will be updated on form submission
+                      setProfilePictureUrl(url);
+                    }}
                     size="lg"
                   />
                   {/* Debug display */}
@@ -541,9 +563,12 @@ export function StudentSettings() {
                   <PhoneInput
                     international
                     defaultCountry="US"
+                    limitMaxLength={true}
+                    maxLength={15}
                     value={accountFormik.values.phoneNumber}
                     onChange={(value) => {
-                      accountFormik.setFieldValue("phoneNumber", value || "");
+                      const limited = limitPhoneLength(value);
+                      accountFormik.setFieldValue("phoneNumber", limited);
                     }}
                     onBlur={() => accountFormik.setFieldTouched("phoneNumber")}
                     disabled={loading.updateProfile}

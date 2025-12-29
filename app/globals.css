@@ -365,6 +365,7 @@ html {
   color: var(--color-primary-600);
   text-decoration: underline;
   text-underline-offset: 2px;
+  position: static;
 }
 
 .ProseMirror a:hover {
@@ -1047,4 +1048,14 @@ html {
   .course-description ol {
     padding-left: 1.5rem;
   }
+}
+
+/* Swiper Equal Height Slides */
+.swiper-wrapper {
+  align-items: stretch !important;
+}
+
+.swiper-slide {
+  height: auto !important;
+  display: flex !important;
 }

@@ -16,6 +16,7 @@ export default function StudentLayout({
     { label: "Courses", href: "/student/courses" },
     { label: "Wishlist", href: "/student/wishlist" },
     { label: "Certificates", href: "/student/certificates" },
+    { label: "Asked Questions", href: "/student/questions" },
     { label: "Settings", href: "/student/settings" },
   ];
 
@@ -31,7 +32,7 @@ export default function StudentLayout({
             </p>
 
             {/* Tabs Navigation */}
-            <div className="flex gap-8 border-b border-white/20">
+            <div className="flex gap-8 border-b border-white/20"> 
               {tabs.map((tab) => (
                 <Link
                   key={tab.href}

@@ -2,7 +2,6 @@ import * as React from "react";
 import { useFormik } from "formik";
 import * as z from "zod";
 import { useCourseStore } from "@/store/useCourseStore";
-import type { UICurriculum } from "@/types/course";
 import type { UploadedFile } from "@/components/Common";
 import type { CurriculumFormData, SectionFormData, LectureFormData } from "@/types/curriculum";
 import {
@@ -85,9 +84,29 @@ export function useCurriculumForm() {
   });
 
   // Sync formik values to Zustand store
+  // Transform name -> title, video -> videoId, isPreview -> isFree to match UICurriculum format
   React.useEffect(() => {
     setCurriculum({
-      sections: formik.values.sections as unknown as UICurriculum["sections"],
+      sections: formik.values.sections.map((section) => ({
+        id: String(section.id),
+        title: section.name,
+        description: section.description,
+        order: (section as { order?: number }).order || 0,
+        lectures: section.lectures.map((lecture) => ({
+          id: String(lecture.id),
+          title: lecture.name,
+          description: lecture.description,
+          order: (lecture as { order?: number }).order || 0,
+          duration: lecture.duration,
+          isFree: lecture.isPreview,
+          videoId: lecture.video && lecture.video > 0 ? lecture.video : null,
+          resources: lecture.resources.map((r) => ({
+            id: typeof r === "object" && "id" in r ? String(r.id) : String(Math.random()),
+            title: typeof r === "object" && "fileName" in r ? r.fileName : "Resource",
+            fileId: typeof r === "object" && "assetId" in r ? r.assetId : 0,
+          })),
+        })),
+      })),
     });
   }, [formik.values.sections, setCurriculum]);
 
@@ -108,12 +127,17 @@ export function useCurriculumForm() {
   const addSection = React.useCallback(() => {
     const newSection = createDefaultSection(getNextId());
     newSection.lectures[0].id = getNextId();
-    formik.setFieldValue("sections", [...formik.values.sections, newSection]);
+    formik.setValues((prevValues) => ({
+      ...prevValues,
+      sections: [...prevValues.sections, newSection],
+    }));
   }, [formik]);
 
   const removeSection = React.useCallback((sectionId: number | string) => {
-    const updated = formik.values.sections.filter((s) => s.id !== sectionId);
-    formik.setFieldValue("sections", updated);
+    formik.setValues((prevValues) => ({
+      ...prevValues,
+      sections: prevValues.sections.filter((s) => s.id !== sectionId),
+    }));
   }, [formik]);
 
   const updateSection = React.useCallback((
@@ -121,34 +145,40 @@ export function useCurriculumForm() {
     field: keyof SectionFormData,
     value: string
   ) => {
-    const updated = formik.values.sections.map((s) =>
-      s.id === sectionId ? { ...s, [field]: value } : s
-    );
-    formik.setFieldValue("sections", updated);
+    formik.setValues((prevValues) => ({
+      ...prevValues,
+      sections: prevValues.sections.map((s) =>
+        s.id === sectionId ? { ...s, [field]: value } : s
+      ),
+    }));
   }, [formik]);
 
   // === Lecture Actions ===
   
   const addLecture = React.useCallback((sectionId: number | string) => {
     const newLecture = createDefaultLecture(getNextId());
-    const updated = formik.values.sections.map((s) =>
-      s.id === sectionId
-        ? { ...s, lectures: [...s.lectures, newLecture] }
-        : s
-    );
-    formik.setFieldValue("sections", updated);
+    formik.setValues((prevValues) => ({
+      ...prevValues,
+      sections: prevValues.sections.map((s) =>
+        s.id === sectionId
+          ? { ...s, lectures: [...s.lectures, newLecture] }
+          : s
+      ),
+    }));
   }, [formik]);
 
   const removeLecture = React.useCallback((
     sectionId: number | string,
     lectureId: number | string
   ) => {
-    const updated = formik.values.sections.map((s) =>
-      s.id === sectionId
-        ? { ...s, lectures: s.lectures.filter((lec) => lec.id !== lectureId) }
-        : s
-    );
-    formik.setFieldValue("sections", updated);
+    formik.setValues((prevValues) => ({
+      ...prevValues,
+      sections: prevValues.sections.map((s) =>
+        s.id === sectionId
+          ? { ...s, lectures: s.lectures.filter((lec) => lec.id !== lectureId) }
+          : s
+      ),
+    }));
   }, [formik]);
 
   const updateLecture = React.useCallback((
@@ -157,33 +187,37 @@ export function useCurriculumForm() {
     field: keyof LectureFormData,
     value: string | number | boolean | UploadedFile[]
   ) => {
-    const updated = formik.values.sections.map((s) =>
-      s.id === sectionId
-        ? {
-            ...s,
-            lectures: s.lectures.map((lec) =>
-              lec.id === lectureId
-                ? {
-                    ...lec,
-                    [field]:
-                      field === "duration" || field === "video"
-                        ? typeof value === "number"
-                          ? value
-                          : value
-                            ? parseInt(String(value), 10)
-                            : 0
-                        : field === "isPreview"
-                          ? typeof value === "boolean"
+    // Use functional update to get the latest state at execution time
+    // This prevents race conditions when multiple async operations update in parallel
+    formik.setValues((prevValues) => ({
+      ...prevValues,
+      sections: prevValues.sections.map((s) =>
+        s.id === sectionId
+          ? {
+              ...s,
+              lectures: s.lectures.map((lec) =>
+                lec.id === lectureId
+                  ? {
+                      ...lec,
+                      [field]:
+                        field === "duration" || field === "video"
+                          ? typeof value === "number"
                             ? value
-                            : value === "true"
-                          : value,
-                  }
-                : lec
-            ),
-          }
-        : s
-    );
-    formik.setFieldValue("sections", updated);
+                            : value
+                              ? parseInt(String(value), 10)
+                              : 0
+                          : field === "isPreview"
+                            ? typeof value === "boolean"
+                              ? value
+                              : value === "true"
+                            : value,
+                    }
+                  : lec
+              ),
+            }
+          : s
+      ),
+    }));
   }, [formik]);
 
   // Update multiple lecture fields atomically (prevents race conditions)
@@ -192,19 +226,23 @@ export function useCurriculumForm() {
     lectureId: number | string,
     updates: Partial<LectureFormData>
   ) => {
-    const updated = formik.values.sections.map((s) =>
-      s.id === sectionId
-        ? {
-            ...s,
-            lectures: s.lectures.map((lec) =>
-              lec.id === lectureId
-                ? { ...lec, ...updates }
-                : lec
-            ),
-          }
-        : s
-    );
-    formik.setFieldValue("sections", updated);
+    // Use functional update to get the latest state at execution time
+    // This prevents race conditions when multiple async operations update in parallel
+    formik.setValues((prevValues) => ({
+      ...prevValues,
+      sections: prevValues.sections.map((s) =>
+        s.id === sectionId
+          ? {
+              ...s,
+              lectures: s.lectures.map((lec) =>
+                lec.id === lectureId
+                  ? { ...lec, ...updates }
+                  : lec
+              ),
+            }
+          : s
+      ),
+    }));
   }, [formik]);
 
   // Handle lecture upload state changes

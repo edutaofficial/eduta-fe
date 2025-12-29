@@ -44,6 +44,8 @@ const contactSchema = z.object({
 
 type ContactFormValues = z.infer<typeof contactSchema>;
 
+// Note: This is a client component, but the page wrapper can still use ISR
+// The static parts will be pre-rendered, and the form will hydrate on the client
 export default function ContactPage() {
   const [submitStatus, setSubmitStatus] = React.useState<{
     type: "success" | "error" | null;
