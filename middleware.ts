@@ -158,6 +158,31 @@ function getLoginUrl(pathname: string, request: NextRequest): URL {
 // MIDDLEWARE FUNCTION
 // ============================================================================
 
+/**
+ * Decode JWT token to check expiration (without verification)
+ */
+function decodeJWT(token: string): { exp?: number; [key: string]: unknown } | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const base64Payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const json = Buffer.from(base64Payload, "base64").toString("utf-8");
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if JWT token is expired
+ */
+function isJWTExpired(token: string): boolean {
+  const decoded = decodeJWT(token);
+  if (!decoded || typeof decoded.exp !== "number") return false;
+  const currentTime = Math.floor(Date.now() / 1000);
+  return decoded.exp <= currentTime;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -179,6 +204,32 @@ export async function middleware(request: NextRequest) {
     token = await getToken({ 
       req: request
     });
+  }
+
+  // Check if access token is expired
+  const accessToken = (token as { accessToken?: string })?.accessToken;
+  const refreshToken = (token as { refreshToken?: string })?.refreshToken;
+  const isTokenExpired = accessToken ? isJWTExpired(accessToken) : false;
+
+  // If token is expired but refresh token exists, allow request to proceed
+  // The client-side code will handle the token refresh
+  if (isTokenExpired && refreshToken) {
+    // eslint-disable-next-line no-console
+    console.log("[Middleware] Token expired but refresh token exists, allowing request to proceed for client-side refresh");
+    // Add a custom header to signal that token needs refresh
+    const response = NextResponse.next();
+    response.headers.set("X-Token-Expired", "true");
+    
+    // For protected routes, allow the request but signal that refresh is needed
+    // The client will handle the refresh before making API calls
+    return response;
+  }
+
+  // If token is expired and no refresh token, treat as no auth
+  if (isTokenExpired && !refreshToken) {
+    // eslint-disable-next-line no-console
+    console.log("[Middleware] Token expired and no refresh token, treating as unauthenticated");
+    token = null;
   }
 
   const user: User | null = token

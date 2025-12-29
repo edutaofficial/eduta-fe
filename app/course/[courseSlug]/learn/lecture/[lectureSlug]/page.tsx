@@ -78,7 +78,7 @@ export async function generateMetadata({
  * Server Component - Lecture Player Page
  * Implements ISR with 1 hour revalidation
  */
-export const revalidate = 3600; // Revalidate every 1 hour (ISR)
+export const revalidate = 900; // Revalidate every 15 minutes (ISR)
 
 export default async function LecturePlayerPage({
   params,

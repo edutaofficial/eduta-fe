@@ -4,8 +4,8 @@ import { getInstructorProfile } from "@/app/api/instructor/getInstructorProfile"
 import { InstructorProfile } from "@/components/Instructor";
 import { SITE_BASE_URL } from "@/lib/constants";
 
-// Enable ISR - revalidate every hour
-export const revalidate = 3600;
+// Enable ISR - revalidate every 15 minutes
+export const revalidate = 900;
 
 // Generate static params for all instructors at build time
 // We extract instructor IDs from courses since there's no direct API for all instructors

@@ -5,7 +5,7 @@
  * Works silently in the background without user intervention
  */
 
-import { getSession,  signOut } from "next-auth/react";
+import { getSession } from "next-auth/react";
 
 // Track if a refresh is already in progress to avoid multiple simultaneous refreshes
 let isRefreshing = false;
@@ -72,6 +72,9 @@ export function isTokenExpired(token: string): boolean {
  * 5. Returns new access token
  * 
  * @returns Promise<string | null> - New access token or null if refresh failed
+ * 
+ * NOTE: This function does NOT automatically sign out the user.
+ * It returns null if refresh fails, and the caller should decide whether to sign out.
  */
 export async function magicalTokenRefresh(): Promise<string | null> {
   try {
@@ -80,7 +83,7 @@ export async function magicalTokenRefresh(): Promise<string | null> {
     
     if (!session) {
       // eslint-disable-next-line no-console
-      console.error("No session found");
+      console.error("[TokenRefresh] No session found");
       return null;
     }
 
@@ -89,14 +92,15 @@ export async function magicalTokenRefresh(): Promise<string | null> {
     
     if (!refreshToken) {
       // eslint-disable-next-line no-console
-      console.error("No refresh token found in session");
-      // If no refresh token, user needs to login again
-      await signOut({ redirect: true, callbackUrl: "/login" });
+      console.error("[TokenRefresh] No refresh token found in session");
+      // Return null but don't sign out - let the caller decide
       return null;
     }
 
     // If already refreshing, wait for it to complete
     if (isRefreshing) {
+      // eslint-disable-next-line no-console
+      console.log("[TokenRefresh] Already refreshing, waiting for completion...");
       return new Promise((resolve) => {
         subscribeTokenRefresh((token: string) => {
           resolve(token);
@@ -105,6 +109,8 @@ export async function magicalTokenRefresh(): Promise<string | null> {
     }
 
     isRefreshing = true;
+    // eslint-disable-next-line no-console
+    console.log("[TokenRefresh] Starting token refresh...");
 
     // Call refresh token API using native fetch to avoid circular dependency with axios
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -120,7 +126,10 @@ export async function magicalTokenRefresh(): Promise<string | null> {
     });
 
     if (!response.ok) {
-      throw new Error("Token refresh API request failed");
+      const errorData = await response.json().catch(() => ({}));
+      // eslint-disable-next-line no-console
+      console.error("[TokenRefresh] API request failed:", response.status, errorData);
+      throw new Error(`Token refresh API request failed: ${response.status}`);
     }
 
     const data = await response.json();
@@ -130,6 +139,9 @@ export async function magicalTokenRefresh(): Promise<string | null> {
     if (!newAccessToken) {
       throw new Error("No access token received from refresh");
     }
+
+    // eslint-disable-next-line no-console
+    console.log("[TokenRefresh] ✅ Token refresh successful");
 
     // Update session using sessionStorage for immediate availability
     // This ensures next request uses new token while session updates in background
@@ -146,6 +158,20 @@ export async function magicalTokenRefresh(): Promise<string | null> {
       });
       window.dispatchEvent(event);
 
+      // Also trigger NextAuth session update to persist tokens
+      // This will call the jwt callback with trigger: "update"
+      if (typeof window !== "undefined" && (window as Window & { __NEXT_AUTH_SESSION_TOKEN__?: string }).__NEXT_AUTH_SESSION_TOKEN__) {
+        // Trigger session update by dispatching the event that NextAuth listens to
+        const updateEvent = new StorageEvent("storage", {
+          key: "nextauth.message",
+          newValue: JSON.stringify({
+            event: "session",
+            data: { trigger: "getSession" }
+          })
+        });
+        window.dispatchEvent(updateEvent);
+      }
+
       // Clear temporary tokens after session updates
       setTimeout(() => {
         sessionStorage.removeItem("_refresh_access_token");
@@ -160,10 +186,10 @@ export async function magicalTokenRefresh(): Promise<string | null> {
   } catch (error) {
     isRefreshing = false;
     // eslint-disable-next-line no-console
-    console.error("Token refresh failed:", error);
+    console.error("[TokenRefresh] ❌ Token refresh failed:", error);
     
-    // If refresh fails, user needs to login again
-    await signOut({ redirect: true, callbackUrl: "/login" });
+    // Return null but don't sign out automatically
+    // Let the caller (axios interceptor or component) decide what to do
     return null;
   }
 }

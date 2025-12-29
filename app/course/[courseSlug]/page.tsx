@@ -4,8 +4,8 @@ import { getCourseDetail } from "@/app/api/course/getCourseDetail";
 import { CourseDetailClient } from "@/components/Courses";
 import { SITE_BASE_URL } from "@/lib/constants";
 
-// Enable ISR - revalidate every hour
-export const revalidate = 3600;
+// Enable ISR - revalidate every 15 minutes
+export const revalidate = 900;
 
 // Generate static params for all courses at build time
 export async function generateStaticParams() {
@@ -51,6 +51,74 @@ export async function generateMetadata({
     const url = `${SITE_BASE_URL}/course/${courseSlug}`;
     const imageUrl = course.courseBannerUrl || `${SITE_BASE_URL}/og-image.jpg`;
 
+    // Generate structured data for rich snippets
+    const courseSchema = {
+      "@context": "https://schema.org",
+      "@type": "Course",
+      name: course.title,
+      description: course.shortDescription || course.fullDescription.substring(0, 300),
+      provider: {
+        "@type": "Organization",
+        name: "Eduta",
+        url: SITE_BASE_URL,
+      },
+      instructor: {
+        "@type": "Person",
+        name: course.instructor.name,
+      },
+      aggregateRating: course.stats?.avgRating ? {
+        "@type": "AggregateRating",
+        ratingValue: course.stats.avgRating,
+        reviewCount: course.stats.totalReviews,
+        bestRating: "5",
+        worstRating: "1",
+      } : undefined,
+      offers: course.pricing ? {
+        "@type": "Offer",
+        price: course.pricing.amount || "0",
+        priceCurrency: course.pricing.currency || "USD",
+        availability: "https://schema.org/InStock",
+        url,
+      } : undefined,
+      image: imageUrl,
+      url,
+      courseCode: course.slug,
+      educationalLevel: course.learningLevel,
+      numberOfLectures: course.stats?.totalLectures,
+      timeRequired: course.stats?.totalDurationFormatted,
+    };
+
+    const breadcrumbSchema = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: SITE_BASE_URL,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Courses",
+          item: `${SITE_BASE_URL}/topics`,
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: course.category.name,
+          item: `${SITE_BASE_URL}/category/${course.category.slug}`,
+        },
+        {
+          "@type": "ListItem",
+          position: 4,
+          name: course.title,
+          item: url,
+        },
+      ],
+    };
+
     return {
       title: course.title,
       description: course.shortDescription || "Learn from industry experts and upgrade your potencies",
@@ -61,6 +129,7 @@ export async function generateMetadata({
         ...course.tags.map((tag) => tag.tagName),
         "online course",
         "e-learning",
+        "skill development",
       ],
       authors: [{ name: course.instructor.name }],
       creator: course.instructor.name,
@@ -108,6 +177,8 @@ export async function generateMetadata({
         "course:instructor": course.instructor?.name || "Unknown",
         "course:rating": course.stats?.avgRating?.toString() || "0",
         "course:students": course.stats?.totalStudents?.toString() || "0",
+        // Add structured data as JSON-LD
+        "application-ld+json": JSON.stringify([courseSchema, breadcrumbSchema]),
       },
     };
   } catch (error) {

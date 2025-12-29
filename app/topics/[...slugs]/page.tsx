@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { AllCoursesPage } from "@/components/Courses";
 import { SITE_BASE_URL } from "@/lib/constants";
 
-// Enable ISR - revalidate every hour
-export const revalidate = 3600;
+// Enable ISR - revalidate every 15 minutes
+export const revalidate = 900;
 
 interface SlugPageProps {
   params: Promise<{

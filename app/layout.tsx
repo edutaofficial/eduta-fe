@@ -5,6 +5,7 @@ import ClientLayout from "@/components/layout/ClientLayout";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import QueryProvider from "@/components/providers/QueryProvider";
 import NextAuthSessionProvider from "@/components/providers/SessionProvider";
+import { TokenRefreshProvider } from "@/components/providers/TokenRefreshProvider";
 import { ToastProvider } from "@/components/ui/toast";
 import { SITE_BASE_URL } from "@/lib/constants";
 
@@ -117,13 +118,15 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <QueryProvider>
           <NextAuthSessionProvider>
-            <ToastProvider>
-              <main>
-                <AuthProvider>
-                  <ClientLayout>{children}</ClientLayout>
-                </AuthProvider>
-              </main>
-            </ToastProvider>
+            <TokenRefreshProvider>
+              <ToastProvider>
+                <main>
+                  <AuthProvider>
+                    <ClientLayout>{children}</ClientLayout>
+                  </AuthProvider>
+                </main>
+              </ToastProvider>
+            </TokenRefreshProvider>
           </NextAuthSessionProvider>
         </QueryProvider>
       </body>

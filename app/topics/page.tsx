@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { AllCoursesPage } from "@/components/Courses";
 import { SITE_BASE_URL } from "@/lib/constants";
 
-// Enable ISR - revalidate every hour
-export const revalidate = 3600;
+// Enable ISR - revalidate every 15 minutes
+export const revalidate = 900;
 
 export const metadata: Metadata = {
   title: "Browse All Courses",
