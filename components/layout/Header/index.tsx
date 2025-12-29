@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import {
   NavigationMenu,
@@ -127,15 +127,11 @@ export default function Header() {
   }, [categories.length, fetchCategories]);
   const { user, logout, isLoading } = useAuth();
   const loggedIn = Boolean(user);
-  const pathname = usePathname();
   const router = useRouter();
   const blogTriggerRef = React.useRef<HTMLButtonElement>(null);
   const exploreTriggerRef = React.useRef<HTMLButtonElement>(null);
   const avatarTriggerRef = React.useRef<HTMLButtonElement>(null);
   const [showSearch, setShowSearch] = React.useState(false);
-
-  // Check if user is on the home page
-  const isHomePage = pathname === "/";
 
   return (
     <header className="bg-white shadow-md fixed top-0 left-0 right-0 z-50 py-4 px-6">
@@ -227,20 +223,11 @@ export default function Header() {
                 ) : loggedIn ? (
                   <>
                     {user?.role === "instructor" ? (
-                      // Instructor - Show Dashboard link and Wishlist icon on home page
+                      // Instructor - Show Dashboard link only (no wishlist)
                       <div className="flex items-center gap-2">
                         <Button asChild>
                           <Link href="/instructor/courses">Dashboard</Link>
                         </Button>
-                        {isHomePage && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => router.push("/student/wishlist")}
-                          >
-                            <HeartIcon className="size-5" />
-                          </Button>
-                        )}
                         <NavigationMenuTrigger
                           ref={avatarTriggerRef}
                           className="ml-2 p-0 hover:bg-transparent"
@@ -254,9 +241,8 @@ export default function Header() {
                         </NavigationMenuTrigger>
                       </div>
                     ) : (
-                      // Student - Show normal navigation
+                      // Student - Show wishlist icon and avatar
                       <div className="flex items-center">
-                     
                         <Button
                           variant="ghost"
                           size="icon"
@@ -268,7 +254,7 @@ export default function Header() {
                           ref={avatarTriggerRef}
                           className="ml-2 p-0 hover:bg-transparent"
                         >
-                          <Avatar className="size-10" key={user?.profilePictureUrl || "no-avatar-instructor"}>
+                          <Avatar className="size-10" key={user?.profilePictureUrl || "no-avatar-student"}>
                             <AvatarImage src={user?.profilePictureUrl || CONSTANTS.USER_DATA.avatar} key={user?.profilePictureUrl} />
                             <AvatarFallback>
                               {user?.name?.charAt(0).toUpperCase() || "U"}
