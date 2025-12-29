@@ -105,6 +105,8 @@ export default async function LecturePlayerPage({
     notFound();
   }
 
+  // Note: We don't fetch initialCourseContent here because lecture pages
+  // require authentication and user-specific data, which can't be pre-rendered
   // Render the client component with validated props
   return <LecturePlayerClient courseId={courseId} lectureId={lectureId} />;
 }

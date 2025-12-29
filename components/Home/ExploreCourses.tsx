@@ -20,7 +20,11 @@ import { useCategoryStore } from "@/store/useCategoryStore";
 import { searchCourses } from "@/app/api/course/searchCourses";
 import { CourseCardSkeleton } from "@/components/skeleton/CourseCardSkeleton";
 
-export default function ExploreCourses() {
+interface ExploreCoursesProps {
+  initialCoursesData?: Awaited<ReturnType<typeof searchCourses>>;
+}
+
+export default function ExploreCourses({ initialCoursesData }: ExploreCoursesProps) {
   const {
     categories,
     loading: categoriesLoading,
@@ -62,6 +66,9 @@ export default function ExploreCourses() {
     return null;
   }, [activeSubcategory, categories]);
 
+  // Determine if we should use initialData (only for first category, no subcategory selected)
+  const shouldUseInitialData = !selectedCategory && !activeSubcategory && initialCoursesData;
+
   // Use TanStack Query for courses
   const { data: coursesData, isLoading: loadingCourses } = useQuery({
     queryKey: ["exploreCourses", activeSubcategorySlug || activeCategorySlug],
@@ -72,6 +79,7 @@ export default function ExploreCourses() {
         sortBy: "created_at",
         order: "desc",
       }),
+    initialData: shouldUseInitialData ? initialCoursesData : undefined,
     enabled: !!activeCategorySlug,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,

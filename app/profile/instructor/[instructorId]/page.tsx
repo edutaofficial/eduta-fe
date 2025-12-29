@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { searchCourses } from "@/app/api/course/searchCourses";
 import { getInstructorProfile } from "@/app/api/instructor/getInstructorProfile";
+import { getInstructorCourses } from "@/app/api/instructor/getInstructorCourses";
 import { InstructorProfile } from "@/components/Instructor";
 import { SITE_BASE_URL } from "@/lib/constants";
 
@@ -147,5 +148,26 @@ export default async function InstructorProfilePage({ params }: { params: Promis
     );
   }
 
-  return <InstructorProfile instructorId={instructorId} />;
+  // Fetch data server-side for SEO
+  let initialProfile = undefined;
+  let initialCourses = undefined;
+  
+  try {
+    // Fetch instructor profile and courses in parallel
+    [initialProfile, initialCourses] = await Promise.all([
+      getInstructorProfile(instructorId),
+      getInstructorCourses(instructorId, { page: 1, pageSize: 12 }),
+    ]);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`Error fetching instructor profile data for ID ${instructorId}:`, error);
+  }
+
+  return (
+    <InstructorProfile 
+      instructorId={instructorId} 
+      initialProfile={initialProfile}
+      initialCourses={initialCourses}
+    />
+  );
 }

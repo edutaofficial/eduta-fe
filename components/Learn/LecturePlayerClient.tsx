@@ -39,11 +39,13 @@ import {
 interface LecturePlayerClientProps {
   courseId: string;
   lectureId: string;
+  initialCourseContent?: Awaited<ReturnType<typeof getCourseContent>>;
 }
 
 export function LecturePlayerClient({
   courseId,
   lectureId: lectureIdParam,
+  initialCourseContent,
 }: LecturePlayerClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -120,6 +122,7 @@ export function LecturePlayerClient({
   } = useQuery({
     queryKey: ["courseContent", courseId],
     queryFn: () => getCourseContent(courseId),
+    initialData: initialCourseContent,
     enabled: !!courseId,
     staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,

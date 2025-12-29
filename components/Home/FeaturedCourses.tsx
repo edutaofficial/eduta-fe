@@ -7,10 +7,15 @@ import { CourseCardSkeleton } from "@/components/skeleton/CourseCardSkeleton";
 import { useQuery } from "@tanstack/react-query";
 import { getFeaturedCourses } from "@/app/api/course/getFeaturedCourses";
 
-export default function FeaturedCourses() {
+interface FeaturedCoursesProps {
+  initialData?: Awaited<ReturnType<typeof getFeaturedCourses>>;
+}
+
+export default function FeaturedCourses({ initialData }: FeaturedCoursesProps) {
   const { data, isLoading: loading } = useQuery({
     queryKey: ["featuredCourses"],
     queryFn: () => getFeaturedCourses({ limit: 10 }),
+    initialData,
     staleTime: 1000 * 60 * 10, // 10 minutes - featured courses don't change often
   });
 

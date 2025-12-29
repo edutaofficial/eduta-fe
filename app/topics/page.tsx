@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AllCoursesPage } from "@/components/Courses";
 import { SITE_BASE_URL } from "@/lib/constants";
+import { searchCourses } from "@/app/api/course/searchCourses";
 
 // Enable ISR - revalidate every 15 minutes
 export const revalidate = 900;
@@ -72,5 +73,19 @@ export default async function AllCoursesPageRoute({ searchParams }: AllCoursesPa
     redirect("/topics");
   }
   
-  return <AllCoursesPage />;
+  // Fetch initial courses data server-side for SEO
+  let initialData = undefined;
+  try {
+    initialData = await searchCourses({
+      pageSize: 9,
+      sortBy: "created_at",
+      order: "desc",
+      page: 1,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("Error fetching topics page data:", error);
+  }
+  
+  return <AllCoursesPage initialData={initialData} />;
 }

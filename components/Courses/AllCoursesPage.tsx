@@ -16,9 +16,10 @@ import { useCategoryStore } from "@/store/useCategoryStore";
 interface AllCoursesPageProps {
   className?: string;
   slugs?: string[]; // For slug-based routing from dynamic route
+  initialData?: Awaited<ReturnType<typeof searchCourses>>;
 }
 
-export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageProps) {
+export function AllCoursesPage({ className: _className, slugs, initialData }: AllCoursesPageProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { categories, fetchCategories } = useCategoryStore();
@@ -296,11 +297,33 @@ export function AllCoursesPage({ className: _className, slugs }: AllCoursesPageP
     categorySlugsFromRoute,
   ]);
 
+  // Determine if we should use initialData (only when no search/filters applied)
+  const shouldUseInitialData = React.useMemo(() => {
+    return (
+      initialData &&
+      !debouncedSearchQuery &&
+      selectedLevels.length === 0 &&
+      selectedDurations.length === 0 &&
+      minRating === 0 &&
+      sortBy === "created_at-desc" &&
+      currentPage === 1
+    );
+  }, [
+    initialData,
+    debouncedSearchQuery,
+    selectedLevels.length,
+    selectedDurations.length,
+    minRating,
+    sortBy,
+    currentPage,
+  ]);
+
   // Use TanStack Query for data fetching
   // Refetch when category param changes
   const { data, isLoading, error } = useQuery({
     queryKey: ["courses", apiParams],
     queryFn: () => searchCourses(apiParams),
+    initialData: shouldUseInitialData ? initialData : undefined,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false, // Prevent refetch on window focus
     refetchOnMount: false,

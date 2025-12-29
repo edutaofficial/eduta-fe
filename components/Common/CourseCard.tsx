@@ -230,20 +230,20 @@ export function CourseCard({
           {(() => {
             // Determine if course is free (price is 0 OR 100% discount)
             const isFree = price === 0 || (discountPercentage && discountPercentage >= 100);
-            const displayPrice = isFree ? 0 : price;
+            const displayPrice = isFree ? 0 : (price ?? 0);
             
             // Show original price if there's any discount
             const showOriginal = price !== 0;
-            const originalPriceToShow = originalPrice || price;
+            const originalPriceToShow = originalPrice ?? price ?? 0;
 
             return (
               <>
                 <span className="text-lg font-bold text-foreground">
-                  {displayPrice === 0 ? "Free" : `$${displayPrice.toFixed(2)}`}
+                  {displayPrice === 0 ? "Free" : `$${(displayPrice ?? 0).toFixed(2)}`}
                 </span>
-                {showOriginal && (
+                {showOriginal && originalPriceToShow != null && (
                   <span className="text-sm text-muted-foreground line-through">
-                    ${originalPriceToShow.toFixed(2)}
+                    ${(originalPriceToShow ?? 0).toFixed(2)}
                   </span>
                 )}
                 {showOriginal && (

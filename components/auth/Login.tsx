@@ -145,15 +145,22 @@ export default function Login() {
         formik.setFieldError("password", errorMessage);
       }
       if (result.success) {
+        // Wait a bit for the session to be fully updated
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         const redirect = searchParams.get("redirect");
         const session = await getSession();
-        const role = (session as unknown as { role?: string })?.role;
-        const dest =
-          redirect ||
-          (role === "instructor"
-            ? "/instructor/courses"
-            : "/");
-        router.replace(dest);
+        
+        // Extract role from session (check both session and user levels)
+        const role = 
+          (session?.user as { role?: string })?.role || 
+          (session as unknown as { role?: string })?.role;
+        
+        // Determine destination
+        const dest = redirect || (role === "instructor" ? "/instructor/courses" : "/");
+        
+        // Use router.push instead of replace to ensure navigation works
+        router.push(dest);
       }
     },
   });

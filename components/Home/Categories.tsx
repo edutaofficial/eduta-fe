@@ -8,24 +8,33 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperType } from "swiper";
 import { Navigation } from "swiper/modules";
 import { Button } from "@/components/ui/button";
+import type { Category } from "@/app/api/category/getAllCategories";
 
 // Import Swiper styles
 import "swiper/css";
 import "swiper/css/navigation";
 
-function Categories() {
+interface CategoriesProps {
+  initialCategories?: Category[];
+}
+
+function Categories({ initialCategories }: CategoriesProps) {
   const { categories, loading, fetchCategories } = useCategoryStore();
   const [swiperInstance, setSwiperInstance] = React.useState<SwiperType | null>(null);
 
+  // Use initialCategories if provided, otherwise fall back to store categories
+  const displayCategories = initialCategories && initialCategories.length > 0 ? initialCategories : categories;
+  
+  // Only fetch from store if no initialCategories and store is empty
   React.useEffect(() => {
-    if (categories.length === 0) {
+    if (!initialCategories && categories.length === 0) {
       fetchCategories();
     }
-  }, [categories.length, fetchCategories]);
+  }, [initialCategories, categories.length, fetchCategories]);
 
   // Flatten categories to include both parent categories and subcategories
   const allCategories = React.useMemo(() => {
-    return categories.flatMap((category) => [
+    return displayCategories.flatMap((category) => [
       { 
         id: category.categoryId, 
         name: category.name, 
@@ -41,7 +50,7 @@ function Categories() {
         parentSlug: category.slug,
       })),
     ]);
-  }, [categories]);
+  }, [displayCategories]);
 
   // Group categories into slides of 8 items (2 rows x 4 columns)
   const itemsPerSlide = 8;
@@ -53,7 +62,8 @@ function Categories() {
     return slides;
   }, [allCategories]);
 
-  if (loading) {
+  // Only show skeleton if loading AND no initial categories provided
+  if (loading && !initialCategories) {
     return (
       <section className="py-12 px-6">
         <div className="max-w-container mx-auto">

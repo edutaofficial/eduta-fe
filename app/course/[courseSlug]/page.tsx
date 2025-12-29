@@ -48,6 +48,14 @@ export async function generateMetadata({
       };
     }
 
+    // Additional null checks for nested properties
+    if (!course.instructor || !course.category) {
+      return {
+        title: course.title || "Course",
+        description: course.shortDescription || "Learn from industry experts.",
+      };
+    }
+
     const url = `${SITE_BASE_URL}/course/${courseSlug}`;
     const imageUrl = course.courseBannerUrl || `${SITE_BASE_URL}/og-image.jpg`;
 
@@ -68,14 +76,14 @@ export async function generateMetadata({
       },
       aggregateRating: course.stats?.avgRating ? {
         "@type": "AggregateRating",
-        ratingValue: course.stats.avgRating,
-        reviewCount: course.stats.totalReviews,
+        ratingValue: course.stats.avgRating.toString(),
+        reviewCount: (course.stats.totalReviews || 0).toString(),
         bestRating: "5",
         worstRating: "1",
       } : undefined,
-      offers: course.pricing ? {
+      offers: course.pricing?.amount !== null && course.pricing?.amount !== undefined ? {
         "@type": "Offer",
-        price: course.pricing.amount || "0",
+        price: course.pricing.amount.toString(),
         priceCurrency: course.pricing.currency || "USD",
         availability: "https://schema.org/InStock",
         url,
@@ -172,11 +180,11 @@ export async function generateMetadata({
         },
       },
       other: {
-        "course:price:amount": course.pricing?.amount?.toString() || "0",
+        "course:price:amount": (course.pricing?.amount !== null && course.pricing?.amount !== undefined) ? course.pricing.amount.toString() : "0",
         "course:price:currency": course.pricing?.currency || "USD",
         "course:instructor": course.instructor?.name || "Unknown",
-        "course:rating": course.stats?.avgRating?.toString() || "0",
-        "course:students": course.stats?.totalStudents?.toString() || "0",
+        "course:rating": (course.stats?.avgRating !== null && course.stats?.avgRating !== undefined) ? course.stats.avgRating.toString() : "0",
+        "course:students": (course.stats?.totalStudents !== null && course.stats?.totalStudents !== undefined) ? course.stats.totalStudents.toString() : "0",
         // Add structured data as JSON-LD
         "application-ld+json": JSON.stringify([courseSchema, breadcrumbSchema]),
       },
@@ -193,5 +201,16 @@ export async function generateMetadata({
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ courseSlug: string }> }) {
   const { courseSlug } = await params;
-  return <CourseDetailClient courseSlug={courseSlug} />;
+  
+  // Fetch course data on the server for SEO - ensures HTML is fully rendered
+  let course = undefined;
+  try {
+    course = await getCourseDetail(courseSlug);
+  } catch (error) {
+    // If fetching fails during build, log it but continue
+    // eslint-disable-next-line no-console
+    console.error(`Failed to fetch course during build: ${courseSlug}`, error);
+  }
+  
+  return <CourseDetailClient courseSlug={courseSlug} initialCourse={course ?? undefined} />;
 }

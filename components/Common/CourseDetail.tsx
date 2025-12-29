@@ -1087,6 +1087,7 @@ export function CourseDetail({
                         Student Reviews
                       </h2>
                       {apiAverageRating !== undefined &&
+                        apiAverageRating !== null &&
                         apiTotalReviews !== undefined && (
                           <div className="flex items-center gap-2 mt-2 text-default-600">
                             <div className="flex items-center gap-1">
@@ -1231,7 +1232,7 @@ export function CourseDetail({
                           {instructorProfile?.stats && (
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                               {/* Average Rating */}
-                              {instructorProfile.stats.avgRating > 0 && (
+                              {instructorProfile.stats?.avgRating != null && instructorProfile.stats.avgRating > 0 && (
                                 <div className="bg-warning-50 border border-warning-200 rounded-lg p-3 text-center hover:shadow-md transition-shadow">
                                   <div className="flex items-center justify-center gap-1 mb-1">
                                     <StarIcon className="size-4 text-warning-600 fill-warning-600" />
@@ -1360,8 +1361,8 @@ export function CourseDetail({
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 flex-wrap">
                             {(() => {
-                              const price = apiCourseData.pricing.amount;
-                              const originalPrice = apiCourseData.pricing.originalAmount;
+                              const price = apiCourseData.pricing.amount ?? 0;
+                              const originalPrice = apiCourseData.pricing.originalAmount ?? null;
                               // If coupon is applied, show original price with strikethrough and $0 free
                               const hasCouponApplied = appliedCoupon && appliedCoupon === "25BBPMXNVD25";
                               // If coupon is applied, make it free (100% discount)
@@ -1371,17 +1372,17 @@ export function CourseDetail({
                               const showOriginal =
                                 (originalPrice && originalPrice > displayPrice) ||
                                 (hasCouponApplied && price > 0);
-                              const originalPriceToShow = originalPrice || price;
+                              const originalPriceToShow = originalPrice ?? price;
                               const discountPercentage = hasCouponApplied && price > 0 && displayPrice === 0
                                 ? 100
-                                : apiCourseData.pricing.discountPercentage;
+                                : (apiCourseData.pricing.discountPercentage ?? 0);
 
                               return (
                                 <>
                                   <span className="text-3xl font-bold text-default-900">
                                     {displayPrice === 0 ? "Free" : `$${displayPrice.toFixed(2)}`}
                                   </span>
-                                  {showOriginal && (
+                                  {showOriginal && originalPriceToShow != null && (
                                     <span className="text-lg text-default-400 line-through">
                                       ${originalPriceToShow.toFixed(2)}
                                     </span>
@@ -1448,11 +1449,11 @@ export function CourseDetail({
                               return (
                                 <>
                                   <span className="text-3xl font-bold text-default-900">
-                                    {displayPrice === 0 ? "Free" : `${displayCurrency} ${displayPrice.toFixed(2)}`}
+                                    {displayPrice === 0 ? "Free" : `${displayCurrency} ${(displayPrice ?? 0).toFixed(2)}`}
                                   </span>
-                                  {showOriginal && (
+                                  {showOriginal && originalPriceToShow != null && (
                                     <span className="text-lg text-default-400 line-through">
-                                      {displayCurrency} {originalPriceToShow.toFixed(2)}
+                                      {displayCurrency} {(originalPriceToShow ?? 0).toFixed(2)}
                                     </span>
                                   )}
                                   {finalDiscountPercentage > 0 && (

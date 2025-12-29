@@ -8,6 +8,9 @@ import {
   FAQ as FAQComponent,
 } from "@/components/Home";
 import { SITE_BASE_URL } from "@/lib/constants";
+import { getFeaturedCourses } from "@/app/api/course/getFeaturedCourses";
+import { searchCourses } from "@/app/api/course/searchCourses";
+import { getAllCategories } from "@/app/api/category/getAllCategories";
 
 // Enable ISR - revalidate every 15 minutes
 export const revalidate = 900;
@@ -68,7 +71,31 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Page() {
+export default async function Page() {
+  // Fetch data server-side for SEO
+  let featuredCoursesData = undefined;
+  let exploreCoursesData = undefined;
+  let categoriesData = undefined;
+
+  try {
+    // Fetch all data in parallel for optimal performance
+    [featuredCoursesData, exploreCoursesData, categoriesData] = await Promise.all([
+      getFeaturedCourses({ limit: 10 }),
+      // Fetch recent courses for ExploreCourses initial load
+      // The client component will refetch with category filter when category is selected
+      searchCourses({
+        pageSize: 12,
+        sortBy: "created_at",
+        order: "desc",
+      }),
+      // Fetch categories for Categories component
+      getAllCategories(),
+    ]);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("Error fetching homepage data:", error);
+  }
+
   const data = {
     heroSlides: [
       {
@@ -148,9 +175,9 @@ export default function Page() {
   return (
     <>
       <Hero slides={data.heroSlides} />
-      <Categories />
-      <FeaturedCourses />
-      <ExploreCourses />
+      <Categories initialCategories={categoriesData?.data} />
+      <FeaturedCourses initialData={featuredCoursesData} />
+      <ExploreCourses initialCoursesData={exploreCoursesData} />
       <Testimonials />
       <FAQComponent />
     </>

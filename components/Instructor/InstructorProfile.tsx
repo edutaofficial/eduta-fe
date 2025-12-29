@@ -24,9 +24,11 @@ import { extractErrorMessage } from "@/lib/errorUtils";
 
 interface InstructorProfileProps {
   instructorId: number;
+  initialProfile?: Awaited<ReturnType<typeof getInstructorProfile>>;
+  initialCourses?: Awaited<ReturnType<typeof getInstructorCourses>>;
 }
 
-export function InstructorProfile({ instructorId }: InstructorProfileProps) {
+export function InstructorProfile({ instructorId, initialProfile, initialCourses }: InstructorProfileProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const pageSize = 12;
 
@@ -38,6 +40,7 @@ export function InstructorProfile({ instructorId }: InstructorProfileProps) {
   } = useQuery({
     queryKey: ["instructorProfile", instructorId],
     queryFn: () => getInstructorProfile(instructorId),
+    initialData: initialProfile,
     enabled: !isNaN(instructorId) && instructorId > 0,
     staleTime: Infinity,
     gcTime: 1000 * 60 * 30,
@@ -54,6 +57,7 @@ export function InstructorProfile({ instructorId }: InstructorProfileProps) {
     queryKey: ["instructorCourses", instructorId, currentPage],
     queryFn: () =>
       getInstructorCourses(instructorId, { page: currentPage, pageSize }),
+    initialData: currentPage === 1 ? initialCourses : undefined,
     enabled: !isNaN(instructorId) && instructorId > 0,
     staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,

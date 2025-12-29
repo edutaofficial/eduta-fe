@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AllCoursesPage } from "@/components/Courses";
 import { SITE_BASE_URL } from "@/lib/constants";
+import { searchCourses } from "@/app/api/course/searchCourses";
 
 // Enable ISR - revalidate every 15 minutes
 export const revalidate = 900;
@@ -88,7 +89,22 @@ export async function generateMetadata({
 export default async function CategorySlugPage({ params }: SlugPageProps) {
   const { slugs } = await params;
   
+  // Fetch initial courses data server-side for SEO
+  let initialData = undefined;
+  try {
+    initialData = await searchCourses({
+      categorySlug: slugs.join(","),
+      pageSize: 9,
+      sortBy: "created_at",
+      order: "desc",
+      page: 1,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`Error fetching category page data for ${slugs.join("/")}:`, error);
+  }
+  
   // Pass slugs as props to AllCoursesPage
-  return <AllCoursesPage slugs={slugs} />;
+  return <AllCoursesPage slugs={slugs} initialData={initialData} />;
 }
 

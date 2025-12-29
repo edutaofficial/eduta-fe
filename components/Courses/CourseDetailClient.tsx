@@ -37,7 +37,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { createLectureUrl } from "@/lib/slugify";
 
-export function CourseDetailClient({ courseSlug }: { courseSlug: string }) {
+interface CourseDetailClientProps {
+  courseSlug: string;
+  initialCourse?: Awaited<ReturnType<typeof getCourseDetail>>;
+}
+
+export function CourseDetailClient({ courseSlug, initialCourse }: CourseDetailClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -61,10 +66,11 @@ export function CourseDetailClient({ courseSlug }: { courseSlug: string }) {
     action: null,
   });
 
-  // Fetch course detail
+  // Fetch course detail with server-side initial data for SEO
   const { data: course, isLoading } = useQuery({
     queryKey: ["courseDetail", courseSlug],
     queryFn: () => getCourseDetail(courseSlug),
+    initialData: initialCourse,
     enabled: !!courseSlug,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
