@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     // Call the backend refresh endpoint
     const response = await axios.post(
-      `${getBaseUrl()}/api/v1/auth/refresh`,
+      `${getBaseUrl()}api/v1/auth/refresh`,
       {
         token: accessToken,
         refresh_token: refreshToken,

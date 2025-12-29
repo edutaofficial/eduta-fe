@@ -88,7 +88,7 @@ export default async function Page() {
         sortBy: "created_at",
         order: "desc",
       }),
-      // Fetch categories for Categories component
+      // Fetch all categories for Categories component
       getAllCategories(),
     ]);
   } catch (error) {

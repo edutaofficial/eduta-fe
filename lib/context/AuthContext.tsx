@@ -232,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const lastName = rest.join(" ");
       const user_type = role === "instructor" ? "instructor" : "learner";
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/user`, {
+      const response = await fetch(`${API_BASE_URL}api/v1/user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

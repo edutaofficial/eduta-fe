@@ -265,7 +265,7 @@ export function StudentSettings() {
 
     try {
       const response = await fetch(
-        `${getBaseUrl()}/api/v1/user/forgot-password`,
+        `${getBaseUrl()}api/v1/user/forgot-password`,
         {
           method: "POST",
           headers: {
@@ -298,7 +298,7 @@ export function StudentSettings() {
     setOtpError("");
 
     try {
-      const response = await fetch(`${getBaseUrl()}/api/v1/user/verify-otp`, {
+      const response = await fetch(`${getBaseUrl()}api/v1/user/verify-otp`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -352,7 +352,7 @@ export function StudentSettings() {
 
     try {
       const response = await fetch(
-        `${getBaseUrl()}/api/v1/user/reset-password`,
+        `${getBaseUrl()}api/v1/user/reset-password`,
         {
           method: "POST",
           headers: {

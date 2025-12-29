@@ -114,7 +114,7 @@ export async function magicalTokenRefresh(): Promise<string | null> {
 
     // Call refresh token API using native fetch to avoid circular dependency with axios
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+    const response = await fetch(`${API_BASE_URL}api/v1/auth/refresh`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

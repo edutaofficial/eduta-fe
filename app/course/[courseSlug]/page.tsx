@@ -10,17 +10,41 @@ export const revalidate = 900;
 // Generate static params for all courses at build time
 export async function generateStaticParams() {
   try {
-    // Fetch all published courses to generate static pages
-    // Use a large pageSize to get all courses
-    const coursesData = await searchCourses({ 
-      pageSize: 100, 
-      page: 1,
-      sortBy: "created_at",
-      order: "desc"
-    });
-    const courses = coursesData?.data.courses || [];
+    // Fetch ALL published courses by paginating through all pages
+    const allCourses = [];
+    let currentPage = 1;
+    let hasMorePages = true;
+    const pageSize = 50; // Use 50 to stay within API limits
 
-    return courses.map((course) => ({
+    // eslint-disable-next-line no-console
+    console.log("Starting to fetch all courses for static generation...");
+
+    while (hasMorePages && currentPage <= 20) { // Safety limit: max 20 pages = 1000 courses
+      const coursesData = await searchCourses({ 
+        pageSize, 
+        page: currentPage,
+        sortBy: "created_at",
+        order: "desc"
+      });
+
+      if (coursesData?.data?.courses && coursesData.data.courses.length > 0) {
+        allCourses.push(...coursesData.data.courses);
+        // eslint-disable-next-line no-console
+        console.log(`Fetched page ${currentPage}: ${coursesData.data.courses.length} courses (Total so far: ${allCourses.length})`);
+        
+        // Check if there are more pages
+        const totalPages = coursesData.meta?.totalPages || 1;
+        hasMorePages = currentPage < totalPages;
+        currentPage++;
+      } else {
+        hasMorePages = false;
+      }
+    }
+
+    // eslint-disable-next-line no-console
+    console.log(`✅ Successfully fetched ${allCourses.length} courses for static generation`);
+
+    return allCourses.map((course) => ({
       courseSlug: course.slug,
     }));
   } catch (error) {
