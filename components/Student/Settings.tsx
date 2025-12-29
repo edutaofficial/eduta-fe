@@ -224,7 +224,7 @@ export function StudentSettings() {
 
     try {
       const response = await fetch(
-        `${getBaseUrl()}/api/v1/user/forgot-password`,
+        `${getBaseUrl()}api/v1/user/forgot-password`,
         {
           method: "POST",
           headers: {
