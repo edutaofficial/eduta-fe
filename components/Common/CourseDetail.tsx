@@ -1500,9 +1500,7 @@ export function CourseDetail({
                           <div className="flex items-center gap-2">
                             {apiCourseData?.isEnrolled ? (
                               <Button
-                                className={`${
-                                  user?.role !== "instructor" ? "flex-1" : "w-full"
-                                } bg-primary-400 hover:bg-primary-500 text-white`}
+                                className="w-full bg-primary-400 hover:bg-primary-500 text-white"
                                 size="lg"
                                 onClick={() => {
                                   if (apiCourseData?.courseId && apiCourseData?.sections?.length > 0) {
@@ -1519,37 +1517,39 @@ export function CourseDetail({
                                   }
                                 }}
                               >
-                                Go to Lectures
+                                Go to Lecture
                                 <ArrowRightIcon className="size-4 ml-2" />
                               </Button>
                             ) : (
-                              <Button
-                                className={`${
-                                  user?.role !== "instructor" ? "flex-1" : "w-full"
-                                } bg-primary-400 hover:bg-primary-500 text-white`}
-                                size="lg"
-                                onClick={onEnroll}
-                                disabled={enrolling}
-                              >
-                                {enrolling ? "Enrolling..." : "Enroll Now"}
-                              </Button>
-                            )}
-                            {user?.role !== "instructor" && (
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="shrink-0 h-11 w-11"
-                                onClick={onWishlistToggle}
-                                disabled={wishlistLoading}
-                              >
-                                <HeartIcon
-                                  className={`size-4 ${
-                                    isWishlisted
-                                      ? "fill-destructive text-destructive"
-                                      : ""
-                                  }`}
-                                />
-                              </Button>
+                              <>
+                                <Button
+                                  className={`${
+                                    user?.role !== "instructor" ? "flex-1" : "w-full"
+                                  } bg-primary-400 hover:bg-primary-500 text-white`}
+                                  size="lg"
+                                  onClick={onEnroll}
+                                  disabled={enrolling}
+                                >
+                                  {enrolling ? "Enrolling..." : "Enroll Now"}
+                                </Button>
+                                {user?.role !== "instructor" && (
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="shrink-0 h-11 w-11"
+                                    onClick={onWishlistToggle}
+                                    disabled={wishlistLoading}
+                                  >
+                                    <HeartIcon
+                                      className={`size-4 ${
+                                        isWishlisted
+                                          ? "fill-destructive text-destructive"
+                                          : ""
+                                      }`}
+                                    />
+                                  </Button>
+                                )}
+                              </>
                             )}
                           </div>
                         </>
@@ -1567,70 +1567,74 @@ export function CourseDetail({
                       )}
                     </div>
 
-                    {/* Money-Back Guarantee */}
-                    <p className="text-sm text-center text-default-600">
-                      30-Day Money-Back Guarantee
-                    </p>
+                    {/* Money-Back Guarantee - Only show if NOT enrolled */}
+                    {!isPreview && !apiCourseData?.isEnrolled && (
+                      <>
+                        <p className="text-sm text-center text-default-600">
+                          30-Day Money-Back Guarantee
+                        </p>
 
-                    <Separator />
+                        <Separator />
 
-                    {/* Coupon Section */}
-                    <div className="space-y-3">
-                      {appliedCoupon && appliedCoupon === "25BBPMXNVD25" && (
-                        <div className="bg-success-50 border border-success-200 rounded-md p-3">
-                          <p className="text-sm font-medium text-success-700">
-                            {appliedCoupon} is applied
-                          </p>
-                          <p className="text-xs text-success-600 mt-1">
-                            Eduta coupon
-                          </p>
+                        {/* Coupon Section */}
+                        <div className="space-y-3">
+                          {appliedCoupon && appliedCoupon === "25BBPMXNVD25" && (
+                            <div className="bg-success-50 border border-success-200 rounded-md p-3">
+                              <p className="text-sm font-medium text-success-700">
+                                {appliedCoupon} is applied
+                              </p>
+                              <p className="text-xs text-success-600 mt-1">
+                                Eduta coupon
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Coupon Error Message */}
+                          {couponError && (
+                            <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
+                              <p className="text-sm text-destructive">
+                                {couponError}
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              placeholder="Enter Coupon"
+                              value={couponInput}
+                              onChange={(e) => {
+                                setCouponInput(e.target.value);
+                                setCouponError(""); // Clear error when user types
+                              }}
+                              className="flex-1 h-12"
+                            />
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                if (couponInput.trim()) {
+                                  // Only allow the static coupon
+                                  if (couponInput.trim() === "25BBPMXNVD25") {
+                                    setAppliedCoupon(couponInput.trim());
+                                    setCouponInput("");
+                                    setCouponError("");
+                                  } else {
+                                    // Show error message for invalid coupon
+                                    setCouponError(
+                                      "The coupon code entered is not valid for this course. already one coupon is applied"
+                                    );
+                                    setCouponInput("");
+                                  }
+                                }
+                              }}
+                              className="bg-primary-400 hover:bg-primary-500 text-white h-12"
+                            >
+                              Apply
+                            </Button>
+                          </div>
                         </div>
-                      )}
-
-                      {/* Coupon Error Message */}
-                      {couponError && (
-                        <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
-                          <p className="text-sm text-destructive">
-                            {couponError}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="flex gap-2">
-                        <Input
-                          type="text"
-                          placeholder="Enter Coupon"
-                          value={couponInput}
-                          onChange={(e) => {
-                            setCouponInput(e.target.value);
-                            setCouponError(""); // Clear error when user types
-                          }}
-                          className="flex-1 h-12"
-                        />
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            if (couponInput.trim()) {
-                              // Only allow the static coupon
-                              if (couponInput.trim() === "25BBPMXNVD25") {
-                                setAppliedCoupon(couponInput.trim());
-                                setCouponInput("");
-                                setCouponError("");
-                              } else {
-                                // Show error message for invalid coupon
-                                setCouponError(
-                                  "The coupon code entered is not valid for this course. already one coupon is applied"
-                                );
-                                setCouponInput("");
-                              }
-                            }
-                          }}
-                          className="bg-primary-400 hover:bg-primary-500 text-white h-12"
-                        >
-                          Apply
-                        </Button>
-                      </div>
-                    </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

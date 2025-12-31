@@ -73,7 +73,7 @@ export function CourseDetailClient({ courseSlug, initialCourse }: CourseDetailCl
     initialData: initialCourse,
     enabled: !!courseSlug,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -109,6 +109,20 @@ export function CourseDetailClient({ courseSlug, initialCourse }: CourseDetailCl
   const averageRating = reviewsData?.averageRating ?? course?.stats.avgRating ?? 0;
   const totalReviews = reviewsData?.totalReviews ?? course?.stats.totalReviews ?? 0;
 
+  // Debug: Log enrollment status
+  React.useEffect(() => {
+    if (course) {
+      // eslint-disable-next-line no-console
+      console.log("🔍 Course Enrollment Status:", {
+        courseId: course.courseId,
+        courseTitle: course.title,
+        isEnrolled: course.isEnrolled,
+        enrollmentId: course.enrollmentId,
+        userRole: user?.role,
+      });
+    }
+  }, [course, user]);
+
   // Increment course view on mount
   React.useEffect(() => {
     if (course?.courseId) {
@@ -134,16 +148,44 @@ export function CourseDetailClient({ courseSlug, initialCourse }: CourseDetailCl
       if (!course?.courseId) throw new Error("Course ID is required");
       return enrollCourse(course.courseId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["courseDetail", courseSlug] });
+    onSuccess: async () => {
+      // Invalidate and refetch the course detail
+      await queryClient.invalidateQueries({ queryKey: ["courseDetail", courseSlug] });
+      await queryClient.refetchQueries({ queryKey: ["courseDetail", courseSlug] });
       setWelcomeMessage("Successfully enrolled!");
       setShowWelcomeDialog(true);
     },
     onError: (error: unknown) => {
       const errorMsg =
         error instanceof Error ? error.message : "Failed to enroll in course";
-      setErrorMessage(errorMsg);
-      setShowErrorDialog(true);
+      
+      // Check if user is already enrolled
+      if (errorMsg.includes("already enrolled")) {
+        setErrorMessage("You are already enrolled in this course. Redirecting to lectures...");
+        setShowErrorDialog(true);
+        // Refetch to get the latest enrollment status
+        queryClient.invalidateQueries({ queryKey: ["courseDetail", courseSlug] });
+        queryClient.refetchQueries({ queryKey: ["courseDetail", courseSlug] });
+        // Redirect after a short delay
+        setTimeout(() => {
+          setShowErrorDialog(false);
+          if (course?.sections && course.sections.length > 0) {
+            const firstLecture = course.sections[0]?.lectures[0];
+            if (firstLecture) {
+              const url = createLectureUrl(
+                course.title,
+                course.courseId,
+                firstLecture.title,
+                firstLecture.lectureId
+              );
+              router.push(url);
+            }
+          }
+        }, 1500);
+      } else {
+        setErrorMessage(errorMsg);
+        setShowErrorDialog(true);
+      }
     },
   });
 
