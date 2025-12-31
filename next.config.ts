@@ -39,6 +39,18 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "*.s3.amazonaws.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.s3.*.amazonaws.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "i.pravatar.cc",
         port: "",
         pathname: "/**",
@@ -50,10 +62,10 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
       {
-        protocol: "http",
-        hostname: "https://api.eduta.org/",
-        port: "3005",
-        pathname: "/api/assets/**",
+        protocol: "https",
+        hostname: "api.eduta.org",
+        port: "",
+        pathname: "/**",
       },
     ],
   },
